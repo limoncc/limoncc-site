@@ -1,0 +1,1244 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="大语言模型,LLM,矩阵微分,RNN,向量微分,现代RNN,状态的并行计算,Householder变换" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
+<meta name="keywords" content="大语言模型,LLM,矩阵微分,RNN,向量微分,现代RNN,状态的并行计算,Householder变换">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RNN的复兴03:现代RNN的并行计算">
+<meta property="og:url" content="https://www.limoncc.com/post/2823bb8e386a0878/index.html">
+<meta property="og:site_name" content="柠檬CC">
+<meta property="og:description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://www.limoncc.com/post/2823bb8e386a0878/images/对角加秩一矩阵.png">
+<meta property="og:image" content="https://www.limoncc.com/post/2823bb8e386a0878/images/Householder变换.png">
+<meta property="og:image" content="https://www.limoncc.com/post/2823bb8e386a0878/images/状态更新.png">
+<meta property="og:image" content="https://www.limoncc.com/post/2823bb8e386a0878/images/现代RNN并行计算.png">
+<meta property="og:image" content="https://www.limoncc.com/images/cc.png">
+<meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
+<meta property="og:updated_time" content="2026-05-25T14:41:15.460Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RNN的复兴03:现代RNN的并行计算">
+<meta name="twitter:description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
+<meta name="twitter:image" content="https://www.limoncc.com/post/2823bb8e386a0878/images/对角加秩一矩阵.png">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: '博主'
+    }
+  };
+</script>
+
+  <script src='//unpkg.com/valine/dist/Valine.min.js'></script>
+  <title> RNN的复兴03:现代RNN的并行计算 | 柠檬CC </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-73837972-3', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?d225b8f8559eb2eb6a8bd8792e01ebb9";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//tajs.qq.com/stats?sId=60130136";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">柠檬CC</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">小白爱吃柠檬O(∩_∩)O</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-poetry">
+          <a href="/poetry" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-leaf"></i> <br />
+            
+            诗集
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="#" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                RNN的复兴03:现代RNN的并行计算
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2025-08-17T09:57:34+08:00" content="2025-08-17">
+              2025-08-17
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/机器学习/" itemprop="url" rel="index">
+                    <span itemprop="name">机器学习</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+             <span id="/post/2823bb8e386a0878/" class="leancloud_visitors" data-flag-title="RNN的复兴03:现代RNN的并行计算">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">阅读次数 </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：httpss://<a href="http://www.limoncc.com/post/2823bb8e386a0878/">www.limoncc.com/post/2823bb8e386a0878/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
+<blockquote>
+<p><strong>摘要</strong>: 本文意在理清向量和矩阵微分的基础问题。若有错误，请大家指正。<br><strong>关键词</strong>: <code>Delta更新规则</code>,<code>向量微分</code>,<code>RNN</code>,<code>对角加秩一矩阵</code>,<code>DPLR</code></p>
+</blockquote>
+<p>[TOC]</p>
+<h3 id="一、引言"><a href="#一、引言" class="headerlink" title="一、引言"></a>一、引言</h3><p>承前所述，联想记忆和Delta更新规则构成了现代循环神经网络（RNN）演进的重要基础。具体而言，现代RNN的一个日趋统一的范式是：基于Delta更新规则构建动态状态，实现实时的在线元学习。在这种范式下，状态本质上扮演着瞬时记忆的角色，它会根据当前输入进行迭代更新。 因此，不同现代RNN变体的核心差异，本质在于对状态更新机制的设计理念不同——即对如何管理和利用这种瞬时记忆的核心认识存在差异。</p>
+<p>基于Delta规则的状态更新机制会自然引入了一种类似经典 <strong>Householder</strong> 变换形式。标准的Householder变换定义如下：给定一个非零向量 $\bm{k} \in \mathbb{R}^n$，其对应的Householder矩阵 $\bm{H}$ 为：<br>$$\begin{align}<br>\bm{H} = \bm{E} - \beta \bm{k} \bm{k}^\T, \quad \beta = \frac{2}{\bm{k}^\top \bm{k}}<br>\end{align}$$<br>其中 $\beta$ 是一个由向量 $\bm{v}$ 的模长<strong>唯一确定的标量</strong>。</p>
+<p>然而，在RNN的状态更新机制中，虽然采用了形如 $\bm{H} = \bm{E} - \beta \bm{k}\bm{k}^\T$ （或类似结构）的变换形式，但其参数化方式与严格意义上的Householder变换<strong>存在关键区别</strong>：$\beta$ 通常被设计为一个<strong>独立的、可学习的标量参数</strong>，而非固定地等于 $\frac{2}{\bm{k}^\top \bm{k}}$。向量 $\bm{k}$ 本身一般也是由网络（如前一层状态、当前输入）计算得到的可学习函数输出。计算Householder变换连积的<strong>WY</strong>表示方法可以很好将状态的顺序计算转变为并行计算。从而实现现代RNN的并行计算。接下来将重点讨论以下状态形式的并行计算：</p>
+<p>$$\begin{align}<br>\bm{S}_t<br>= \bm{S}_{t-1}\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]+ \eta_t \bm{v}_t\bm{k}_t^\T<br>\end{align}$$</p>
+<p>无论形式如何，这里的关键结构是<strong>对角加秩一</strong>(<strong>DPLR</strong>:Diagonal Plus Low-Rank）  $\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T$，其中 $\bm{E}$是对角矩阵， $\beta_t\bm{k}_t \bm{k}_t^\T$的秩 $\mathrm{rank}[\beta_t\bm{k}_t \bm{k}_t^\T]=1$, 对角加秩一的几何意义在RNN的复兴02<a href="尚未整理好">^1</a>中已经解释，这里上个图回忆一下：</p>
+<p><img src="images/对角加秩一矩阵.png" alt=""></p>
+<p>对角加秩一矩阵的实质是<strong>通过迭代变换构建记忆状态</strong>: 对于任意向量 $\bm{s}$，变换后沿 $\bm{k}$方向的分量被衰减、保留或放大，而正交分量保持不变，从而实现精细化的记忆控制。 $\beta$用于动态调整记忆衰减强度，确保模型仅遗忘与当前任务无关的信息。</p>
+<h3 id="二、对角加秩一矩阵变换"><a href="#二、对角加秩一矩阵变换" class="headerlink" title="二、对角加秩一矩阵变换"></a>二、对角加秩一矩阵变换</h3><h4 id="2-1、对角加秩一矩阵-DPLR-连积"><a href="#2-1、对角加秩一矩阵-DPLR-连积" class="headerlink" title="2.1、对角加秩一矩阵(DPLR)连积"></a>2.1、对角加秩一矩阵(DPLR)连积</h4><p>已知DPLR变换 $\displaystyle \bm{H}_\tau=\bm{E}-\beta_{\tau}\bm{k}_{\tau}\bm{k}_{\tau}^\T$，对于DPLR变换的累积有如下 $\bm{W}^\T\bm{Y}$表示方法：</p>
+<p>$$\begin{align}<br>\bm{P}=\prod_{\tau=1}^{t}\bm{H}_\tau<br>=\prod_{\tau=1}^{t}\Big[\bm{E}-\beta_{\tau}\bm{k}_{\tau}\bm{k}_{\tau}^\T\Big]<br>=\bm{E}-\sum_{\tau}^t \bm{w}_\tau \bm{k}_\tau ^\T<br>=\bm{E}-\bm{W}^\T\bm{Y}^\T<br>=\bm{E}-\bm{W}^\T\bm{K}<br>\end{align}$$</p>
+<p>可以将连乘运算转换为连加运算，其中 $\bm{W}^\T=[\bm{w}_1,\cdots,\bm{w}_t]$,  $\bm{Y}^\T=\bm{K}^\T=[\bm{k}_1,\cdots,\bm{k}_t]$。 其中 $\bm{w}_\tau \mathbf{k}_\tau^\T$是节点 $\tau$ 对全局状态的影响，$\sum$表示所有节点影响的叠加，<strong>负号</strong>则是历史路径的衰减效应。</p>
+<p>证明：<br>$$\begin{align}<br>\bm{P}<br>&amp;= \bigg[\bm{E}-\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T\bigg] \bigg[\bm{E}-\beta_{t}\bm{k}_{t}\bm{k}_{t}^\T \bigg]\\<br>&amp;=\bm{E}-\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T-\beta_{t}\bm{k}_{t}\bm{k}_{t}^\T +\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T\beta_{t}\bm{k}_{t}\bm{k}_{t}^\T\\<br>&amp;=\bm{E}-\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T - \underbrace{\beta_{t}\bigg[\bm{k}_{t}-\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T\bm{k}_{t}\bigg]}_{\bm{w}_t}\bm{k}_{t}^\T\\<br>&amp;=\bm{E}-\sum_{\tau}^t \bm{w}_\tau \bm{k}_\tau ^\T\\<br>&amp;=\bm{E}-\bm{W}^\T\bm{K}<br>\end{align}$$</p>
+<p>证明过程中还实现了 $\bm{w}_t$的构造方法：</p>
+<p>$$\begin{align}<br>\bm{w}_t = \beta_{t}\bm{k}_{t}-\beta_{t}\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T\bm{k}_{t}=\beta_{t}\bm{k}_{t}-\beta_{t}\sum_{\tau}^{t-1} \bm{k}_\tau ^\T\bm{k}_{t}\bm{w}_\tau<br>\end{align}$$</p>
+<h4 id="2-2、信息传播算子-3"><a href="#2-2、信息传播算子-3" class="headerlink" title="2.2、信息传播算子[^3]"></a>2.2、信息传播算子[^3]</h4><p>令 $\bm{W}^\T=[\bm{w}_1,\cdots,\bm{w}_t]$ 以便整体看待。基于$\bm{w}_t$的构造方法展开，很快就能看到 $\bm{W}$编码了节点信息的传播。先展开几项，以便获得直觉：</p>
+<p>$$\begin{align}<br>\bm{w}_1&amp;= \beta_1 \bm{k}_1\\<br>\bm{w}_2&amp;= \beta_2 \bm{k}_2 -\beta_{2}\bm{k}_1 ^\T\bm{k}_{2}\bm{w}_1\\<br>\bm{w}_3&amp;= \beta_3 \bm{k}_3 -\beta_{3}\bm{k}_1 ^\T\bm{k}_{3}\bm{w}_1-\beta_{3}\bm{k}_2 ^\T\bm{k}_{3}\bm{w}_2\\<br>&amp;\vdots\\<br>\bm{w}_t&amp;=\beta_t \bm{k}_t-\beta_{t}\bm{k}_1 ^\T\bm{k}_{t}\bm{w}_1-\beta_{t}\bm{k}_2 ^\T\bm{k}_{t}\bm{w}_2-<br>\cdots-\beta_{t}\bm{k}_{t-1} ^\T\bm{k}_{t}\bm{w}_{t-1}<br>\end{align}$$</p>
+<p>写成矩阵形式</p>
+<p>$$\begin{align}<br>\begin{bmatrix}<br>\bm{w}_1 ^\T\\<br>\bm{w}_2^\T\\<br>\bm{w}_3^\T\\<br>\vdots\\<br>\bm{w}_t^\T\\<br>\end{bmatrix}<br>=<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\vdots\\<br>\beta_t \bm{k}_t^\T\\<br>\end{bmatrix}</p>
+<ul>
+<li>\begin{bmatrix}<br>0&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{2}\bm{k}_1 ^\T\bm{k}_{2}&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{3}\bm{k}_1 ^\T\bm{k}_{3}&amp;-\beta_{3}\bm{k}_2 ^\T\bm{k}_{3}&amp;0&amp;\cdots&amp;0\\<br>\vdots\\<br>-\beta_{t}\bm{k}_1 ^\T\bm{k}_{t}&amp;-\beta_{t}\bm{k}_2 ^\T\bm{k}_{t}&amp;\cdots&amp;-\beta_{t}\bm{k}_{t-1} ^\T\bm{k}_{t}&amp;0<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{w}_1^\T\\<br>\bm{w}_2^\T\\<br>\bm{w}_3^\T\\<br>\vdots\\<br>\bm{w}_t^\T\\<br>\end{bmatrix}<br>\end{align}$$</li>
+</ul>
+<p>如果令 $\bm{b}_\tau=\beta_\tau \bm{k}_\tau$, $\bm{B}^\T=[\beta_1 \bm{k}_1,\cdots,\beta_t \bm{k}_t] = \mathrm{diag}[\bm{\beta}]\bm{K} $，于是有 $\bm{W} = \bm{B}+\bm{A}\bm{W}$，易得：</p>
+<p>$$\begin{align}<br>\bm{W} &amp;=\big[\bm{E}-\bm{A}\big]^{-1}\bm{B}\\<br>\end{align}$$</p>
+<p>令 $\bm{T}=\big[\bm{E}-\bm{A}\big]^{-1}$，其中下三角矩阵 $\bm{A}$中的元素 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)$, 其中 $i&gt;j$。这样就得到了 $\bm{W}$的计算方法。</p>
+<h4 id="2-3、下三角矩阵矩阵求逆"><a href="#2-3、下三角矩阵矩阵求逆" class="headerlink" title="2.3、下三角矩阵矩阵求逆"></a>2.3、下三角矩阵矩阵求逆</h4><h5 id="2-3-1、前向替代法-Forward-Substitution"><a href="#2-3-1、前向替代法-Forward-Substitution" class="headerlink" title="2.3.1、前向替代法 (Forward Substitution)"></a>2.3.1、前向替代法 (Forward Substitution)</h5><p>如何计算$\bm{T}=\big[\bm{E}-\bm{A}\big]^{-1}$，充分利用 $\bm{A}$是下三角矩阵的事实，对于 $\big[\bm{E}-\bm{A}\big]\bm{T} = \bm{E}$, 展开第 $j$列：</p>
+<p>$$\begin{align}<br>\bm{T}[:,j] - \bm{A} * \bm{T}[:,j] = \bm{e}_j<br>\end{align}$$</p>
+<p>由于 $\bm{A}$是严格下三角， $\bm{T}$是下三角矩阵，可得递推关系：</p>
+<p>$$\begin{align}<br>\bm{T}[i,j] = \begin{cases}<br>0 &amp; \text{if } i &lt; j \ <br>1 &amp; \text{if } i = j \ <br>\sum_{k=j}^{i-1} \bm{A}[i,k]  \bm{T}[k,j] &amp; \text{if } i &gt; j<br>\end{cases}<br>\end{align}$$</p>
+<p>来个例子，做做数学符号体操：<br>对于 $$\begin{align}<br>\bm{A}=\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>A_{31} &amp; A_{32} &amp; 0 &amp; 0\\<br>A_{41} &amp; A_{42} &amp; A_{43} &amp; 0\\<br>\end{bmatrix}<br>\end{align}$$</p>
+<ul>
+<li>第1列 (j=1)：</li>
+</ul>
+<p>$i=1\to \bm{T}[1,1]=1$<br>$i=2\to \bm{T}[2,1]=\bm{A}[2,1]\bm{T}[1,1]=A_{21}\times 1= A_{21}$<br>$i=3\to \bm{T}[3,1]=\bm{A}[3,1]\bm{T}[1,1]+\bm{A}[3,2]\bm{T}[2,1]=A_{31}+A_{32}A_{21}$<br>$i=4\to \bm{T}[4,1]=\bm{A}[4,1]\bm{T}[1,1]+\bm{A}[4,2]\bm{T}[2,1]+\bm{A}[4,3]\bm{T}[3,1]=A_{41}+A_{42}A_{21}+A_{43}A_{31}+A_{42}A_{32}A_{21}$</p>
+<ul>
+<li>第2列 (j=2)：</li>
+</ul>
+<p>$i=2\to \bm{T}[2,2]=1$<br>$i=3\to \bm{T}[3,2]=\bm{A}[3,2]\bm{T}[2,2]=A_{32}$<br>$i=4\to \bm{T}[4,2]=\bm{A}[4,2]\bm{T}[2,2]+\bm{A}[4,3]\bm{T}[3,2]=A_{42}+A_{43}A_{32}$</p>
+<ul>
+<li>第3列 (j=3)：</li>
+</ul>
+<p>$i=3\to \bm{T}[3,3]=1$<br>$i=4\to \bm{T}[4,3]=\bm{A}[4,3]\bm{T}[3,3]=A_{43}$</p>
+<ul>
+<li>第4列 (j=4)：</li>
+</ul>
+<p>$i=4\to \bm{T}[4,]=1$</p>
+<p>$$\begin{align}<br>\bm{T}<br>=<br>\begin{bmatrix}<br>1 &amp; 0 &amp; 0 &amp; 0\ <br>A_{21} &amp; 1 &amp; 0 &amp; 0\\<br>A_{31}+A_{32}A_{21} &amp; A_{32} &amp; 1 &amp; 0\\<br>A_{41}+A_{42}A_{21}+A_{43}A_{31}+A_{42}A_{32}A_{21} &amp; A_{42}+A_{43}A_{32} &amp; A_{43} &amp; 1\\<br>\end{bmatrix}<br>\end{align}$$</p>
+<p>观察上述公式，其实有 $\bm{T}[i,j]=A[i,1:i-1]\bm{T}[1:i-1,j]$, 这意味着</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">block_forward_substitution</span><span class="params">(A, block_size=<span class="number">32</span>)</span>:</span></span><br><span class="line">    C = A.shape[<span class="number">0</span>]</span><br><span class="line">    T = np.eye(C)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 分块计算</span></span><br><span class="line">    <span class="keyword">for</span> j_block <span class="keyword">in</span> range(<span class="number">0</span>, C, block_size):</span><br><span class="line">        j_end = min(j_block + block_size, C)</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> range(j_block, j_end):</span><br><span class="line">            <span class="comment"># 并行计算当前列</span></span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(j+<span class="number">1</span>, C):</span><br><span class="line">                start_k = max(j, j_block)  <span class="comment"># 块内起始位置</span></span><br><span class="line">                T[i,j] = np.dot(A[i, start_k:i], T[start_k:i, j])</span><br><span class="line">    <span class="keyword">return</span> T</span><br></pre></td></tr></table></figure>
+<h5 id="2-3-2、Neumann级数展开"><a href="#2-3-2、Neumann级数展开" class="headerlink" title="2.3.2、Neumann级数展开"></a>2.3.2、Neumann级数展开</h5><h6 id="2-3-2-1、收敛证明"><a href="#2-3-2-1、收敛证明" class="headerlink" title="2.3.2.1、收敛证明"></a>2.3.2.1、收敛证明</h6><p>若谱范数 $|\bm{A}|_2=\lambda_{max}\big[\bm{A}^\T\bm{A}\big]&lt;1$，则有</p>
+<p>$$\begin{align}<br>\big[\bm{E}-\bm{A}\big]^{-1}=\bm{E}+\bm{A}+\bm{A}^2+\bm{A}^3+\cdots<br>\end{align}$$</p>
+<p>令 $\bm{S}=\bm{E}+\bm{A}+\bm{A}^2+\bm{A}^3+\cdots$， $\bm{S}(N)=\sum_{n=0}^N\bm{A}^n$, 其中 $\bm{S}_0=\bm{E}$, $\bm{S}_1=\bm{E}+\bm{A}$</p>
+<p>$$\begin{align}<br>\big[\bm{E}-\bm{A}\big]\bm{S}<br>=\lim_{N\to \infty}\big[\bm{E}-\bm{A}\big]\bm{S}(N)<br>=\lim_{N\to \infty}\bigg[\big[\bm{E}-\bm{A}\big]\sum_{n=0}^N\bm{A}^n\bigg]<br>=\sum_{n=0}^N\bigg[\bm{A}^n-\bm{A}^{n+1}\bigg]<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\bm{S}\big[\bm{E}-\bm{A}\big]<br>=\lim_{N\to \infty}\bm{S}(N)\big[\bm{E}-\bm{A}\big]<br>=\lim_{N\to \infty}\bigg[\sum_{n=0}^N\bm{A}^n\big[\bm{E}-\bm{A}\big]\bigg]<br>=\sum_{n=0}^N\bigg[\bm{A}^n-\bm{A}^{n+1}\bigg]<br>\end{align}$$</p>
+<p>又有</p>
+<p>$$\begin{align}<br>\sum_{n=0}^N\bigg[\bm{A}^n-\bm{A}^{n+1}\bigg]<br>&amp;=\big[\bm{E}-\bm{A}\big]+\big[\bm{A}-\bm{A}^2\big]+\cdots + \big[\bm{A}^n-\bm{A}^{n+1}\big]\\<br>&amp;=\bm{E}-\bm{A}^{n+1}\Leftarrow(|\bm{A}|_2&lt;1\Rightarrow|\bm{A}^{n+1}|_2\leq |\bm{A}|_2^{n+1}\to 0)\\<br>&amp;=\bm{E}<br>\end{align}$$</p>
+<p>于是有 $\big[\bm{E}-\bm{A}\big]\bm{S}=\sum_{n=0}^N\bigg[\bm{A}^n-\bm{A}^{n+1}\bigg]=\bm{E}$,得 $\bm{S}=\big[\bm{E}-\bm{A}\big]^{-1}$,因此有：</p>
+<p>$$\begin{align}<br>\big[\bm{E}-\bm{A}\big]^{-1}=\bm{E}+\bm{A}+\bm{A}^2+\bm{A}^3+\cdots<br>\end{align}$$</p>
+<h6 id="2-3-2-2、参数的限制"><a href="#2-3-2-2、参数的限制" class="headerlink" title="2.3.2.2、参数的限制"></a>2.3.2.2、参数的限制</h6><p>其中最重要的是谱范数 $|\bm{A}|_2=\lambda_{max}\big[\bm{A}^\T\bm{A}\big]&lt;1$，知道 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)$, 其中 $i&gt;j$。Key向量一般是归一化的 $|\bm{k}_t|_2\leqslant 1,\forall t$,对于 $\beta_t\leqslant \frac{1}{D-1},\forall t$,其中 $D=\dim[\bm{k}_t]$是特征维度。</p>
+<p>对于对角线元素</p>
+<p>$$\begin{align}<br>(\bm{A}^\T\bm{A})_{ii}<br>&amp;=\sum_{k=i+1}^D A_{ki}^2<br>=\sum_{k=i+1}^D\beta_{k}^2(\bm{k}_i^\T \bm{k}_k)^2\\<br>&amp;\leqslant\sum_{k=i+1}^D\beta_{k}^2<br>\leqslant (D-i)\beta_{max}^2\\<br>&amp;\leqslant \frac{D-i}{(D-1)^2}<br>\end{align}$$</p>
+<p>对于非对角线元素</p>
+<p>$$\begin{align}<br>(\bm{A}^\T\bm{A})_{ij}<br>&amp;=\sum_{k=\max(i,j)+1}^DA_{ki}A_{kj}<br>\leqslant \sum_{k=\max(i,j)+1}^D \beta_k^2(\bm{k}_i^\T \bm{k}_k)(\bm{k}_j^\T \bm{k}_k)\\<br>&amp;\leqslant (D-\max(i,j))\beta_k^2<br>\leqslant (D-\max(i,j))\beta_{max}^2\\<br>&amp;\leqslant \frac{D-\max(i,j)}{(D-1)^2}<br>\end{align}$$</p>
+<p>构造上界矩阵 $(\bm{A}^\T\bm{A})_{ij} \leqslant B_{ij}$</p>
+<p>$$\begin{align}<br>B_{ij}\begin{cases}<br>(D-\max(i,j))\beta_{max}^2 &amp; i\neq j\\<br>(D-i)\beta_{max}^2 &amp; i=j<br>\end{cases}<br>\end{align}$$</p>
+<p>这样就有</p>
+<p>$$\begin{align}<br>\lambda_{max}[\bm{A}^\T\bm{A}]<br>&amp;\leqslant \lambda_{max}[\bm{B}]<br>\leqslant|\bm{B}|_{\infty}<br>=\max_{i}\sum_j B_{ij}\\<br>&amp;=\max_{i}\bigg(B_{ii}+\sum_{i\neq j}B_{ij}\bigg)\\<br>&amp;=\max_{i}\bigg((D-i)\beta_{max}^2+\sum_{i\neq j}(D-\max(i,j))\beta_{max}^2\bigg)\\<br>&amp;=\max_{i}\bigg((D-i)\beta_{max}^2+\beta_{max}^2\sum_{j=1}^{i-1}(D-i)+\beta_{max}^2\sum_{j=i+1}^{D}(D-j)\bigg)\\<br>&amp;=\max_{i}\bigg((D-i)\beta_{max}^2+(i-1)(D-i)\beta_{max}^2+\frac{(D-i)(D-i-1)}{2}\beta_{max}^2\bigg)\\<br>&amp;=\max_{i} \frac{(D-i)(D+i-1)}{2}\beta_{max}^2\\<br>&amp;=\max_{i} \frac{1}{2}(-i^2+i+D^2-D)\beta_{max}^2\\<br>&amp;=\frac{D(D-1)}{2}\beta_{max}^2\Leftarrow (i=1)\\<br>&amp;&lt; \frac{D}{2(D-1)}\Leftarrow (\beta_t\leqslant \frac{1}{D-1})\\<br>&amp;&lt;1\Leftarrow (D&gt;2)\\<br>\end{align}$$</p>
+<p>总结一下</p>
+<ol>
+<li>归一化假设：$|\mathbf{k}_t| \leq 1$ 保证相似度有界</li>
+<li>$\beta$约束：$\beta_{\max} \leq \frac{1}{D-1}$ 控制影响强度</li>
+<li>块大小影响：$D$ 越大，上界 $\frac{D}{2(D-1)}$ 越接近 0.5</li>
+</ol>
+<p>此证明保证了在合理参数范围内，使用Neumann级数展开是数值稳定的。</p>
+<h6 id="2-3-2-3、精度控制"><a href="#2-3-2-3、精度控制" class="headerlink" title="2.3.2.3、精度控制"></a>2.3.2.3、精度控制</h6><p>$$\begin{align}<br>|\big[\bm{E}-\bm{A}\big]^{-1}-\bm{S}(N)|<br>=\left|\sum_{i=N+1}^{\infty}\bm{A}^n\right|<br>\leqslant \sum_{i=N+1}^{\infty}|\bm{A}|^2<br>= \frac{|\bm{A}|^{N+1}}{1-|\bm{A}|}<br>&lt;\epsilon<br>\end{align}$$</p>
+<p>忽略分母 $1-|\bm{A}|$的保守估计（因 $|\bm{A}|\ll 1$时影响小），简化为</p>
+<p>$$\begin{align}<br>|\bm{A}|^{N+1}&lt;\epsilon<br>\Leftrightarrow (N+1)\log|\bm{A}|&lt;\log \epsilon<br>\Leftrightarrow N&gt; \frac{\log \epsilon}{\log|\bm{A}|}-1<br>\end{align}$$</p>
+<p>最终截断项数取：</p>
+<p>$$\begin{align}<br>N=\bigg[\frac{\log \epsilon}{\log|\bm{A}|}\bigg]<br>\end{align}$$</p>
+<p><strong>经验项数 $N \approx 10 \sim 20 $</strong>  </p>
+<p>当 $|\bm{A}| \leq 0.7$时，$N \approx 10 \sim 20$可满足典型精度 $\varepsilon \sim 10^{-6}$：<br>$|\bm{A}| = 0.7 \to N = \lceil \log(10^{-6}) / \log(0.7) \rceil = 25$<br>$|\bm{A}| = 0.5 \to N = 20$<br>$|\bm{A}| = 0.3 \to N = 11$<br><strong>适用场景</strong>：$|\bm{A}|$ 较小（如 $ &lt; 0.8$) 时，级数收敛快，较少项即可达到高精度。</p>
+<h6 id="2-3-2-4、代码的实现"><a href="#2-3-2-4、代码的实现" class="headerlink" title="2.3.2.4、代码的实现"></a>2.3.2.4、代码的实现</h6><p>有两种代码实现，第一种</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">neumann_inverse</span><span class="params">(A, N=<span class="number">10</span>)</span>:</span></span><br><span class="line">    S = np.eye(A.shape[<span class="number">0</span>])</span><br><span class="line">    A_power = A.copy()</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">for</span> k <span class="keyword">in</span> range(<span class="number">1</span>, N+<span class="number">1</span>):</span><br><span class="line">        S += A_power</span><br><span class="line">        A_power = A_power @ A  <span class="comment"># 并行矩阵乘法</span></span><br><span class="line">    <span class="keyword">return</span> T</span><br></pre></td></tr></table></figure>
+<p>第二种是利用 $\bm{S}(N+1)=\bm{E}+\bm{A}\bm{S}(N)$</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">richardson_iteration</span><span class="params">(A, max_iter=<span class="number">20</span>)</span>:</span></span><br><span class="line">    D = A.shape[<span class="number">0</span>]</span><br><span class="line">    S = np.eye(C)</span><br><span class="line">    <span class="keyword">for</span> _ <span class="keyword">in</span> range(max_iter):</span><br><span class="line">        S_new = np.eye(D) + A @ S</span><br><span class="line">        <span class="keyword">if</span> np.linalg.norm(S_new - S) &lt; <span class="number">1e-8</span>:</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">        S = S_new</span><br><span class="line">    <span class="keyword">return</span> S</span><br></pre></td></tr></table></figure>
+<h4 id="2-4、状态累计更新的图论"><a href="#2-4、状态累计更新的图论" class="headerlink" title="2.4、状态累计更新的图论"></a>2.4、状态累计更新的图论</h4><p>使用Neumann级数展开有</p>
+<p>$$\begin{align}<br>\bm{W}<br>=\big[\bm{E}-\bm{A}\big]^{-1} \mathrm{diag}[\bm{\beta}]\bm{K}<br>=\big[\bm{E}+\bm{A}+\bm{A}^2+\bm{A}^3+\cdots+\bm{A}^\infty\big]\cdot\mathrm{diag}[\bm{\beta}]\cdot\bm{K}<br>\end{align}$$</p>
+<p>对于其中的 $\bm{w}_{\tau}$, 令 $\bm{b}_\tau=\beta_\tau \bm{k}_\tau$, $\bm{B}^\T=[\beta_1 \bm{k}_1,\cdots,\beta_t \bm{k}_t]$实际有</p>
+<p>$$\begin{align}<br>\bm{w}_\tau =<br>\underbrace{\bm{b}_\tau \vphantom{\sum\sum_{j}}}_{\text{自身贡献}}</p>
+<ul>
+<li>\underbrace{\sum_{i}A_{\tau i}\bm{b}_\tau \vphantom{\sum\sum_{j}}}_{\text{相邻贡献}} </li>
+<li>\underbrace{\sum_{i}\sum_{j}A_{\tau i}A_{ij}\bm{b}_j \vphantom{\sum\sum_{j}}}_{\text{跨步影响}}</li>
+<li>\cdots<br>\end{align}$$</li>
+</ul>
+<p>其中 $\tau&gt;i&gt;j$。来几个例子，做做数学符号体操, 对了解细节大有裨益，以Neumann级数展开视角，当 $t=4$时考察 $\bm{W}$其实有</p>
+<p>$$\begin{align}<br>\bm{W}<br>&amp;=<br>\underbrace{\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}<br>}_{自身贡献}<br>+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>A_{31} &amp; A_{32} &amp; 0 &amp; 0\\<br>A_{41} &amp; A_{42} &amp; A_{43} &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}:相邻贡献}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}\\<br>&amp;+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>A_{32}A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>A_{42}A_{21}+A_{43}A_{31} &amp; A_{43}A_{32} &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^2:跨步影响}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}<br>+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>A_{43}A_{32}A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^3:长程依赖}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}\\<br>&amp;+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^4}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}+\bm{O}\bm{B}\\<br>\end{align}$$</p>
+<p>展开就有</p>
+<p>$$\begin{align}<br>\bm{w}_1 &amp;= \beta_1\bm{k}_1\\<br>\bm{w}_2 &amp;= \beta_2\bm{k}_2 + A_{21}(\beta_1\bm{k}_1)\\<br>\bm{w}_3 &amp;= \beta_3\bm{k}_3 + A_{31}(\beta_1\bm{k}_1) + A_{32}(\beta_2\bm{k}_2) + A_{32}A_{21}(\beta_1\bm{k}_1)\\<br>\bm{w}_4 &amp;= \beta_4\bm{k}_4 + A_{41}(\beta_1\bm{k}_1) + A_{42}(\beta_2\bm{k}_2) + A_{43}(\beta_3\bm{k}_3) \\<br>&amp;+ A_{42}A_{21}(\beta_1\bm{k}_1)+A_{43}A_{31}(\beta_1\bm{k}_1)+A_{43}A_{32}(\beta_2\bm{k}_2)\\<br>&amp;+A_{43}A_{32}A_{21}(\beta_1\bm{k}_1)\\<br>\end{align}$$<br>如果以$\bm{b}_\tau=\beta_\tau \bm{k}_\tau$为节点，以下三角矩阵 $\bm{A}$中的元素 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)$乘积为边, 其中 $i&gt;j$。那么 $\bm{w}_\tau$的计算可视为一个图:</p>
+<ul>
+<li>1、$\bm{w}_\tau$表示节点 $\tau$的累积路径信息, 编码来历史状态衰减信息。</li>
+<li>2、$\bm{k}_\tau$是节点的特征向量，影响信息传播的方向</li>
+<li>3、$\beta_\tau$是节点更新强度，控制新信息权重</li>
+<li>4、$A_{ij}$是边权值，是历史状态衰减系数</li>
+</ul>
+<p><img src="images/Householder变换.png" alt=""><br>这样的路径求和将顺序依赖转化为独立路径的叠加，$\bm{W}$的本质是图上的信息传播算子，是状态转移的累积效应。</p>
+<ul>
+<li>1、当 $\beta_\tau \approx 0$ 时：节点孤立（无信息传播）</li>
+<li>2、当 $\mathbf{k}_i \perp \mathbf{k}_j$ 时：边权为零（无信息传递）</li>
+<li>3、当 $|\mathbf{k}_\tau| \to 0$ 时：节点影响消失</li>
+</ul>
+<h3 id="三、状态更新的并行"><a href="#三、状态更新的并行" class="headerlink" title="三、状态更新的并行"></a>三、状态更新的并行</h3><h4 id="3-1、状态矩阵并行表示"><a href="#3-1、状态矩阵并行表示" class="headerlink" title="3.1、状态矩阵并行表示"></a>3.1、状态矩阵并行表示</h4><p>有如下定理</p>
+<p>$$\begin{align}<br>\bm{S}_t<br>= \bm{S}_{t-1}\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]+ \eta_t \bm{v}_t\bm{k}_t^\T<br>=\bm{S}_0\Big[\bm{E}-\sum_{\tau}^t \bm{w}_\tau \bm{k}_\tau ^\T\Big]+\sum_{\tau=1}^t \bm{u}_\tau \bm{k}_\tau^\T<br>=\bm{S}_0\big[\bm{E}-\bm{W}^\T\bm{K}\big]+ \bm{U}^\T\bm{K}<br>\end{align}$$</p>
+<p>其中 $\bm{W}^\T=[\bm{w}_1,\cdots,\bm{w}_t]$, $\bm{U}^\T=[\bm{u}_1,\cdots,\bm{u}_t]$, $\bm{K}^\T=[\bm{k}_1,\cdots,\bm{k}_t]$</p>
+<p>证明</p>
+<p>$$\begin{align}<br>\bm{S}_t<br>&amp;=\Big[\bm{S}_{t-2}\big[\bm{E}-\beta_{t-1}\bm{k}_{t-1} \bm{k}_{t-1}^\T\big]+ \eta_{t-1} \bm{v}_{t-1}\bm{k}_{t-1}^\T\Big]<br>\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]+ \eta_t \bm{v}_t\bm{k}_t^\T\\<br>&amp;=\bm{S}_{t-2}\big[\bm{E}-\beta_{t-1}\bm{k}_{t-1} \bm{k}_{t-1}^\T\big]\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]<br>+\eta_{t-1} \bm{v}_{t-1}\bm{k}_{t-1}^\T\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]</p>
+<ul>
+<li>\eta_t \bm{v}_t\bm{k}_t^\T\\<br>&amp;=\bm{S}_0\underbrace{\prod_{\tau=1}^t \Big[\bm{E} - \beta_\tau \bm{k}_\tau \bm{k}_\tau^\T\Big]}_{\text{累积转移矩阵}} </li>
+<li>\underbrace{\sum_{\tau=1}^t \Big[ \eta_\tau \bm{v}_\tau \bm{k}_\tau^\T \prod_{i=\tau+1}^t \big[\bm{E} - \beta_i \bm{k}_i \bm{k}_i^\T\big]\Big]}_{\text{累积更新项}}<br>\end{align}$$</li>
+</ul>
+<p>其中 $\displaystyle \bm{E}-\beta_{t+1}\bm{k}_{t+1} \bm{k}_{t+1}^\T=\bm{E}-\bm{0}=\bm{E}$,对于左侧的累积转移矩阵，根据前面的推导易得结论。</p>
+<p>$$\begin{align}<br>\bm{S}_0\prod_{\tau=1}^t \Big[\bm{E} - \beta_\tau \bm{k}_\tau \bm{k}_\tau^\T\Big]<br>=\bm{S}_0\Big[\bm{E}-\sum_{\tau}^t \bm{w}_\tau \bm{k}_\tau ^\T\Big]<br>=\bm{S}_0\big[\bm{E}-\bm{W}^\T\bm{K}\big]<br>\end{align}$$</p>
+<p>现在关注右侧累积更新项 $\bm{L}(t)$</p>
+<p>$$\begin{align}<br>\bm{L}(t)<br>&amp;=\sum_{\tau=1}^t\Big[\eta_\tau \bm{v}_\tau \bm{k}_\tau^\T \prod_{i=\tau+1}^t \big[\bm{E} - \beta_i \bm{k}_i \bm{k}_i^\T\big]\Big]\\<br>&amp;=\sum_{\tau=1}^{t-1}\Big[\eta_\tau \bm{v}_\tau \bm{k}_\tau^\T \prod_{i=\tau+1}^{t}\big[\bm{E} - \beta_i \bm{k}_i \bm{k}_i^\T\big]\Big]<br>+\eta_t \bm{v}_t\bm{k}_t^\T\\<br>&amp;=\sum_{\tau=1}^{t-1}\Big[\eta_\tau \bm{v}_\tau \bm{k}_\tau^\T \prod_{i=\tau+1}^{t-1}\big[\bm{E} - \beta_i \bm{k}_i \bm{k}_i^\T\big]\Big]\big[\bm{E} - \beta_t \bm{k}_t \bm{k}_t^\T\big]<br>+\eta_t \bm{v}_t\bm{k}_t^\T\\<br>&amp;=\bm{L}(t-1)\big[\bm{E} - \beta_t \bm{k}_t \bm{k}_t^\T\big]<br>+\eta_t \bm{v}_t\bm{k}_t^\T\\<br>&amp;=\sum_{\tau=1}^{t-1} \bm{u}_\tau \bm{k}_\tau^\T\big[\bm{E} - \beta_t \bm{k}_t \bm{k}_t^\T\big]<br>+\eta_t \bm{v}_t\bm{k}_t^\T\\<br>&amp;=\sum_{\tau=1}^{t-1} \bm{u}_\tau \bm{k}_\tau^\T<br>-\sum_{\tau=1}^{t-1} \bm{u}_\tau \bm{k}_\tau^\T\beta_t \bm{k}_t \bm{k}_t^\T<br>+\eta_t \bm{v}_t\bm{k}_t^\T\\<br>&amp;=\sum_{\tau=1}^{t-1} \bm{u}_\tau \bm{k}_\tau^\T<br>+\Big[\underbrace{\eta_t\bm{v}_t-\beta_t\sum_{\tau=1}^{t-1}\bm{u}_\tau\big[\bm{k}_{\tau}^\T\bm{k}_t\big]}_{\bm{u}_t}\Big]\bm{k}_t^\T\\<br>&amp;=\sum_{\tau=1}^{t} \bm{u}_\tau \bm{k}_\tau^\T\\<br>&amp;=\bm{U}^\T\bm{K}<br>\end{align}$$</p>
+<p>证明过程中还实现了 $\bm{u}_t$的构造方法</p>
+<p>$$\begin{align}<br>\bm{u}_t<br>=\eta_t\bm{v}_t-\beta_t\sum_{\tau=1}^{t-1}\bm{u}_\tau\big[\bm{k}_{\tau}^\T\bm{k}_t\big]<br>=\eta_t\bm{v}_t-\beta_t\sum_{\tau=1}^{t-1}\big[\bm{k}_{\tau}^\T\bm{k}_t\big]\bm{u}_\tau<br>\end{align}$$</p>
+<h4 id="3-2、信息传播算子的计算"><a href="#3-2、信息传播算子的计算" class="headerlink" title="3.2、信息传播算子的计算"></a>3.2、信息传播算子的计算</h4><p>考虑对 $\bm{U}^\T=[\bm{u}_1,\cdots,\bm{u}_t]$的计算，可以整体看待。先展开</p>
+<p>$$\begin{align}<br>\bm{u}_1&amp;= \eta_1 \bm{v}_1\\<br>\bm{u}_2&amp;= \eta_2 \bm{v}_2 -\beta_{2}\bm{k}_1 ^\T\bm{k}_{2}\bm{u}_1\\<br>\bm{u}_3&amp;= \eta_3 \bm{v}_3 -\beta_{3}\bm{k}_1 ^\T\bm{k}_{3}\bm{u}_1-\beta_{3}\bm{k}_2 ^\T\bm{k}_{3}\bm{u}_2\\<br>&amp;\vdots\\<br>\bm{u}_t&amp;=\eta_t \bm{v}_t-\beta_{t}\bm{k}_1 ^\T\bm{k}_{t}\bm{u}_1-\beta_{t}\bm{k}_2 ^\T\bm{k}_{t}\bm{u}_2-<br>\cdots-\beta_{t}\bm{k}_{t-1} ^\T\bm{k}_{t}\bm{u}_{t-1}<br>\end{align}$$</p>
+<p>写成矩阵形式</p>
+<p>$$\begin{align}<br>\begin{bmatrix}<br>\bm{u}_1 ^\T\\<br>\bm{u}_2^\T\\<br>\bm{u}_3^\T\\<br>\vdots\\<br>\bm{u}_t^\T\\<br>\end{bmatrix}<br>=<br>\begin{bmatrix}<br>\eta_1 \bm{v}_1^\T\\<br>\eta_2 \bm{v}_2^\T\\<br>\eta_3 \bm{v}_3^\T\\<br>\vdots\\<br>\eta_t \bm{v}_t^\T\\<br>\end{bmatrix}</p>
+<ul>
+<li>\begin{bmatrix}<br>0&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{2}\bm{k}_1 ^\T\bm{k}_{2}&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{3}\bm{k}_1 ^\T\bm{k}_{3}&amp;-\beta_{3}\bm{k}_2 ^\T\bm{k}_{3}&amp;0&amp;\cdots&amp;0\\<br>\vdots\\<br>-\beta_{t}\bm{k}_1 ^\T\bm{k}_{t}&amp;-\beta_{t}\bm{k}_2 ^\T\bm{k}_{t}&amp;\cdots&amp;-\beta_{t}\bm{k}_{t-1} ^\T\bm{k}_{t}&amp;0<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{u}_1^\T\\<br>\bm{u}_2^\T\\<br>\bm{u}_3^\T\\<br>\vdots\\<br>\bm{u}_t^\T\\<br>\end{bmatrix}<br>\end{align}$$</li>
+</ul>
+<p>于是有和Householder变换累积一样，可以定义同样的下三角矩阵 $\bm{A}$中的元素 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)$，或者叫邻接矩阵，其中 $i&gt;j$。定义 $\bm{U}^\T=[\bm{u}_1,\cdots,\bm{u}_t]$， $\bm{V}^\T=[\bm{v}_1,\cdots,\bm{v}_t]$</p>
+<p>$$\begin{align}<br>\bm{U} = \mathrm{diag}[\bm{\eta}]\bm{V}+\bm{A}\bm{U}<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\bm{U}<br>= \big[\bm{E}-\bm{A}\big]^{-1}\mathrm{diag}[\bm{\eta}]\bm{V}<br>=\bm{T}\mathrm{diag}[\bm{\eta}]\bm{V}<br>\end{align}$$</p>
+<h4 id="3-3、状态更新的图论"><a href="#3-3、状态更新的图论" class="headerlink" title="3.3、状态更新的图论"></a>3.3、状态更新的图论</h4><p>来几个例子，做做数学符号体操, 对了解细节大有裨益。以Neumann级数展开视角，当 $t=4$时考察 $\bm{U}$其实有</p>
+<p>$$\begin{align}<br>\bm{U}<br>&amp;=<br>\underbrace{\begin{bmatrix}<br>\eta_1 \bm{v}_1^\T\\<br>\eta_2 \bm{v}_2^\T\\<br>\eta_3 \bm{v}_3^\T\\<br>\eta_4 \bm{v}_4^\T\\<br>\end{bmatrix}<br>}_{自身贡献}<br>+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>A_{31} &amp; A_{32} &amp; 0 &amp; 0\\<br>A_{41} &amp; A_{42} &amp; A_{43} &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}:相邻贡献}<br>\begin{bmatrix}<br>\eta_1 \bm{v}_1^\T\\<br>\eta_2 \bm{v}_2^\T\\<br>\eta_3 \bm{v}_3^\T\\<br>\eta_4 \bm{v}_4^\T\\<br>\end{bmatrix}\\<br>&amp;+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>A_{32}A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>A_{42}A_{21}+A_{43}A_{31} &amp; A_{43}A_{32} &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^2:跨步影响}<br>\begin{bmatrix}<br>\eta_1 \bm{v}_1^\T\\<br>\eta_2 \bm{v}_2^\T\\<br>\eta_3 \bm{v}_3^\T\\<br>\eta_4 \bm{v}_4^\T\\<br>\end{bmatrix}<br>+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>A_{43}A_{32}A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^3:长程依赖}<br>\begin{bmatrix}<br>\eta_1 \bm{v}_1^\T\\<br>\eta_2 \bm{v}_2^\T\\<br>\eta_3 \bm{v}_3^\T\\<br>\eta_4 \bm{v}_4^\T\\<br>\end{bmatrix}\\<br>&amp;+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^4}<br>\begin{bmatrix}<br>\eta_1 \bm{v}_1^\T\\<br>\eta_2 \bm{v}_2^\T\\<br>\eta_3 \bm{v}_3^\T\\<br>\eta_4 \bm{v}_4^\T\\<br>\end{bmatrix}+\bm{O}\bm{C}\\<br>\end{align}$$</p>
+<p>展开有<br>$$\begin{align}<br>\bm{u}_1 &amp;= \eta_1\bm{v}_1\\<br>\bm{u}_2 &amp;= \eta_2\bm{v}_2 + A_{21}(\eta_1\bm{v}_1)\\<br>\bm{u}_3 &amp;= \eta_3\bm{v}_3 + A_{31}(\eta_1\bm{v}_1) + A_{32}(\eta_2\bm{v}_2) + A_{32}A_{21}(\eta_1\bm{v}_1)\\<br>\bm{u}_4 &amp;= \eta_4\bm{v}_4 + A_{41}(\eta_1\bm{v}_1) + A_{42}(\eta_2\bm{v}_2) + A_{43}(\eta_3\bm{v}_3) \\<br>&amp;+ A_{42}A_{21}(\eta_1\bm{v}_1)+A_{43}A_{31}(\eta_1\bm{v}_1)+A_{43}A_{32}(\eta_2\bm{v}_2)\\<br>&amp;+A_{43}A_{32}A_{21}(\eta_1\bm{v}_1)\\<br>\end{align}$$<br>如果以$\bm{c}_\tau=\eta_\tau \bm{v}_\tau$为节点，以下三角矩阵 $\bm{A}$中的元素 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)$乘积为边, 其中 $i&gt;j$。那么 $\bm{u}_\tau$的计算可视为一个图:</p>
+<ul>
+<li>1、$\bm{u}_\tau$表示节点 $\tau$的更新路径信息, 编码了信息注入路径</li>
+<li>2、$\bm{v}_\tau$是节点的特征向量，影响信息传播的方向</li>
+<li>3、$\eta_\tau$是节点更新强度，控制新信息权重</li>
+<li>4、$A_{ij}$是边权值，是状态衰减系数</li>
+</ul>
+<p><img src="images/状态更新.png" alt=""><br>这样的路径求和将顺序依赖转化为独立路径的叠加，$\bm{U}$的本质是图上的信息传播算子，是状态更新的累积效应。</p>
+<ul>
+<li>1、当 $\eta_\tau \approx 0$ 时：节点孤立（无信息传播）</li>
+<li>2、当 $\mathbf{k}_i \perp \mathbf{k}_j$ 时：边权为零（无信息传递）</li>
+<li>3、当 $|\mathbf{v}_\tau| \to 0$ 时：节点影响消失</li>
+</ul>
+<h3 id="四、状态矩阵的并行计算"><a href="#四、状态矩阵的并行计算" class="headerlink" title="四、状态矩阵的并行计算"></a>四、状态矩阵的并行计算</h3><p>$$\begin{align}<br>\bm{S}_t<br>= \bm{S}_{t-1}\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]+ \eta_t \bm{v}_t\bm{k}_t^\T<br>=\bm{S}_0\Big[\bm{E}-\sum_{\tau}^t \bm{w}_\tau \bm{k}_\tau ^\T\Big]+\sum_{\tau=1}^t \bm{u}_\tau \bm{k}_\tau^\T<br>=\bm{S}_0\big[\bm{E}-\bm{W}^\T\bm{K}\big]+ \bm{U}^\T\bm{K}<br>\end{align}$$</p>
+<p>其中 $\bm{W}^\T=[\bm{w}_1,\cdots,\bm{w}_t]$, $\bm{U}^\T=[\bm{u}_1,\cdots,\bm{u}_t]$, $\bm{K}^\T=[\bm{k}_1,\cdots,\bm{k}_t]$, $\bm{W}=\big[\bm{E}-\bm{A}\big]^{-1}\mathrm{diag}[\beta]\bm{K}$, $\bm{U}=\big[\bm{E}-\bm{A}\big]^{-1}\mathrm{diag}[\eta]\bm{V}$，下三角矩阵 $\bm{A}$中的元素 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)\quad,i&gt;j$。</p>
+<p>最后以总体视角讨论一下更新公式，然后结束本文。对于上式，稍加变形有</p>
+<p>$$\begin{align}<br>\bm{S}_t = \bm{S}_0+\big[\bm{U}-\bm{W}\bm{S}_0^\T\big]^\T\bm{K}<br>\end{align}$$</p>
+<p>令 $\dim[\bm{Q}]=t\times d_q$, $\dim[\bm{K}]=t\times d_k$, $\dim[\bm{V}]=t\times d_v$, 通常 $d=d_q=d_k=d_v$。明晰一下更新公式中的维度：其中 $\dim[\bm{S}]=d_v\times d_k$、 $\dim[\bm{U}]=t\times d_v$、 $\dim[\bm{W}]=t\times d_k$, 上述变形后可以降低计算复杂度。实际有</p>
+<p>$$\begin{align}<br>&amp;O(\bm{S}_0+\big[\bm{U}-\bm{W}\bm{S}_0^\T\big]^\T\bm{K})\\<br>&amp;=O(\bm{T}_1 =  \bm{U} - \bm{W}\bm{S}_0^\T)<br>+O(\bm{T}_2 = \bm{T}_1\bm{K})<br>+O(\bm{S}_0+\bm{T}_2)\\<br>&amp;=O(td^2+td+t^2d+d^2)\\<br>&amp;=O(td^2+t^2d)\\<br>&amp;O(\bm{S}_0\big[\bm{E}-\bm{W}^\T\bm{K}\big]+ \bm{U}^\T\bm{K})\\<br>&amp;=O(\bm{T}_1 = \bm{E}-\bm{W}^\T\bm{K})<br>+O(\bm{T}_2 = \bm{S}_0\bm{T}_1)<br>+O(\bm{T}_3=\bm{U}^\T\bm{K})<br>+O(\bm{T}_2+\bm{T}_3)\\<br>&amp;=O(t^2d+td+d^3+t^2d+d^2)\\<br>&amp;=O(d^3+2t^2d)<br>\end{align}$$</p>
+<p>当 $t \ll d$的时候，也就是说序列长度小于特征维度。对于长序列而言，可以分块计算，从而减小 $t$。说白了其实就是切分为若干段来计算，一张图说明所有：<strong>块内并行，块间依赖</strong>。</p>
+<p><img src="images/现代RNN并行计算.png" alt=""></p>
+<p>那么又有好事者问：先计算 $\bm{S}=\bm{S}_0+\big[\bm{U}-\bm{W}\bm{S}_0^\T\big]^\T\bm{K}$，再计算 $\bm{O}=\bm{Q}\bm{S}^\T$，和直接按 $\bm{O}=\bm{Q}\bm{S}^\T+(\bm{Q}\bm{K}^\T\odot\bm{M}) (\bm{U} - \bm{W}\bm{S}^\T) $公式计算，有什么不同？后面的复杂度要越高一点，因为前者只需三次矩阵乘法，后者需要4次矩阵乘法。</p>
+<p>分开计算</p>
+<ol>
+<li>$\bm{T}_1 =  \bm{U} - \bm{W}\bm{S}_0^\T$：$O(td^2+td)$</li>
+<li>$\bm{T}_2 = \bm{T}_1\bm{K}$：$O(t^2d)$</li>
+<li>$\bm{S} = \bm{S}_0+\bm{T}_2$：$O(d^2)$</li>
+<li>$\bm{O} = \bm{Q} \bm{S}^\T$：$O(td^2)$</li>
+</ol>
+<p><strong>总复杂度</strong>：$O(2td^2+t^2d+d^2+td)$</p>
+<ol>
+<li>$\bm{T}_1 = \bm{Q} \bm{K}^\T$：$O(t^2 d)$</li>
+<li>$\bm{T}_2 = \bm{T}_1 \odot \bm{M}$：$O(t^2)$ (轻量)</li>
+<li>$\bm{T}_3 = \bm{U} - \bm{W}\bm{S}_0^\T$：$O(td^2+td)$</li>
+<li>$\bm{T}_4 = \bm{T}_2 \bm{T}_3$：$O(t^2 d)$</li>
+<li>$\bm{T}_5 = \bm{Q} \bm{S}_0^\T$：$O(td^2)$</li>
+<li>$\bm{O} = \bm{T}_5 + \bm{T}_4$：$O(t^2)$</li>
+</ol>
+<p>合计计算<br><strong>总复杂度</strong>：$O(2td^2+2t^2d+2t^2+td)$</p>
+<h3 id="五、评述"><a href="#五、评述" class="headerlink" title="五、评述"></a>五、评述</h3><p>1、充分利用<strong>对角加秩一</strong>(DPLR:Diagonal Plus Low-Rank）的特点，实现了基于Delta规则RNN的并行计算。<br>2、并行计算公式中最重要的其实是两个信息传播算子 $\bm{W}$、 $\bm{U}$的计算。尤其以下三角矩阵 $\bm{A}$中元素 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)$最为关键。这就凸显了key矩阵 $\bm{K<br>}$的重要性。因为它元素的内积或者说自相关性直接影响每个token信息如何传播到瞬时记忆状态 $\bm{S}$。针对这个问题，在RWKV7中对 $\bm{K}$做了特殊处理，增强了 $\bm{K}$的表达能力。<br>3、现代RNN核心机制和计算问题解决后，如何进一步增强RNN的表达能力。就是本系列的下一篇内容了。<br>4、成文有些匆忙，难免有些错误，请大家批评指正。</p>
+<h3 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h3><p>[^2]: Yang, S., Wang, B., Zhang, Y., Shen, Y., &amp; Kim, Y. (2025, January 15). Parallelizing linear transformers with the delta rule over sequence length. arXiv. <a href="https://doi.org/10.48550/arXiv.2406.06484" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2406.06484</a></p>
+<p><hr></p>
+<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%">httpss://<a href="http://www.limoncc.com/post/2823bb8e386a0878/">www.limoncc.com/post/2823bb8e386a0878/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (Aug. 17, 2025). 《RNN的复兴03:现代RNN的并行计算》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/2823bb8e386a0878">https://www.limoncc.com/post/2823bb8e386a0878</a></td></tr><tr><td align="left" width="100%">@online{limoncc-2823bb8e386a0878,<br>title={RNN的复兴03:现代RNN的并行计算},<br>author={引线小白},<br>year={2025},<br>month={Aug},<br>date={17},<br>url={\url{<a href="https://www.limoncc.com/post/2823bb8e386a0878}}">https://www.limoncc.com/post/2823bb8e386a0878}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/大语言模型/" rel="tag">#大语言模型</a>
+          
+            <a href="/tags/生成模型/" rel="tag">#生成模型</a>
+          
+            <a href="/tags/强化学习/" rel="tag">#强化学习</a>
+          
+            <a href="/tags/LLM/" rel="tag">#LLM</a>
+          
+            <a href="/tags/矩阵微分/" rel="tag">#矩阵微分</a>
+          
+            <a href="/tags/向量微分/" rel="tag">#向量微分</a>
+          
+            <a href="/tags/矩阵导数/" rel="tag">#矩阵导数</a>
+          
+            <a href="/tags/向量导数/" rel="tag">#向量导数</a>
+          
+            <a href="/tags/Householder变换/" rel="tag">#Householder变换</a>
+          
+            <a href="/tags/DPLR/" rel="tag">#DPLR</a>
+          
+            <a href="/tags/对角加秩一矩阵/" rel="tag">#对角加秩一矩阵</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/ab2342877c86f7c1/" rel="next" title="RNN的复兴01:向量和矩阵微分-大语言模型研究08">
+                <i class="fa fa-chevron-left"></i> RNN的复兴01:向量和矩阵微分-大语言模型研究08
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+<!--           </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div> -->
+        <div id="vcomments"></div>
+        <script>new Valine({
+          el: "#vcomments",
+      appId: "BVjuNRCpkVSkz82jFmadIvY8-gzGzoHsz",
+    appKey: "bRjXPp55dop7RTC2xgunGdiP"})
+  </script>'
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="引线小白" />
+          <p class="site-author-name" itemprop="name">引线小白</p>
+          <p class="site-description motion-element" itemprop="description">小湖椰影廊桥,曾记否,谷围晓月,灯影朦胧。</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">57</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">113</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="" target="_blank" title="Design">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  Design
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.behance.net/limoncc" target="_blank" title="Behance">
+                  
+                    <i class="fa fa-fw fa-behance"></i>
+                  
+                  Behance
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.pinterest.com/aegeanfan/" target="_blank" title="Pinterest">
+                  
+                    <i class="fa fa-fw fa-pinterest"></i>
+                  
+                  Pinterest
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://github.com/limoncc" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://weibo.com/3483157951" target="_blank" title="微博">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  微博
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://www.zhihu.com/people/limoncc" target="_blank" title="知乎">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  知乎
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              设计不止，折腾不息。
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://chuangzaoshi.com" title="创造狮" target="_blank">创造狮</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#一、引言"><span class="nav-number">1.</span> <span class="nav-text">一、引言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#二、对角加秩一矩阵变换"><span class="nav-number">2.</span> <span class="nav-text">二、对角加秩一矩阵变换</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-1、对角加秩一矩阵-DPLR-连积"><span class="nav-number">2.1.</span> <span class="nav-text">2.1、对角加秩一矩阵(DPLR)连积</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-2、信息传播算子-3"><span class="nav-number">2.2.</span> <span class="nav-text">2.2、信息传播算子[^3]</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-3、下三角矩阵矩阵求逆"><span class="nav-number">2.3.</span> <span class="nav-text">2.3、下三角矩阵矩阵求逆</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#2-3-1、前向替代法-Forward-Substitution"><span class="nav-number">2.3.1.</span> <span class="nav-text">2.3.1、前向替代法 (Forward Substitution)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-3-2、Neumann级数展开"><span class="nav-number">2.3.2.</span> <span class="nav-text">2.3.2、Neumann级数展开</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#2-3-2-1、收敛证明"><span class="nav-number">2.3.2.1.</span> <span class="nav-text">2.3.2.1、收敛证明</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#2-3-2-2、参数的限制"><span class="nav-number">2.3.2.2.</span> <span class="nav-text">2.3.2.2、参数的限制</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#2-3-2-3、精度控制"><span class="nav-number">2.3.2.3.</span> <span class="nav-text">2.3.2.3、精度控制</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#2-3-2-4、代码的实现"><span class="nav-number">2.3.2.4.</span> <span class="nav-text">2.3.2.4、代码的实现</span></a></li></ol></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-4、状态累计更新的图论"><span class="nav-number">2.4.</span> <span class="nav-text">2.4、状态累计更新的图论</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#三、状态更新的并行"><span class="nav-number">3.</span> <span class="nav-text">三、状态更新的并行</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1、状态矩阵并行表示"><span class="nav-number">3.1.</span> <span class="nav-text">3.1、状态矩阵并行表示</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-2、信息传播算子的计算"><span class="nav-number">3.2.</span> <span class="nav-text">3.2、信息传播算子的计算</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-3、状态更新的图论"><span class="nav-number">3.3.</span> <span class="nav-text">3.3、状态更新的图论</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#四、状态矩阵的并行计算"><span class="nav-number">4.</span> <span class="nav-text">四、状态矩阵的并行计算</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#五、评述"><span class="nav-number">5.</span> <span class="nav-text">五、评述</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考文献"><span class="nav-number">6.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">引线小白&nbsp &nbsp |&nbsp &nbsp  一个理想主义者，再造自我，以期未来。</span>
+</div>
+
+<div class="powered-by">
+  由 <a rel="external nofollow" class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a rel="external nofollow" class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>&nbsp &nbsp| &nbsp &nbsp Hosted by  <a href="https://github.com" style="font-weight: bold">Github Pages</a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+<!--   
+   
+  
+
+  
+
+ -->
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+       search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+    'use strict';
+    $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+            // get the contents from search data
+            isfetched = true;
+            $('.popup').detach().appendTo('.header-inner');
+            var datas = $( "entry", xmlResponse ).map(function() {
+                return {
+                    title: $( "title", this ).text(),
+                    content: $("content",this).text(),
+                    url: $( "url" , this).text()
+                };
+            }).get();
+            var $input = document.getElementById(search_id);
+            var $resultContent = document.getElementById(content_id);
+            $input.addEventListener('input', function(){
+                var matchcounts = 0;
+                var str='<ul class=\"search-result-list\">';                
+                var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                $resultContent.innerHTML = "";
+                if (this.value.trim().length > 1) {
+                // perform local searching
+                datas.forEach(function(data) {
+                    var isMatch = true;
+                    var content_index = [];
+                    var data_title = data.title.trim().toLowerCase();
+                    var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                    var data_url = data.url;
+                    var index_title = -1;
+                    var index_content = -1;
+                    var first_occur = -1;
+                    // only match artiles with not empty titles and contents
+                    if(data_title != '' && data_content != '') {
+                        keywords.forEach(function(keyword, i) {
+                            index_title = data_title.indexOf(keyword);
+                            index_content = data_content.indexOf(keyword);
+                            if( index_title < 0 && index_content < 0 ){
+                                isMatch = false;
+                            } else {
+                                if (index_content < 0) {
+                                    index_content = 0;
+                                }
+                                if (i == 0) {
+                                    first_occur = index_content;
+                                }
+                            }
+                        });
+                    }
+                    // show search results
+                    if (isMatch) {
+                        matchcounts += 1;
+                        str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                        var content = data.content.trim().replace(/<[^>]+>/g,"");
+                        if (first_occur >= 0) {
+                            // cut out 100 characters
+                            var start = first_occur - 20;
+                            var end = first_occur + 80;
+                            if(start < 0){
+                                start = 0;
+                            }
+                            if(start == 0){
+                                end = 50;
+                            }
+                            if(end > content.length){
+                                end = content.length;
+                            }
+                            var match_content = content.substring(start, end);
+                            // highlight all keywords
+                            keywords.forEach(function(keyword){
+                                var regS = new RegExp(keyword, "gi");
+                                match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                            });
+                            
+                            str += "<p class=\"search-result\">" + match_content +"...</p>"
+                        }
+                        str += "</li>";
+                    }
+                })};
+                str += "</ul>";
+                if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+                if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+                $resultContent.innerHTML = str;
+            });
+            proceedsearch();
+        }
+    });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').mousedown(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+  
+<!--   <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+     showMathMenu: false,
+     showMathMenuMSIE: false,
+     tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+          displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+          processEscapes: true
+        },
+        TeX: {
+          equationNumbers: {autoNumber: 'AMS'},
+          Macros: {bm: "\\boldsymbol"}
+        },
+        'HTML-CSS': {
+          imageFont: null
+        }
+    });
+  </script> -->
+<!--     MathJax.Hub.Queue(function() {
+      var all = MathJax.Hub.getAllJax(), i;
+      for (i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+      }
+    }); -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+    processEscapes: true,
+    tags: 'ams',
+    macros: {
+                                            bm: "\\boldsymbol",
+					    T:"\\intercal",
+                                            oiint: "{\\iint\\kern{-20mu}{\\unicode{x2B2D}}}",
+                                            oiiint: "{\\iiint\\kern{-24.5mu}\\large{\\unicode{x2B2D}}}"
+                                },
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};
+</script>
+  <script type="text/x-mathjax-config">
+MathJax.texReset();
+MathJax.typeset();
+  </script>
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_SVG-full"></script> -->
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("Es7wAnqi0QiGhMLoyl7mkrQo-gzGzoHsz", "BxPXaoPFp3PzWqBTSe6VUuQS");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+</body>
+</html>
