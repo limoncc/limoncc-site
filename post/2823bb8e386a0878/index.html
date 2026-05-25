@@ -98,7 +98,7 @@
 <meta property="og:image" content="https://www.limoncc.com/images/现代RNN并行计算.png">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-05-25T14:52:49.906Z">
+<meta property="og:updated_time" content="2026-05-25T15:03:53.731Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="RNN的复兴03:现代RNN的并行计算">
 <meta name="twitter:description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
@@ -503,11 +503,7 @@
 <p>$$\begin{align}<br>\bm{S}_t<br>= \bm{S}_{t-1}\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]+ \eta_t \bm{v}_t\bm{k}_t^\T<br>=\bm{S}_0\Big[\bm{E}-\sum_{\tau}^t \bm{w}_\tau \bm{k}_\tau ^\T\Big]+\sum_{\tau=1}^t \bm{u}_\tau \bm{k}_\tau^\T<br>=\bm{S}_0\big[\bm{E}-\bm{W}^\T\bm{K}\big]+ \bm{U}^\T\bm{K}<br>\end{align}$$</p>
 <p>其中 $\bm{W}^\T=[\bm{w}_1,\cdots,\bm{w}_t]$, $\bm{U}^\T=[\bm{u}_1,\cdots,\bm{u}_t]$, $\bm{K}^\T=[\bm{k}_1,\cdots,\bm{k}_t]$</p>
 <p>证明</p>
-<p>$$\begin{align}<br>\bm{S}_t<br>&amp;=\Big[\bm{S}_{t-2}\big[\bm{E}-\beta_{t-1}\bm{k}_{t-1} \bm{k}_{t-1}^\T\big]+ \eta_{t-1} \bm{v}_{t-1}\bm{k}_{t-1}^\T\Big]<br>\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]+ \eta_t \bm{v}_t\bm{k}_t^\T\\<br>&amp;=\bm{S}_{t-2}\big[\bm{E}-\beta_{t-1}\bm{k}_{t-1} \bm{k}_{t-1}^\T\big]\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]<br>+\eta_{t-1} \bm{v}_{t-1}\bm{k}_{t-1}^\T\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]</p>
-<ul>
-<li>\eta_t \bm{v}_t\bm{k}_t^\T\\<br>&amp;=\bm{S}_0\underbrace{\prod_{\tau=1}^t \Big[\bm{E} - \beta_\tau \bm{k}_\tau \bm{k}_\tau^\T\Big]}_{\text{累积转移矩阵}} </li>
-<li>\underbrace{\sum_{\tau=1}^t \Big[ \eta_\tau \bm{v}_\tau \bm{k}_\tau^\T \prod_{i=\tau+1}^t \big[\bm{E} - \beta_i \bm{k}_i \bm{k}_i^\T\big]\Big]}_{\text{累积更新项}}<br>\end{align}$$</li>
-</ul>
+<p>$$\begin{align}\bm{S}_t<br>&amp;=\Big[\bm{S}_{t-2}\big[\bm{E}-\beta_{t-1}\bm{k}_{t-1} \bm{k}_{t-1}^\T\big]+ \eta_{t-1} \bm{v}_{t-1}\bm{k}_{t-1}^\T\Big]\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]+ \eta_t \bm{v}_t\bm{k}_t^\T\\<br>&amp;=\bm{S}_{t-2}\big[\bm{E}-\beta_{t-1}\bm{k}_{t-1} \bm{k}_{t-1}^\T\big]\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]+\eta_{t-1} \bm{v}_{t-1}\bm{k}_{t-1}^\T\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]+ \eta_t \bm{v}_t\bm{k}_t^\T\\<br>&amp;=\bm{S}_0\underbrace{\prod_{\tau=1}^t \Big[\bm{E} - \beta_\tau \bm{k}_\tau \bm{k}_\tau^\T\Big]}_{\text{累积转移矩阵}} + \underbrace{\sum_{\tau=1}^t \Big[ \eta_\tau \bm{v}_\tau \bm{k}_\tau^\T \prod_{i=\tau+1}^t \big[\bm{E} - \beta_i \bm{k}_i \bm{k}_i^\T\big]\Big]}_{\text{累积更新项}}<br>\end{align}$$</p>
 <p>其中 $\displaystyle \bm{E}-\beta_{t+1}\bm{k}_{t+1} \bm{k}_{t+1}^\T=\bm{E}-\bm{0}=\bm{E}$,对于左侧的累积转移矩阵，根据前面的推导易得结论。</p>
 <p>$$\begin{align}<br>\bm{S}_0\prod_{\tau=1}^t \Big[\bm{E} - \beta_\tau \bm{k}_\tau \bm{k}_\tau^\T\Big]<br>=\bm{S}_0\Big[\bm{E}-\sum_{\tau}^t \bm{w}_\tau \bm{k}_\tau ^\T\Big]<br>=\bm{S}_0\big[\bm{E}-\bm{W}^\T\bm{K}\big]<br>\end{align}$$</p>
 <p>现在关注右侧累积更新项 $\bm{L}(t)$</p>
@@ -517,10 +513,7 @@
 <h4 id="3-2、信息传播算子的计算"><a href="#3-2、信息传播算子的计算" class="headerlink" title="3.2、信息传播算子的计算"></a>3.2、信息传播算子的计算</h4><p>考虑对 $\bm{U}^\T=[\bm{u}_1,\cdots,\bm{u}_t]$的计算，可以整体看待。先展开</p>
 <p>$$\begin{align}<br>\bm{u}_1&amp;= \eta_1 \bm{v}_1\\<br>\bm{u}_2&amp;= \eta_2 \bm{v}_2 -\beta_{2}\bm{k}_1 ^\T\bm{k}_{2}\bm{u}_1\\<br>\bm{u}_3&amp;= \eta_3 \bm{v}_3 -\beta_{3}\bm{k}_1 ^\T\bm{k}_{3}\bm{u}_1-\beta_{3}\bm{k}_2 ^\T\bm{k}_{3}\bm{u}_2\\<br>&amp;\vdots\\<br>\bm{u}_t&amp;=\eta_t \bm{v}_t-\beta_{t}\bm{k}_1 ^\T\bm{k}_{t}\bm{u}_1-\beta_{t}\bm{k}_2 ^\T\bm{k}_{t}\bm{u}_2-<br>\cdots-\beta_{t}\bm{k}_{t-1} ^\T\bm{k}_{t}\bm{u}_{t-1}<br>\end{align}$$</p>
 <p>写成矩阵形式</p>
-<p>$$\begin{align}<br>\begin{bmatrix}<br>\bm{u}_1 ^\T\\<br>\bm{u}_2^\T\\<br>\bm{u}_3^\T\\<br>\vdots\\<br>\bm{u}_t^\T\\<br>\end{bmatrix}<br>=<br>\begin{bmatrix}<br>\eta_1 \bm{v}_1^\T\\<br>\eta_2 \bm{v}_2^\T\\<br>\eta_3 \bm{v}_3^\T\\<br>\vdots\\<br>\eta_t \bm{v}_t^\T\\<br>\end{bmatrix}</p>
-<ul>
-<li>\begin{bmatrix}<br>0&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{2}\bm{k}_1 ^\T\bm{k}_{2}&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{3}\bm{k}_1 ^\T\bm{k}_{3}&amp;-\beta_{3}\bm{k}_2 ^\T\bm{k}_{3}&amp;0&amp;\cdots&amp;0\\<br>\vdots\\<br>-\beta_{t}\bm{k}_1 ^\T\bm{k}_{t}&amp;-\beta_{t}\bm{k}_2 ^\T\bm{k}_{t}&amp;\cdots&amp;-\beta_{t}\bm{k}_{t-1} ^\T\bm{k}_{t}&amp;0<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{u}_1^\T\\<br>\bm{u}_2^\T\\<br>\bm{u}_3^\T\\<br>\vdots\\<br>\bm{u}_t^\T\\<br>\end{bmatrix}<br>\end{align}$$</li>
-</ul>
+<p>$$\begin{align}<br>\begin{bmatrix}<br>\bm{u}_1 ^\T\\<br>\bm{u}_2^\T\\<br>\bm{u}_3^\T\\<br>\vdots\\<br>\bm{u}_t^\T\\<br>\end{bmatrix}=<br>\begin{bmatrix}<br>\eta_1 \bm{v}_1^\T\\<br>\eta_2 \bm{v}_2^\T\\<br>\eta_3 \bm{v}_3^\T\\<br>\vdots\\<br>\eta_t \bm{v}_t^\T\\<br>\end{bmatrix}+ \begin{bmatrix}<br>0&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{2}\bm{k}_1 ^\T\bm{k}_{2}&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{3}\bm{k}_1 ^\T\bm{k}_{3}&amp;-\beta_{3}\bm{k}_2 ^\T\bm{k}_{3}&amp;0&amp;\cdots&amp;0\\<br>\vdots\\<br>-\beta_{t}\bm{k}_1 ^\T\bm{k}_{t}&amp;-\beta_{t}\bm{k}_2 ^\T\bm{k}_{t}&amp;\cdots&amp;-\beta_{t}\bm{k}_{t-1} ^\T\bm{k}_{t}&amp;0<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{u}_1^\T\\<br>\bm{u}_2^\T\\<br>\bm{u}_3^\T\\<br>\vdots\\<br>\bm{u}_t^\T\\<br>\end{bmatrix}<br>\end{align}$$</p>
 <p>于是有和Householder变换累积一样，可以定义同样的下三角矩阵 $\bm{A}$中的元素 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)$，或者叫邻接矩阵，其中 $i&gt;j$。定义 $\bm{U}^\T=[\bm{u}_1,\cdots,\bm{u}_t]$， $\bm{V}^\T=[\bm{v}_1,\cdots,\bm{v}_t]$</p>
 <p>$$\begin{align}<br>\bm{U} = \mathrm{diag}[\bm{\eta}]\bm{V}+\bm{A}\bm{U}<br>\end{align}$$</p>
 <p>$$\begin{align}<br>\bm{U}<br>= \big[\bm{E}-\bm{A}\big]^{-1}\mathrm{diag}[\bm{\eta}]\bm{V}<br>=\bm{T}\mathrm{diag}[\bm{\eta}]\bm{V}<br>\end{align}$$</p>
