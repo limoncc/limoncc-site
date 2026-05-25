@@ -92,17 +92,17 @@
 <meta property="og:site_name" content="柠檬CC">
 <meta property="og:description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="https://www.limoncc.com/post/2823bb8e386a0878/images/对角加秩一矩阵.png">
-<meta property="og:image" content="https://www.limoncc.com/post/2823bb8e386a0878/images/Householder变换.png">
-<meta property="og:image" content="https://www.limoncc.com/post/2823bb8e386a0878/images/状态更新.png">
-<meta property="og:image" content="https://www.limoncc.com/post/2823bb8e386a0878/images/现代RNN并行计算.png">
+<meta property="og:image" content="https://www.limoncc.com/images/对角加秩一矩阵.png">
+<meta property="og:image" content="https://www.limoncc.com/images/Householder变换.png">
+<meta property="og:image" content="https://www.limoncc.com/images/状态更新.png">
+<meta property="og:image" content="https://www.limoncc.com/images/现代RNN并行计算.png">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-05-25T14:41:15.460Z">
+<meta property="og:updated_time" content="2026-05-25T14:52:49.906Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="RNN的复兴03:现代RNN的并行计算">
 <meta name="twitter:description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
-<meta name="twitter:image" content="https://www.limoncc.com/post/2823bb8e386a0878/images/对角加秩一矩阵.png">
+<meta name="twitter:image" content="https://www.limoncc.com/images/对角加秩一矩阵.png">
 
 
 
@@ -400,7 +400,8 @@
 <p>然而，在RNN的状态更新机制中，虽然采用了形如 $\bm{H} = \bm{E} - \beta \bm{k}\bm{k}^\T$ （或类似结构）的变换形式，但其参数化方式与严格意义上的Householder变换<strong>存在关键区别</strong>：$\beta$ 通常被设计为一个<strong>独立的、可学习的标量参数</strong>，而非固定地等于 $\frac{2}{\bm{k}^\top \bm{k}}$。向量 $\bm{k}$ 本身一般也是由网络（如前一层状态、当前输入）计算得到的可学习函数输出。计算Householder变换连积的<strong>WY</strong>表示方法可以很好将状态的顺序计算转变为并行计算。从而实现现代RNN的并行计算。接下来将重点讨论以下状态形式的并行计算：</p>
 <p>$$\begin{align}<br>\bm{S}_t<br>= \bm{S}_{t-1}\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]+ \eta_t \bm{v}_t\bm{k}_t^\T<br>\end{align}$$</p>
 <p>无论形式如何，这里的关键结构是<strong>对角加秩一</strong>(<strong>DPLR</strong>:Diagonal Plus Low-Rank）  $\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T$，其中 $\bm{E}$是对角矩阵， $\beta_t\bm{k}_t \bm{k}_t^\T$的秩 $\mathrm{rank}[\beta_t\bm{k}_t \bm{k}_t^\T]=1$, 对角加秩一的几何意义在RNN的复兴02<a href="尚未整理好">^1</a>中已经解释，这里上个图回忆一下：</p>
-<p><img src="images/对角加秩一矩阵.png" alt=""></p>
+<div align="center"><img src="/images/对角加秩一矩阵.png" width="1000" ==""><br></div>
+
 <p>对角加秩一矩阵的实质是<strong>通过迭代变换构建记忆状态</strong>: 对于任意向量 $\bm{s}$，变换后沿 $\bm{k}$方向的分量被衰减、保留或放大，而正交分量保持不变，从而实现精细化的记忆控制。 $\beta$用于动态调整记忆衰减强度，确保模型仅遗忘与当前任务无关的信息。</p>
 <h3 id="二、对角加秩一矩阵变换"><a href="#二、对角加秩一矩阵变换" class="headerlink" title="二、对角加秩一矩阵变换"></a>二、对角加秩一矩阵变换</h3><h4 id="2-1、对角加秩一矩阵-DPLR-连积"><a href="#2-1、对角加秩一矩阵-DPLR-连积" class="headerlink" title="2.1、对角加秩一矩阵(DPLR)连积"></a>2.1、对角加秩一矩阵(DPLR)连积</h4><p>已知DPLR变换 $\displaystyle \bm{H}_\tau=\bm{E}-\beta_{\tau}\bm{k}_{\tau}\bm{k}_{\tau}^\T$，对于DPLR变换的累积有如下 $\bm{W}^\T\bm{Y}$表示方法：</p>
 <p>$$\begin{align}<br>\bm{P}=\prod_{\tau=1}^{t}\bm{H}_\tau<br>=\prod_{\tau=1}^{t}\Big[\bm{E}-\beta_{\tau}\bm{k}_{\tau}\bm{k}_{\tau}^\T\Big]<br>=\bm{E}-\sum_{\tau}^t \bm{w}_\tau \bm{k}_\tau ^\T<br>=\bm{E}-\bm{W}^\T\bm{Y}^\T<br>=\bm{E}-\bm{W}^\T\bm{K}<br>\end{align}$$</p>
@@ -411,10 +412,7 @@
 <h4 id="2-2、信息传播算子-3"><a href="#2-2、信息传播算子-3" class="headerlink" title="2.2、信息传播算子[^3]"></a>2.2、信息传播算子[^3]</h4><p>令 $\bm{W}^\T=[\bm{w}_1,\cdots,\bm{w}_t]$ 以便整体看待。基于$\bm{w}_t$的构造方法展开，很快就能看到 $\bm{W}$编码了节点信息的传播。先展开几项，以便获得直觉：</p>
 <p>$$\begin{align}<br>\bm{w}_1&amp;= \beta_1 \bm{k}_1\\<br>\bm{w}_2&amp;= \beta_2 \bm{k}_2 -\beta_{2}\bm{k}_1 ^\T\bm{k}_{2}\bm{w}_1\\<br>\bm{w}_3&amp;= \beta_3 \bm{k}_3 -\beta_{3}\bm{k}_1 ^\T\bm{k}_{3}\bm{w}_1-\beta_{3}\bm{k}_2 ^\T\bm{k}_{3}\bm{w}_2\\<br>&amp;\vdots\\<br>\bm{w}_t&amp;=\beta_t \bm{k}_t-\beta_{t}\bm{k}_1 ^\T\bm{k}_{t}\bm{w}_1-\beta_{t}\bm{k}_2 ^\T\bm{k}_{t}\bm{w}_2-<br>\cdots-\beta_{t}\bm{k}_{t-1} ^\T\bm{k}_{t}\bm{w}_{t-1}<br>\end{align}$$</p>
 <p>写成矩阵形式</p>
-<p>$$\begin{align}<br>\begin{bmatrix}<br>\bm{w}_1 ^\T\\<br>\bm{w}_2^\T\\<br>\bm{w}_3^\T\\<br>\vdots\\<br>\bm{w}_t^\T\\<br>\end{bmatrix}<br>=<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\vdots\\<br>\beta_t \bm{k}_t^\T\\<br>\end{bmatrix}</p>
-<ul>
-<li>\begin{bmatrix}<br>0&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{2}\bm{k}_1 ^\T\bm{k}_{2}&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{3}\bm{k}_1 ^\T\bm{k}_{3}&amp;-\beta_{3}\bm{k}_2 ^\T\bm{k}_{3}&amp;0&amp;\cdots&amp;0\\<br>\vdots\\<br>-\beta_{t}\bm{k}_1 ^\T\bm{k}_{t}&amp;-\beta_{t}\bm{k}_2 ^\T\bm{k}_{t}&amp;\cdots&amp;-\beta_{t}\bm{k}_{t-1} ^\T\bm{k}_{t}&amp;0<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{w}_1^\T\\<br>\bm{w}_2^\T\\<br>\bm{w}_3^\T\\<br>\vdots\\<br>\bm{w}_t^\T\\<br>\end{bmatrix}<br>\end{align}$$</li>
-</ul>
+<p>$$\begin{align}<br>\begin{bmatrix}<br>\bm{w}_1 ^\T\\<br>\bm{w}_2^\T\\<br>\bm{w}_3^\T\\<br>\vdots\\<br>\bm{w}_t^\T\\<br>\end{bmatrix}<br>=\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\vdots\\<br>\beta_t \bm{k}_t^\T\\<br>\end{bmatrix}+ \begin{bmatrix}<br>0&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{2}\bm{k}_1 ^\T\bm{k}_{2}&amp;0&amp;0&amp;\cdots&amp;0\\<br>-\beta_{3}\bm{k}_1 ^\T\bm{k}_{3}&amp;-\beta_{3}\bm{k}_2 ^\T\bm{k}_{3}&amp;0&amp;\cdots&amp;0\\<br>\vdots\\<br>-\beta_{t}\bm{k}_1 ^\T\bm{k}_{t}&amp;-\beta_{t}\bm{k}_2 ^\T\bm{k}_{t}&amp;\cdots&amp;-\beta_{t}\bm{k}_{t-1} ^\T\bm{k}_{t}&amp;0<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{w}_1^\T\\<br>\bm{w}_2^\T\\<br>\bm{w}_3^\T\\<br>\vdots\\<br>\bm{w}_t^\T\\<br>\end{bmatrix}<br>\end{align}$$</p>
 <p>如果令 $\bm{b}_\tau=\beta_\tau \bm{k}_\tau$, $\bm{B}^\T=[\beta_1 \bm{k}_1,\cdots,\beta_t \bm{k}_t] = \mathrm{diag}[\bm{\beta}]\bm{K} $，于是有 $\bm{W} = \bm{B}+\bm{A}\bm{W}$，易得：</p>
 <p>$$\begin{align}<br>\bm{W} &amp;=\big[\bm{E}-\bm{A}\big]^{-1}\bm{B}\\<br>\end{align}$$</p>
 <p>令 $\bm{T}=\big[\bm{E}-\bm{A}\big]^{-1}$，其中下三角矩阵 $\bm{A}$中的元素 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)$, 其中 $i&gt;j$。这样就得到了 $\bm{W}$的计算方法。</p>
@@ -439,7 +437,7 @@
 <li>第4列 (j=4)：</li>
 </ul>
 <p>$i=4\to \bm{T}[4,]=1$</p>
-<p>$$\begin{align}<br>\bm{T}<br>=<br>\begin{bmatrix}<br>1 &amp; 0 &amp; 0 &amp; 0\ <br>A_{21} &amp; 1 &amp; 0 &amp; 0\\<br>A_{31}+A_{32}A_{21} &amp; A_{32} &amp; 1 &amp; 0\\<br>A_{41}+A_{42}A_{21}+A_{43}A_{31}+A_{42}A_{32}A_{21} &amp; A_{42}+A_{43}A_{32} &amp; A_{43} &amp; 1\\<br>\end{bmatrix}<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\bm{T}=<br>\begin{bmatrix}<br>1 &amp; 0 &amp; 0 &amp; 0\ <br>A_{21} &amp; 1 &amp; 0 &amp; 0\\<br>A_{31}+A_{32}A_{21} &amp; A_{32} &amp; 1 &amp; 0\\<br>A_{41}+A_{42}A_{21}+A_{43}A_{31}+A_{42}A_{32}A_{21} &amp; A_{42}+A_{43}A_{32} &amp; A_{43} &amp; 1\\<br>\end{bmatrix}<br>\end{align}$$</p>
 <p>观察上述公式，其实有 $\bm{T}[i,j]=A[i,1:i-1]\bm{T}[1:i-1,j]$, 这意味着</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">block_forward_substitution</span><span class="params">(A, block_size=<span class="number">32</span>)</span>:</span></span><br><span class="line">    C = A.shape[<span class="number">0</span>]</span><br><span class="line">    T = np.eye(C)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 分块计算</span></span><br><span class="line">    <span class="keyword">for</span> j_block <span class="keyword">in</span> range(<span class="number">0</span>, C, block_size):</span><br><span class="line">        j_end = min(j_block + block_size, C)</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">for</span> j <span class="keyword">in</span> range(j_block, j_end):</span><br><span class="line">            <span class="comment"># 并行计算当前列</span></span><br><span class="line">            <span class="keyword">for</span> i <span class="keyword">in</span> range(j+<span class="number">1</span>, C):</span><br><span class="line">                start_k = max(j, j_block)  <span class="comment"># 块内起始位置</span></span><br><span class="line">                T[i,j] = np.dot(A[i, start_k:i], T[start_k:i, j])</span><br><span class="line">    <span class="keyword">return</span> T</span><br></pre></td></tr></table></figure>
 <h5 id="2-3-2、Neumann级数展开"><a href="#2-3-2、Neumann级数展开" class="headerlink" title="2.3.2、Neumann级数展开"></a>2.3.2、Neumann级数展开</h5><h6 id="2-3-2-1、收敛证明"><a href="#2-3-2-1、收敛证明" class="headerlink" title="2.3.2.1、收敛证明"></a>2.3.2.1、收敛证明</h6><p>若谱范数 $|\bm{A}|_2=\lambda_{max}\big[\bm{A}^\T\bm{A}\big]&lt;1$，则有</p>
@@ -480,24 +478,22 @@
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">richardson_iteration</span><span class="params">(A, max_iter=<span class="number">20</span>)</span>:</span></span><br><span class="line">    D = A.shape[<span class="number">0</span>]</span><br><span class="line">    S = np.eye(C)</span><br><span class="line">    <span class="keyword">for</span> _ <span class="keyword">in</span> range(max_iter):</span><br><span class="line">        S_new = np.eye(D) + A @ S</span><br><span class="line">        <span class="keyword">if</span> np.linalg.norm(S_new - S) &lt; <span class="number">1e-8</span>:</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">        S = S_new</span><br><span class="line">    <span class="keyword">return</span> S</span><br></pre></td></tr></table></figure>
 <h4 id="2-4、状态累计更新的图论"><a href="#2-4、状态累计更新的图论" class="headerlink" title="2.4、状态累计更新的图论"></a>2.4、状态累计更新的图论</h4><p>使用Neumann级数展开有</p>
 <p>$$\begin{align}<br>\bm{W}<br>=\big[\bm{E}-\bm{A}\big]^{-1} \mathrm{diag}[\bm{\beta}]\bm{K}<br>=\big[\bm{E}+\bm{A}+\bm{A}^2+\bm{A}^3+\cdots+\bm{A}^\infty\big]\cdot\mathrm{diag}[\bm{\beta}]\cdot\bm{K}<br>\end{align}$$</p>
-<p>对于其中的 $\bm{w}_{\tau}$, 令 $\bm{b}_\tau=\beta_\tau \bm{k}_\tau$, $\bm{B}^\T=[\beta_1 \bm{k}_1,\cdots,\beta_t \bm{k}_t]$实际有</p>
-<p>$$\begin{align}<br>\bm{w}_\tau =<br>\underbrace{\bm{b}_\tau \vphantom{\sum\sum_{j}}}_{\text{自身贡献}}</p>
-<ul>
-<li>\underbrace{\sum_{i}A_{\tau i}\bm{b}_\tau \vphantom{\sum\sum_{j}}}_{\text{相邻贡献}} </li>
-<li>\underbrace{\sum_{i}\sum_{j}A_{\tau i}A_{ij}\bm{b}_j \vphantom{\sum\sum_{j}}}_{\text{跨步影响}}</li>
-<li>\cdots<br>\end{align}$$</li>
-</ul>
+<p>对于其中的 $\bm{w}_{\tau}$, 令 $\bm{b}_\tau=\beta_\tau \bm{k}_\tau$, $\bm{B}^\T=[\beta_1 \bm{k}_1,\cdots,\beta_t \bm{k}_t]$ 实际有</p>
+<p>$$\begin{align}<br>\bm{w}_\tau = \underbrace{\bm{b}_\tau \vphantom{\sum\sum_{j}}}_{\text{自身贡献}}+ \underbrace{\sum_{i}A_{\tau i}\bm{b}_\tau \vphantom{\sum\sum_{j}}}_{\text{相邻贡献}} + \underbrace{\sum_{i}\sum_{j}A_{\tau i}A_{ij}\bm{b}_j \vphantom{\sum\sum_{j}}}_{\text{跨步影响}} + \cdots<br>\end{align}$$</p>
 <p>其中 $\tau&gt;i&gt;j$。来几个例子，做做数学符号体操, 对了解细节大有裨益，以Neumann级数展开视角，当 $t=4$时考察 $\bm{W}$其实有</p>
-<p>$$\begin{align}<br>\bm{W}<br>&amp;=<br>\underbrace{\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}<br>}_{自身贡献}<br>+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>A_{31} &amp; A_{32} &amp; 0 &amp; 0\\<br>A_{41} &amp; A_{42} &amp; A_{43} &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}:相邻贡献}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}\\<br>&amp;+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>A_{32}A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>A_{42}A_{21}+A_{43}A_{31} &amp; A_{43}A_{32} &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^2:跨步影响}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}<br>+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>A_{43}A_{32}A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^3:长程依赖}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}\\<br>&amp;+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^4}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}+\bm{O}\bm{B}\\<br>\end{align}$$</p>
+<p>$$\begin{align}\bm{W}&amp;=<br>\underbrace{\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}<br>}_{自身贡献}+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>A_{31} &amp; A_{32} &amp; 0 &amp; 0\\<br>A_{41} &amp; A_{42} &amp; A_{43} &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}:相邻贡献}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}\\&amp;+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>A_{32}A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>A_{42}A_{21}+A_{43}A_{31} &amp; A_{43}A_{32} &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^2:跨步影响}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>A_{43}A_{32}A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^3:长程依赖}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}\\&amp;+<br>\underbrace{\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>0 &amp; 0 &amp; 0 &amp; 0\\<br>\end{bmatrix}<br>}_{\bm{A}^4}<br>\begin{bmatrix}<br>\beta_1 \bm{k}_1^\T\\<br>\beta_2 \bm{k}_2^\T\\<br>\beta_3 \bm{k}_3^\T\\<br>\beta_4 \bm{k}_4^\T\\<br>\end{bmatrix}+\bm{O}\bm{B}\\<br>\end{align}$$</p>
 <p>展开就有</p>
-<p>$$\begin{align}<br>\bm{w}_1 &amp;= \beta_1\bm{k}_1\\<br>\bm{w}_2 &amp;= \beta_2\bm{k}_2 + A_{21}(\beta_1\bm{k}_1)\\<br>\bm{w}_3 &amp;= \beta_3\bm{k}_3 + A_{31}(\beta_1\bm{k}_1) + A_{32}(\beta_2\bm{k}_2) + A_{32}A_{21}(\beta_1\bm{k}_1)\\<br>\bm{w}_4 &amp;= \beta_4\bm{k}_4 + A_{41}(\beta_1\bm{k}_1) + A_{42}(\beta_2\bm{k}_2) + A_{43}(\beta_3\bm{k}_3) \\<br>&amp;+ A_{42}A_{21}(\beta_1\bm{k}_1)+A_{43}A_{31}(\beta_1\bm{k}_1)+A_{43}A_{32}(\beta_2\bm{k}_2)\\<br>&amp;+A_{43}A_{32}A_{21}(\beta_1\bm{k}_1)\\<br>\end{align}$$<br>如果以$\bm{b}_\tau=\beta_\tau \bm{k}_\tau$为节点，以下三角矩阵 $\bm{A}$中的元素 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)$乘积为边, 其中 $i&gt;j$。那么 $\bm{w}_\tau$的计算可视为一个图:</p>
+<p>$$\begin{align}<br>\bm{w}_1 &amp;= \beta_1\bm{k}_1\\<br>\bm{w}_2 &amp;= \beta_2\bm{k}_2 + A_{21}(\beta_1\bm{k}_1)\\<br>\bm{w}_3 &amp;= \beta_3\bm{k}_3 + A_{31}(\beta_1\bm{k}_1) + A_{32}(\beta_2\bm{k}_2) + A_{32}A_{21}(\beta_1\bm{k}_1)\\<br>\bm{w}_4 &amp;= \beta_4\bm{k}_4 + A_{41}(\beta_1\bm{k}_1) + A_{42}(\beta_2\bm{k}_2) + A_{43}(\beta_3\bm{k}_3) \\&amp;+ A_{42}A_{21}(\beta_1\bm{k}_1)+A_{43}A_{31}(\beta_1\bm{k}_1)+A_{43}A_{32}(\beta_2\bm{k}_2)\\&amp;+A_{43}A_{32}A_{21}(\beta_1\bm{k}_1)\\<br>\end{align}$$</p>
+<p>如果以 $\bm{b}_\tau=\beta_\tau \bm{k}_\tau$ 为节点，以下三角矩阵 $\bm{A}$ 中的元素  $A_{ij}=-\beta_i(\bm{k}_j^\T\bm{k}_i)$ 乘积为边, 其中 $i&gt;j$ 。那么 $\bm{w}_\tau$ 的计算可视为一个图:</p>
 <ul>
 <li>1、$\bm{w}_\tau$表示节点 $\tau$的累积路径信息, 编码来历史状态衰减信息。</li>
 <li>2、$\bm{k}_\tau$是节点的特征向量，影响信息传播的方向</li>
 <li>3、$\beta_\tau$是节点更新强度，控制新信息权重</li>
 <li>4、$A_{ij}$是边权值，是历史状态衰减系数</li>
 </ul>
-<p><img src="images/Householder变换.png" alt=""><br>这样的路径求和将顺序依赖转化为独立路径的叠加，$\bm{W}$的本质是图上的信息传播算子，是状态转移的累积效应。</p>
+<div align="center"><img src="/images/Householder变换.png" width="1000" ==""><br></div>
+
+<p>这样的路径求和将顺序依赖转化为独立路径的叠加，$\bm{W}$的本质是图上的信息传播算子，是状态转移的累积效应。</p>
 <ul>
 <li>1、当 $\beta_\tau \approx 0$ 时：节点孤立（无信息传播）</li>
 <li>2、当 $\mathbf{k}_i \perp \mathbf{k}_j$ 时：边权为零（无信息传递）</li>
@@ -537,7 +533,9 @@
 <li>3、$\eta_\tau$是节点更新强度，控制新信息权重</li>
 <li>4、$A_{ij}$是边权值，是状态衰减系数</li>
 </ul>
-<p><img src="images/状态更新.png" alt=""><br>这样的路径求和将顺序依赖转化为独立路径的叠加，$\bm{U}$的本质是图上的信息传播算子，是状态更新的累积效应。</p>
+<div align="center"><img src="/images/状态更新.png" width="1000" ==""><br></div>
+
+<p>这样的路径求和将顺序依赖转化为独立路径的叠加，$\bm{U}$的本质是图上的信息传播算子，是状态更新的累积效应。</p>
 <ul>
 <li>1、当 $\eta_\tau \approx 0$ 时：节点孤立（无信息传播）</li>
 <li>2、当 $\mathbf{k}_i \perp \mathbf{k}_j$ 时：边权为零（无信息传递）</li>
@@ -550,7 +548,8 @@
 <p>令 $\dim[\bm{Q}]=t\times d_q$, $\dim[\bm{K}]=t\times d_k$, $\dim[\bm{V}]=t\times d_v$, 通常 $d=d_q=d_k=d_v$。明晰一下更新公式中的维度：其中 $\dim[\bm{S}]=d_v\times d_k$、 $\dim[\bm{U}]=t\times d_v$、 $\dim[\bm{W}]=t\times d_k$, 上述变形后可以降低计算复杂度。实际有</p>
 <p>$$\begin{align}<br>&amp;O(\bm{S}_0+\big[\bm{U}-\bm{W}\bm{S}_0^\T\big]^\T\bm{K})\\<br>&amp;=O(\bm{T}_1 =  \bm{U} - \bm{W}\bm{S}_0^\T)<br>+O(\bm{T}_2 = \bm{T}_1\bm{K})<br>+O(\bm{S}_0+\bm{T}_2)\\<br>&amp;=O(td^2+td+t^2d+d^2)\\<br>&amp;=O(td^2+t^2d)\\<br>&amp;O(\bm{S}_0\big[\bm{E}-\bm{W}^\T\bm{K}\big]+ \bm{U}^\T\bm{K})\\<br>&amp;=O(\bm{T}_1 = \bm{E}-\bm{W}^\T\bm{K})<br>+O(\bm{T}_2 = \bm{S}_0\bm{T}_1)<br>+O(\bm{T}_3=\bm{U}^\T\bm{K})<br>+O(\bm{T}_2+\bm{T}_3)\\<br>&amp;=O(t^2d+td+d^3+t^2d+d^2)\\<br>&amp;=O(d^3+2t^2d)<br>\end{align}$$</p>
 <p>当 $t \ll d$的时候，也就是说序列长度小于特征维度。对于长序列而言，可以分块计算，从而减小 $t$。说白了其实就是切分为若干段来计算，一张图说明所有：<strong>块内并行，块间依赖</strong>。</p>
-<p><img src="images/现代RNN并行计算.png" alt=""></p>
+<div align="center"><img src="/images/现代RNN并行计算.png" width="1000" ==""><br></div>
+
 <p>那么又有好事者问：先计算 $\bm{S}=\bm{S}_0+\big[\bm{U}-\bm{W}\bm{S}_0^\T\big]^\T\bm{K}$，再计算 $\bm{O}=\bm{Q}\bm{S}^\T$，和直接按 $\bm{O}=\bm{Q}\bm{S}^\T+(\bm{Q}\bm{K}^\T\odot\bm{M}) (\bm{U} - \bm{W}\bm{S}^\T) $公式计算，有什么不同？后面的复杂度要越高一点，因为前者只需三次矩阵乘法，后者需要4次矩阵乘法。</p>
 <p>分开计算</p>
 <ol>
