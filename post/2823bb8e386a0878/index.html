@@ -98,7 +98,7 @@
 <meta property="og:image" content="https://www.limoncc.com/images/现代RNN并行计算.png">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-05-25T15:03:53.731Z">
+<meta property="og:updated_time" content="2026-05-26T01:04:17.737Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="RNN的复兴03:现代RNN的并行计算">
 <meta name="twitter:description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
@@ -420,7 +420,7 @@
 <p>$$\begin{align}<br>\bm{T}[:,j] - \bm{A} * \bm{T}[:,j] = \bm{e}_j<br>\end{align}$$</p>
 <p>由于 $\bm{A}$是严格下三角， $\bm{T}$是下三角矩阵，可得递推关系：</p>
 <p>$$\begin{align}<br>\bm{T}[i,j] = \begin{cases}<br>0 &amp; \text{if } i &lt; j \ <br>1 &amp; \text{if } i = j \ <br>\sum_{k=j}^{i-1} \bm{A}[i,k]  \bm{T}[k,j] &amp; \text{if } i &gt; j<br>\end{cases}<br>\end{align}$$</p>
-<p>来个例子，做做数学符号体操：<br>对于 $$\begin{align}<br>\bm{A}=\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\ <br>A_{21} &amp; 0 &amp; 0 &amp; 0\\<br>A_{31} &amp; A_{32} &amp; 0 &amp; 0\\<br>A_{41} &amp; A_{42} &amp; A_{43} &amp; 0\\<br>\end{bmatrix}<br>\end{align}$$</p>
+<p>来个例子，做做数学符号体操：<br>对于 $$\begin{align}<br>\bm{A}=\begin{bmatrix}<br>0 &amp; 0 &amp; 0 &amp; 0\\\\<br>A_{21} &amp; 0 &amp; 0 &amp; 0\\\\<br>A_{31} &amp; A_{32} &amp; 0 &amp; 0\\\\<br>A_{41} &amp; A_{42} &amp; A_{43} &amp; 0\\\\<br>\end{bmatrix}<br>\end{align}$$</p>
 <ul>
 <li>第1列 (j=1)：</li>
 </ul>
