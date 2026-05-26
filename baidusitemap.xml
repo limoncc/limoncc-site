@@ -5,7 +5,7 @@
     
   <url>
     <loc>https://www.limoncc.com/post/2823bb8e386a0878/</loc>
-    <lastmod>2026-05-26T01:04:17.737Z</lastmod>
+    <lastmod>2026-05-26T01:04:53.300Z</lastmod>
     <data>
         <display>
         <title>RNN的复兴03:现代RNN的并行计算</title>
@@ -19,6 +19,12 @@
          
         <tag>LLM</tag>
          
+        <tag>Householder变换</tag>
+         
+        <tag>DPLR</tag>
+         
+        <tag>对角加秩一矩阵</tag>
+         
         <tag>矩阵微分</tag>
          
         <tag>向量微分</tag>
@@ -26,12 +32,6 @@
         <tag>矩阵导数</tag>
          
         <tag>向量导数</tag>
-         
-        <tag>Householder变换</tag>
-         
-        <tag>DPLR</tag>
-         
-        <tag>对角加秩一矩阵</tag>
          
          
            

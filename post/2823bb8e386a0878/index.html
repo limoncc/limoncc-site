@@ -98,7 +98,7 @@
 <meta property="og:image" content="https://www.limoncc.com/images/现代RNN并行计算.png">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-05-26T01:04:17.737Z">
+<meta property="og:updated_time" content="2026-05-26T01:04:53.300Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="RNN的复兴03:现代RNN的并行计算">
 <meta name="twitter:description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
@@ -405,7 +405,7 @@
 <p>对角加秩一矩阵的实质是<strong>通过迭代变换构建记忆状态</strong>: 对于任意向量 $\bm{s}$，变换后沿 $\bm{k}$方向的分量被衰减、保留或放大，而正交分量保持不变，从而实现精细化的记忆控制。 $\beta$用于动态调整记忆衰减强度，确保模型仅遗忘与当前任务无关的信息。</p>
 <h3 id="二、对角加秩一矩阵变换"><a href="#二、对角加秩一矩阵变换" class="headerlink" title="二、对角加秩一矩阵变换"></a>二、对角加秩一矩阵变换</h3><h4 id="2-1、对角加秩一矩阵-DPLR-连积"><a href="#2-1、对角加秩一矩阵-DPLR-连积" class="headerlink" title="2.1、对角加秩一矩阵(DPLR)连积"></a>2.1、对角加秩一矩阵(DPLR)连积</h4><p>已知DPLR变换 $\displaystyle \bm{H}_\tau=\bm{E}-\beta_{\tau}\bm{k}_{\tau}\bm{k}_{\tau}^\T$，对于DPLR变换的累积有如下 $\bm{W}^\T\bm{Y}$表示方法：</p>
 <p>$$\begin{align}<br>\bm{P}=\prod_{\tau=1}^{t}\bm{H}_\tau<br>=\prod_{\tau=1}^{t}\Big[\bm{E}-\beta_{\tau}\bm{k}_{\tau}\bm{k}_{\tau}^\T\Big]<br>=\bm{E}-\sum_{\tau}^t \bm{w}_\tau \bm{k}_\tau ^\T<br>=\bm{E}-\bm{W}^\T\bm{Y}^\T<br>=\bm{E}-\bm{W}^\T\bm{K}<br>\end{align}$$</p>
-<p>可以将连乘运算转换为连加运算，其中 $\bm{W}^\T=[\bm{w}_1,\cdots,\bm{w}_t]$,  $\bm{Y}^\T=\bm{K}^\T=[\bm{k}_1,\cdots,\bm{k}_t]$。 其中 $\bm{w}_\tau \mathbf{k}_\tau^\T$是节点 $\tau$ 对全局状态的影响，$\sum$表示所有节点影响的叠加，<strong>负号</strong>则是历史路径的衰减效应。</p>
+<p>可以将连乘运算转换为连加运算，其中 $\bm{W}^\T=[\bm{w}_1,\cdots,\bm{w}_t]$,  $\bm{Y}=\bm{K}^\T=[\bm{k}_1,\cdots,\bm{k}_t]$。 其中 $\bm{w}_\tau \mathbf{k}_\tau^\T$是节点 $\tau$ 对全局状态的影响，$\sum$表示所有节点影响的叠加，<strong>负号</strong>则是历史路径的衰减效应。</p>
 <p>证明：<br>$$\begin{align}<br>\bm{P}<br>&amp;= \bigg[\bm{E}-\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T\bigg] \bigg[\bm{E}-\beta_{t}\bm{k}_{t}\bm{k}_{t}^\T \bigg]\\<br>&amp;=\bm{E}-\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T-\beta_{t}\bm{k}_{t}\bm{k}_{t}^\T +\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T\beta_{t}\bm{k}_{t}\bm{k}_{t}^\T\\<br>&amp;=\bm{E}-\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T - \underbrace{\beta_{t}\bigg[\bm{k}_{t}-\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T\bm{k}_{t}\bigg]}_{\bm{w}_t}\bm{k}_{t}^\T\\<br>&amp;=\bm{E}-\sum_{\tau}^t \bm{w}_\tau \bm{k}_\tau ^\T\\<br>&amp;=\bm{E}-\bm{W}^\T\bm{K}<br>\end{align}$$</p>
 <p>证明过程中还实现了 $\bm{w}_t$的构造方法：</p>
 <p>$$\begin{align}<br>\bm{w}_t = \beta_{t}\bm{k}_{t}-\beta_{t}\sum_{\tau}^{t-1} \bm{w}_\tau \bm{k}_\tau ^\T\bm{k}_{t}=\beta_{t}\bm{k}_{t}-\beta_{t}\sum_{\tau}^{t-1} \bm{k}_\tau ^\T\bm{k}_{t}\bm{w}_\tau<br>\end{align}$$</p>
@@ -595,6 +595,12 @@
           
             <a href="/tags/LLM/" rel="tag">#LLM</a>
           
+            <a href="/tags/Householder变换/" rel="tag">#Householder变换</a>
+          
+            <a href="/tags/DPLR/" rel="tag">#DPLR</a>
+          
+            <a href="/tags/对角加秩一矩阵/" rel="tag">#对角加秩一矩阵</a>
+          
             <a href="/tags/矩阵微分/" rel="tag">#矩阵微分</a>
           
             <a href="/tags/向量微分/" rel="tag">#向量微分</a>
@@ -602,12 +608,6 @@
             <a href="/tags/矩阵导数/" rel="tag">#矩阵导数</a>
           
             <a href="/tags/向量导数/" rel="tag">#向量导数</a>
-          
-            <a href="/tags/Householder变换/" rel="tag">#Householder变换</a>
-          
-            <a href="/tags/DPLR/" rel="tag">#DPLR</a>
-          
-            <a href="/tags/对角加秩一矩阵/" rel="tag">#对角加秩一矩阵</a>
           
         </div>
       
