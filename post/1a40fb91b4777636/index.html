@@ -1,0 +1,1346 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="大语言模型,LLM,RNN,什么是记忆,线性注意力,DPLR,Titans,RWKV7,Miras" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="本文主要总结了现代RNN中记忆的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
+<meta name="keywords" content="大语言模型,LLM,RNN,什么是记忆,线性注意力,DPLR,Titans,RWKV7,Miras">
+<meta property="og:type" content="article">
+<meta property="og:title" content="RNN的复兴02_什么是记忆">
+<meta property="og:url" content="https://www.limoncc.com/post/1a40fb91b4777636/index.html">
+<meta property="og:site_name" content="柠檬CC">
+<meta property="og:description" content="本文主要总结了现代RNN中记忆的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://www.limoncc.com/images/约翰逊.png">
+<meta property="og:image" content="https://www.limoncc.com/images/闪电注意力.png">
+<meta property="og:image" content="https://www.limoncc.com/images/对角加秩一矩阵.png">
+<meta property="og:image" content="https://www.limoncc.com/images/mole.png">
+<meta property="og:image" content="https://www.limoncc.com/images/yan架构.png">
+<meta property="og:image" content="https://www.limoncc.com/images/cc.png">
+<meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
+<meta property="og:updated_time" content="2026-05-27T14:58:22.703Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RNN的复兴02_什么是记忆">
+<meta name="twitter:description" content="本文主要总结了现代RNN中记忆的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
+<meta name="twitter:image" content="https://www.limoncc.com/images/约翰逊.png">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: '博主'
+    }
+  };
+</script>
+
+  <script src='//unpkg.com/valine/dist/Valine.min.js'></script>
+  <title> RNN的复兴02_什么是记忆 | 柠檬CC </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-73837972-3', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?d225b8f8559eb2eb6a8bd8792e01ebb9";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//tajs.qq.com/stats?sId=60130136";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">柠檬CC</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">小白爱吃柠檬O(∩_∩)O</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-poetry">
+          <a href="/poetry" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-leaf"></i> <br />
+            
+            诗集
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="#" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                RNN的复兴02_什么是记忆
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2025-07-27T18:00:18+08:00" content="2025-07-27">
+              2025-07-27
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/机器学习/" itemprop="url" rel="index">
+                    <span itemprop="name">机器学习</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+             <span id="/post/1a40fb91b4777636/" class="leancloud_visitors" data-flag-title="RNN的复兴02_什么是记忆">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">阅读次数 </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：httpss://<a href="http://www.limoncc.com/post/1a40fb91b4777636/">www.limoncc.com/post/1a40fb91b4777636/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
+<p>英国作家塞缪尔·约翰逊说过</p>
+<blockquote>
+<p>记忆的真正艺术是注意力艺术！（The true art of memory is the art of attention!）</p>
+</blockquote>
+<div align="center"><img src="/images/约翰逊.png" width="1000" ==""><br></div>
+
+<h4 id="一、引言"><a href="#一、引言" class="headerlink" title="一、引言"></a>一、引言</h4><p>什么是记忆? 当前[2025]要让模型拥有记忆,大家倾向于构建复杂的上下文工程(Context Engineering)，这种记忆是外置非内生的，而人类的记忆并不是这样的。这个工程化的记忆机制注定只是当前技术下的短期解决方法。注意力机制的<strong>QKV</strong>体现了数据库的查询检索存储框架。线性化后的注意力机制也同样体现了这一点。随着Delta学习规则的引入, 将状态(记忆)更新由加法规则改为了Delta学习规则, 诞生了DeltaNet[^1]，从而启发了人们进一步思考什么是记忆。Delta学习规则涉及的对角加秩一矩阵(一种广义Householder变换)是一种很重要的形式，出现了很多类似RWKV7[^2]的改进方案，如Gated DeltaNet[^3]、TTT[^4]、谷歌Titans[^5]也在这个方向上进行探索，最近2025WAIC上的岩芯数智（RockAI）也展示了一种可微的神经网络记忆单元[^6]也令人印象深刻。在大模型时代关于什么是记忆、记忆是如何工作这个问题似乎已经走的足够远了，其中Miras[^7]总结了这些线性RNN的特点，并提出了一个统一框架。本文将围绕记忆这个主题总结最近以来(2025年)的一些进展和个人的看法。</p>
+<p>限于文章长度，本文对很多内容未做深度讨论，主要展示现代RNN状态更新如何解决记忆这个问题，同时描述这种更新的内在统一框架。</p>
+<h4 id="二、原始线性注意力"><a href="#二、原始线性注意力" class="headerlink" title="二、原始线性注意力"></a>二、原始线性注意力</h4><h5 id="2-1、线性注意力的并行计算"><a href="#2-1、线性注意力的并行计算" class="headerlink" title="2.1、线性注意力的并行计算"></a>2.1、线性注意力的并行计算</h5><p>将注意力机制变为线性注意力最简单的方法就是去掉softmax：</p>
+<p>$$\begin{align}<br>\mathrm{Attention}(\bm{Q}, \bm{K}, \bm{V})=\mathrm{softmax}\left[\frac{\bm{Q} \bm{K}^T}{\sqrt{d_k}}\odot \bm{M}\right] \bm{V}<br>\end{align}$$</p>
+<p>这样就得到了最简单的线性注意力机制:<br>$$\begin{align}<br>\mathrm {LinearAttention}(\bm{Q}, \bm{K}, \bm{V})<br>=\left(\bm{Q}\bm{K}^\T\odot \bm{M}\right) \bm{V}<br>\end{align}$$</p>
+<p>其中：<br>$\bm{Q} \in \mathbb{R}^{n \times d_q}$：查询矩阵<br>$\bm{K} \in \mathbb{R}^{n \times d_k}$：键矩阵<br>$\bm{V} \in \mathbb{R}^{n \times d_v}$：值矩阵<br>$d_q=d_k=d_v$</p>
+<p>在线性注意力中外积 $\bm{K}^\T \bm{V}$和累积求和是可交换的。也就是说可以定义一个状态  $\bm{S}_t$, 通过顺序计算 $\bm{S}_t = \bm{S}_{t-1} + \bm{k}_t\bm{v}_t^\T$ 来求矩阵 $\bm{K}^\T \bm{V}$，利用这个特性可以得到minimax的闪电注意力(Lightning Attention)[^8]：<strong>块内并行, 块间依赖</strong>。这样在小块内并行计算可以利用HBM实现高性能计算，下面以3块分割举例，在序列方向上将token分为三部分，这样有</p>
+<p>$$\begin{align}<br>\begin{bmatrix}<br>\bm{O}_1\\<br>\bm{O}_2\\<br>\bm{O}_3\\<br>\end{bmatrix}=<br>\begin{bmatrix}<br>\bm{Q}_1\\<br>\bm{Q}_2\\<br>\bm{Q}_3\\<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{S}_0\\<br>\bm{S}_1\\<br>\bm{S}_2\\<br>\end{bmatrix}+<br>\left(<br>\begin{bmatrix}<br>\bm{Q}_1\\<br>\bm{Q}_2\\<br>\bm{Q}_3\\<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{K}_1 &amp; \bm{K}_2 &amp; \bm{K}_3<br>\end{bmatrix}\odot<br>\begin{bmatrix}<br>\bm{E} &amp; \bm{0} &amp;\bm{0} \\<br>\bm{0} &amp; \bm{E} &amp;\bm{0} \\<br>\bm{0} &amp; \bm{0} &amp;\bm{E} \\<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{V}_1\\<br>\bm{V}_2\\<br>\bm{V}_3\\<br>\end{bmatrix}<br>\right)<br>\end{align}$$</p>
+<p>其中 $\bm{S}_0=\bm{0}$, 使用$\bm{K}^\T \bm{V}$外积的求和模式有：</p>
+<p>$$\begin{align}<br>\begin{bmatrix}<br>\bm{O}_1\\<br>\bm{O}_2\\<br>\bm{O}_3\\<br>\end{bmatrix}=<br>\begin{bmatrix}<br>\bm{Q}_1\\<br>\bm{Q}_2\\<br>\bm{Q}_3\\<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{0}\\<br>\bm{S}_0+ \bm{K}_1^\T\bm{V}_1\\<br>\bm{S}_1+ \bm{K}_2^\T\bm{V}_2\\<br>\end{bmatrix}+<br>\left(<br>\begin{bmatrix}<br>\bm{Q}_1\\<br>\bm{Q}_2\\<br>\bm{Q}_3\\<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{K}_1 &amp; \bm{K}_2 &amp; \bm{K}_3<br>\end{bmatrix}<br>\odot<br>\begin{bmatrix}<br>\bm{E} &amp; \bm{0} &amp;\bm{0} \\<br>\bm{0} &amp; \bm{E} &amp;\bm{0} \\<br>\bm{0} &amp; \bm{0} &amp;\bm{E} \\<br>\end{bmatrix}<br>\begin{bmatrix}<br>\bm{V}_1\\<br>\bm{V}_2\\<br>\bm{V}_3\\<br>\end{bmatrix}<br>\right)<br>\end{align}$$</p>
+<p>展开其实就有</p>
+<p>$$\begin{align}<br>\bm{O}_\tau<br>&amp;= \bm{Q}_\tau \bm{S}_{\tau}+\left(\bm{Q}_\tau\bm{K}_\tau^\T\odot \bm{M}\right) \bm{V}_\tau\\<br>\bm{S}_{\tau}<br>&amp;=\bm{S}_{\tau-1}+ \bm{K}_\tau^\T \bm{V}_\tau<br>=\bm{S}_{\tau-1}+\sum_{i=1}^n\bm{k}_i \bm{v}_i^\T<br>\end{align}$$<br>其中 $n=\text{size}(block)$, $\dim[\bm{S}]=d_k\times d_v$，即块内token的数量。这就是最原始的线性注意力和其并行计算。</p>
+<div align="center"><img src="/images/闪电注意力.png" width="1000" ==""><br></div>
+
+<p>那么这些线性注意力机制到底应该如何理解，下面先回顾一下历史。</p>
+<h5 id="2-2、Hebb学习规则"><a href="#2-2、Hebb学习规则" class="headerlink" title="2.2、Hebb学习规则"></a>2.2、Hebb学习规则</h5><p>1949年，心理学家 Hebb 最早提出了关于神经网络学习机理的“突触修正”的假设。该假设指出，当神经元的突触前膜电位与后膜电位同时为正时，突触传导增强，当前膜电位与后膜电位正负相反时，突触传导减弱。也就是说”神经元共同激活则连接增强”（”cells that fire together, wire together”）。用数学公式就是</p>
+<p>$$\begin{align}<br>\Delta w= x_iy_i<br>\end{align}$$</p>
+<p>神经网络是通过其权重和连接结构来表达信息的记忆，大多数现有架构将记忆视为由输入引起的神经更新过程，并将学习定义为在给定目标的情况下获取有效且有用记忆的过程。通过这一视角：</p>
+<p>对于Transformer的注意力机制而言</p>
+<ul>
+<li>1、将键和值附加到上下文(KV Cache)中来更新记忆，这里没有压缩。</li>
+<li>2、然后通过查找查询向量 $\bm{q}$与键向量 $\bm{k}$之间的相似性来检索查询向量对应的记忆 $\bm{v}$，然后利用<br>该相似性对值向量进行加权以生成输出</li>
+</ul>
+<p>Transformer的注意力机制最大的问题是长下文的大显存需求和有限显存的矛盾，而线性注意力没有这个问题，它的状态需要的显存是恒定的。原始的线性注意力其实是Hebb学习规则的结果，它将历史数据压缩为固定大小的矩阵型记忆，并把上下文信息不断地压缩到状态 $\bm{S}$中。</p>
+<p>$$\begin{align}<br>\underbrace{\bm{S}_\tau}_{当前累积记忆}=\underbrace{\bm{S}_{\tau-1}}_{历史累积记忆}+\underbrace{\bm{k}_\tau \bm{v}_\tau^\T}_{当前记忆}<br>\end{align}$$</p>
+<p>由于状态 $\bm{S}$的大小有限，其能容纳的记忆和上下文也是有限的。简单的说<strong>它会爆</strong>，这就说明这种加性更新表达能力是有限，这样就有了后面的$\delta$ 规则。</p>
+<h4 id="三、绕不开的DeltaNet"><a href="#三、绕不开的DeltaNet" class="headerlink" title="三、绕不开的DeltaNet"></a>三、绕不开的DeltaNet</h4><h5 id="3-1、历史悠久的-delta-规则"><a href="#3-1、历史悠久的-delta-规则" class="headerlink" title="3.1、历史悠久的 $\delta$ 规则"></a>3.1、历史悠久的 $\delta$ 规则</h5><p>$\delta$ 规则顾名思义就是学习输出与目标值的差值来学习，它很容易由输出值与期望值的最小平方误差条件推导出来</p>
+<p>$$\begin{align}<br>\min_{\bm{S}} \ell(\bm{S})=\frac{1}{2}|\bm{S}\bm{k}-\bm{v}|_F^2<br>\end{align}$$</p>
+<p>这里要注意 $\bm{S}$的维度和上面线性注意力状态的维度不一样 $\dim[\bm{S}]=d_v\times d_k$, 之所以要转置一下，是为了接下叙述的方便, 符号也会节省很多。回顾公式，实际上是在说：将信息 $\bm{v}$ 存入记忆其实就是让 $\bm{k}$ 能在记忆 $\bm{S}$ 中尽可能地回忆起 $\bm{v}$，且让它们的差值越小越好。实际上有</p>
+<p>$$\begin{align}<br>\mathrm{d}\ell<br>&amp;=\frac{1}{2}\mathrm{d}\mathrm{tr}\big[[\bm{S}\bm{k}-\bm{v}]^\T[\bm{S}\bm{k}-\bm{v}]\big]\\<br>&amp;=\frac{1}{2}\mathrm{d}\mathrm{tr}\big[\bm{k}^\T\bm{S}^\T \bm{S}\bm{k}-\bm{k}^\T\bm{S}^\T \bm{v}- \bm{v}^\T \bm{S}\bm{k}+\bm{v}^\T \bm{v}\big]\\<br>&amp;=\frac{1}{2}\big(<br>\mathrm{d}\mathrm{tr}[\bm{k}^\T\bm{S}^\T \bm{S}\bm{k}]<br>-\mathrm{d}\mathrm{tr}[\bm{k}^\T\bm{S}^\T \bm{v}]<br>-\mathrm{d}\mathrm{tr}[ \bm{v}^\T \bm{S}\bm{k}]<br>\big)\\<br>&amp;=\frac{1}{2}\big(<br>\mathrm{tr}[\bm{k}^\T\mathrm{d}\bm{S}^\T \bm{S}\bm{k}]<br>+\mathrm{tr}[\bm{k}^\T\bm{S}^\T \mathrm{d}\bm{S}\bm{k}]<br>-2\mathrm{d}\mathrm{tr}[\bm{v}^\T\bm{S}\bm{k}]<br>\big)\\<br>&amp;=\frac{1}{2}\big(<br>2\mathrm{tr}[\bm{k}^\T\bm{S}^\T \mathrm{d}\bm{S}\bm{k}]<br>-2\mathrm{d}\mathrm{tr}[\bm{v}^\T\bm{S}\bm{k}]<br>\big)\\<br>&amp;=\mathrm{tr}[\bm{k}^\T\bm{S}^\T \mathrm{d}\bm{S}\bm{k}]<br>-\mathrm{tr}[\bm{v}^\T\mathrm{d}\bm{S}\bm{k}]\\<br>&amp;=\mathrm{tr}[\bm{k}\bm{k}^\T\bm{S}^\T \mathrm{d}\bm{S}]<br>-\mathrm{tr}[\bm{k}\bm{v}^\T\mathrm{d}\bm{S}]\\<br>&amp;=\mathrm{tr}\bigg[\big[\bm{S}\bm{k}\bm{k}^\T-\bm{v}\bm{k}^\T\big]^\T\mathrm{d}\bm{S}\bigg]<br>\end{align}$$</p>
+<p>于是有</p>
+<p>$$\begin{align}<br>\nabla_{\bm{S}}\ell = \bm{S}\bm{k}\bm{k}^\T-\bm{v}\bm{k}^\T<br>\end{align}$$</p>
+<p>做梯度更新有</p>
+<p>$$\begin{align}<br>\bm{S}:=\bm{S}-\beta(\bm{S}\bm{k}\bm{k}^\T-\bm{v}\bm{k}^\T)<br>=\bm{S}\big[\bm{E}-\beta\bm{k}\bm{k}^\T\big]+\beta\bm{v}\bm{k}^\T<br>\end{align}$$</p>
+<p>加上下角标就有</p>
+<p>$$\begin{align}<br>\bm{S}_{t}=\bm{S}_{t-1}\big[\bm{E}-\beta_t\bm{k}_t\bm{k}_t^\T\big]+\beta_t\bm{v}_t\bm{k}_t^\T<br>\end{align}$$</p>
+<p>这样就得到了DeltaNet的状态更新公式。注意到状态更新公式是在推理中计算的。于是基于上述推导，实际上就实现了<strong>在推理中进行梯度下降学习</strong>，也就是说一定程度上实现了边推理边学习的元学习状态。万里长征总是算迈出了第一步。</p>
+<p>现在回顾一下这种做法的历史，2021年的一篇论文《Linear Transformers Are Secretly Fast Weight Programmers》说的是线性Transformer 实际上是快权重编程。而<strong>快权重编程FWP</strong>(Fast Weight Programmers)的概念实际上是上世纪90年代的思想（Schmidhuber, 1991; 1992; 1993; AI Blog, 2021）。这里引用论文的原文来介绍一下快权重编程：</p>
+<blockquote>
+</blockquote>
+<p>在标准神经网络中，权重在训练后保持固定，不同于激活值，后者在测试时会根据输入发生变化。快速权重的基本思想是使权重也变得可变且输入相关。这一概念被称为突触调制（vonder Malsburg, 1981），一种用于神经网络中可变绑定的方法（例如，Greff等人（2020）的最新综述），或动态连接（Feldman, 1982）。Von der Malsburg将有效权重定义为传统、上下文无关的慢权重与快速变化、上下文相关的快权重的（乘法）叠加。Hinton &amp; Plaut（1987）研究了一个网络，在模型再训练场景中，该网络通过（加法）叠加两种不同学习率的两组权重。然而，在 1991 年之前，没有任何网络通过梯度下降学习来快速计算另一网络或自身快权重存储的变化。</p>
+<blockquote>
+<p>一个传统的慢网络通过慢权重持续改变或重新编程快网络的快权重，使快权重实际上依赖于给定输入流的时空上下文。简而言之，慢网络学习如何编程其快网络。</p>
+</blockquote>
+<p>回顾公式 </p>
+<p>$$\begin{align}<br>\bm{S}_{t}=\underbrace{\bm{S}_{t-1}\big[\bm{E}-\beta_t\bm{k}_t\bm{k}_t^\T\big]}_{历史记忆衰减}+\underbrace{\beta_t\bm{v}_t\bm{k}_t^\T}_{新增记忆}<br>\end{align}$$</p>
+<p>不仅有加性记忆，也引入了记忆遗忘(删除)的机制，从而实现了在固定记忆大小下更好的表达能力。</p>
+<h5 id="3-1、对角加秩一矩阵-DPLR"><a href="#3-1、对角加秩一矩阵-DPLR" class="headerlink" title="3.1、对角加秩一矩阵(DPLR)"></a>3.1、对角加秩一矩阵(DPLR)</h5><p>这里要进一步探究DeltaNet中的状态衰减因子 $\bm{E}-\beta_t\bm{k}_t\bm{k}_t^\T$，它实际上和矩阵计算中重要的Householder变换极为相似，除了 $\beta_t$的不一样。实际上它几何意义和Householder变换是差不多的。在开始解释前，注意到该矩阵其实是一个对角矩阵+秩一矩阵，这样矩阵有些特殊的性质。</p>
+<p>$$\begin{align}<br>\bm{H} =\underbrace{\bm{E} \vphantom{\beta\bm{k}\bm{k}^\T}}_{对角矩阵} -\underbrace{\beta\bm{k}\bm{k}^\T}_{秩一矩阵\,\mathrm{rank}[\bm{k}\bm{k}^\T]=1}<br>\end{align}$$</p>
+<p>首先明确一下矩阵和向量维度： $\dim[\bm{S}]=d_v \times d_k$, 实际有 $\bm{S}^\T=[\bm{s}_1,\cdots,\bm{s}_{d_v}]$, $\dim[\bm{s}]=\dim[\bm{k}]=d_k$，所以有</p>
+<p>$$\begin{align}<br>\bm{s}_{t}^\T= \bm{s}_{t-1}^\T[\bm{E}-\beta_t\bm{k}_t\bm{k}_t^\T]\Leftrightarrow<br>\bm{s}_{t}=[\bm{E}-\beta_t\bm{k}_t\bm{k}_t^\T]\bm{s}_{t-1}<br>\end{align}$$</p>
+<p>实际上会对键矩阵做归一化再求状态，这样就有 $|\bm{k}|=1$, 那么$\bm{s}_{t-1}$在 $\bm{k}_t$上的投影是</p>
+<p>$$\begin{align}<br>\mathrm{proj}_{\bm{k}_t}(\bm{s}_{t-1})= \bm{k}_t ^\T\bm{s}_{t-1}\bm{k}_{t}=<br>\bm{k}_{t}\bm{k}_t ^\T\bm{s}_{t-1}<br>\end{align}$$</p>
+<p>这样就有</p>
+<p>$$\begin{align}<br>\bm{s}_{t}=\bm{s}_{t-1}-\beta_t\mathrm{proj}_{\bm{k}_t}(\bm{s}_{t-1})<br>\end{align}$$</p>
+<p>那么对角加秩一矩阵的实质是<strong>通过迭代变换构建记忆状态</strong>: 对于任意向量 $\bm{s}$，变换后沿 $\bm{k}$方向的分量被衰减、保留或放大，而正交分量保持不变，从而实现精细化的记忆控制。 $\beta$用于动态调整记忆衰减强度，确保模型仅遗忘与当前任务无关的信息。一张图说明问题：</p>
+<div align="center"><img src="/images/对角加秩一矩阵.png" width="1000" ==""><br></div>
+
+
+<p>一个简单例子：假设状态空间为 $\mathbb{R}^2$，输入键向量$\mathbf{k}_t = [1, 0]^\T$，状态 $\bm{S}_{t-1} = [3, 2]^\T$，取 $\beta_t = 0.5$.</p>
+<p>$$\begin{align}<br>\bm{H}_t = \bm{E} - 0.5 \begin{bmatrix} 1 \ 0 \end{bmatrix} \begin{bmatrix} 1 &amp; 0 \end{bmatrix} = \begin{bmatrix} 0.5 &amp; 0 \ 0 &amp; 1 \end{bmatrix}<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\bm{S}_t = \bm{H}_t\bm{S}_{t-1} = \begin{bmatrix} 0.5 &amp; 0 \ 0 &amp; 1 \end{bmatrix} \begin{bmatrix} 3 \ 2 \end{bmatrix} = \begin{bmatrix} 1.5 \ 2 \end{bmatrix}<br>\end{align}$$</p>
+<p>几何效果：</p>
+<ul>
+<li><strong>平行分量</strong>：沿 $x$-轴的分量从 3 衰减至 1.5（衰减率 50%）。</li>
+<li><strong>正交分量</strong>：沿 $y$-轴的分量保持 2 不变。</li>
+<li><strong>物理意义</strong>：模型遗忘 $x$-方向的历史信息，保留 $y$-方向的记忆。</li>
+</ul>
+<p>对于输入序列：[The, quick, brown, fox]，变换的效果：</p>
+<ul>
+<li>键向量 $\bm{k}(quick)$衰减无关修饰词（如$\bm{k}(The)$），保留核心动词信息。</li>
+<li>键向量 $\bm{k}(fox)$衰减动物无关特征，强化主语一致性。</li>
+</ul>
+<h5 id="3-3、RWKV7的状态更新"><a href="#3-3、RWKV7的状态更新" class="headerlink" title="3.3、RWKV7的状态更新"></a>3.3、RWKV7的状态更新</h5><p>这里不打算深入RWKV7的细节，只讨论状态(记忆)更新公式。<br>$$\begin{align}<br>\bm{S}_t= \bm{S}_{t-1}\big[\underbrace{\mathrm{diag}[\bm{w}_t]}_{累积记忆衰减}-\underbrace{\bm{\kappa}_t(\bm{\beta}_t\odot\bm{\kappa}_t)^\T}_{历史记忆遗忘}\big]+ \underbrace{\bm{v}_t(\bm{\eta}_t\odot\bm{k}_t)^\T}_{新增记忆增强}<br>\end{align}$$</p>
+<p>1、$\bm{\kappa}_t=\bm{k}_t\odot \bm{\xi}$，这里笔者认为是一种过参数化，增加表达力。这里的类似键矩阵 $\bm{k}$的矩阵已经和注意力机制中的  $\bm{k}$所起的作用大不相同，具体笔者将在接下来的博文中详细解释。<br>2、引入了累积记忆的衰减参数$\mathrm{diag}[\bm{w}_t]$<br>3、将学习率精细化，给遗忘记忆和新增记忆不同的学习率<br>4、学习率向量化，精确到每个特征维度(通道维度)</p>
+<p>总的来说RWKV7的状态更新，做很多细节化的处理，对比最原始的线性注意力的加性状态已经是不可同日而语, 对比DeltaNet的状态更新也是做了更加精细处理，进一步增强了表达能力。</p>
+<h4 id="四、Titans的解释"><a href="#四、Titans的解释" class="headerlink" title="四、Titans的解释"></a>四、Titans的解释</h4><p>对原始线性注意力、DeltaNet的更新规则、RWKV7的更新规则有了解后，有一个自然的问题就提出来了：<strong>这个记忆更新规则背后的统一框架是什么？</strong> google的Titans给出了一个顺理成章的解释：<strong>记忆依赖惊奇更新</strong>。</p>
+<h5 id="4-1、定义惊奇度"><a href="#4-1、定义惊奇度" class="headerlink" title="4.1、定义惊奇度"></a>4.1、定义惊奇度</h5><p>现代线性模型记忆视角将学习定义为获取有效且有用记忆的过程。在此基础上，可以将循环神经网络（RNN）的隐藏状态视为记忆单元，模型旨在将信息压缩到其中。相应地，在一般的循环神经网络形式中，隐藏状态可以被视为记忆单元，而递归过程可以分解为记忆单元中的读取和写入操作。令 $\mathcal{M}$为记忆， $\bm{X}_{n\times d}$作为输入，其中 $\bm{x}_t$是时刻 $t$的输入, $\bm{y}_t$是时刻 $t$的输出。那么有</p>
+<p>$$\begin{align}<br>\mathcal{M}_t &amp;= \mathrm{write}(\mathcal{M}_{t-1},\bm{x}_t)\\<br>\bm{y}_t &amp;= \mathrm{read}(\mathcal{M}_t,\bm{x}_t)<br>\end{align}$$</p>
+<p>那么如何构造这样记忆模块。简单的想法是训练一个神经网络并期望它能够记忆其训练数据。然而，记忆在神经网络中几乎一直被认为是一种不期望的现象：</p>
+<ul>
+<li>1、它会限制模型的泛化能力</li>
+<li>2、引发隐私问题</li>
+<li>3、训练数据的记忆在测试时可能并不有益，因为在测试时数据可能是分布外的</li>
+</ul>
+<p>这样最好是有一个在线元模型，该模型学习如何在测试时记忆或遗忘数据。在这种设置下，模型学习一个能够进行记忆的函数，但它并未过拟合训练数据，从而在测试时实现更好的泛化能力。这样训练记忆的关键思想就是将其训练视为一个在线学习问题，目标是将过去的信息 $\bm{x}_1\cdots \bm{x}_{t-1}$压缩到长期神经记忆模块 $\mathcal{M}_t$的参数中。违反预期的事件（即具有惊奇性）对人类来说更具记忆性。受此启发，可以为模型定义一个简单的惊讶度指标：</p>
+<p>$$\begin{align}<br>\nabla\ell(\mathcal{M}_{t-1},\bm{x}_t)<br>\end{align}$$</p>
+<p>即其相对于输入的梯度。梯度越大，表示输入数据与过去数据的差异越大。因此，利用这个惊讶度指标，可以更新记忆如下:</p>
+<p>$$\begin{align}<br>\mathcal{M}_t = \mathcal{M}_{t-1} - \theta_t\nabla\ell(\mathcal{M}_{t-1},\bm{x}_t)<br>\end{align}$$</p>
+<h5 id="4-2、惊奇分解"><a href="#4-2、惊奇分解" class="headerlink" title="4.2、惊奇分解"></a>4.2、惊奇分解</h5><p>这种<strong>惊奇度指标</strong>（<strong>surprise metric</strong>）可能会导致错过一些重要的信息，这些信息出现在一个重大惊喜事件之后。也就是说，在经过几次惊奇步骤后，梯度可能会变得非常小，从而使模型陷入平坦区域（即局部极小值），并错过序列中某些部分的信息。从人类记忆的角度来看，一个事件可能不会在长时间内持续地让我们感到惊奇，尽管它是令人难忘的。其原因是，初始时刻的惊奇程度足以在长时间范围内引起我们的注意，从而记住整个时间范围。为了改进上述的惊奇度指标，我们将惊奇度指标分解为两部分：(1)过去惊奇，用于衡量非常近期过去的信息；以及 (2) 当前惊奇，用于衡量新输入数据的惊奇程度：</p>
+<p>$$\begin{align}<br>\mathcal{M}_t &amp;= (1-\alpha_t)\mathcal{M}_{t-1} + \bm{S}_t\\<br>\bm{S}_t &amp; = \eta_t\underbrace{\bm{S}_{t-1}}_{过去惊奇} - \theta_t\underbrace{\nabla\ell(\mathcal{M}_{t-1},\bm{x}_t)}_{当前惊奇}<br>\end{align}$$</p>
+<p>有趣的是，这种形式与带有动量的梯度下降相似，其中 $\bm{S}_t$是动量项。因此，这里的动量起到了跨时间（序列长度）的“惊奇”记忆作用。在该形式中， $\eta_t$ 是一个数据依赖的惊讶衰减项（ $\bm{x}_t$的函数），控制惊讶随时间的衰减程度，而 $\theta_t$ 则控制应将多少即时惊奇纳入最终的惊奇度量中，以数据依赖的方式进行。这种数据依赖性在该设计中尤为重要：虽然前一个标记的惊奇可能需要影响下一个标记的惊讶，但如果所有标记都相关且处于同一上下文中，这种做法才大多有效。因此，一个数据依赖的 $\eta$ 可以控制是否需要保留记忆：(1) 通过设置 $\eta_t\to 0$ 忽略最后的惊讶（可能由于上下文的变化），或(2) 通过设置 $\eta_t\to 1$ 完全保留最后的惊讶（可能因为该标记与其最近的前序标记高度相关）。 $\alpha_t \in [0,1]$ 是控制记忆的门控机制；即决定应遗忘多少信息。例如，它可以通过让 $\alpha_t\to 0$ 来更新记忆而不影响过去的抽象，也可以通过让 $\alpha_t\to 1$ 清除整个记忆。</p>
+<h5 id="4-3、统一的解释"><a href="#4-3、统一的解释" class="headerlink" title="4.3、统一的解释"></a>4.3、统一的解释</h5><p>在惊奇度定义中，并没有明确 $\mathcal{M}_t$ 和 $\nabla\ell(\mathcal{M}_{t-1},\bm{x}_t)$ 的具体形式。这样就有了设计的空间。 这样 LightningAttention、GLA、Mamba、HGRN2、DeltaNet、RWKV-7、TTT、GatedDeltaNet、Titans-LMM就只是$\mathcal{M}_t$ 和 $\nabla\ell(\mathcal{M}_{t-1},\bm{x}_t)$的不同而已。以上就是Titans的解释。</p>
+<h4 id="五、Miras的统一框架"><a href="#五、Miras的统一框架" class="headerlink" title="五、Miras的统一框架"></a>五、Miras的统一框架</h4><p>与Titans的不同，Miras更进一步：定义目标函数，再做梯度更新太麻烦。直接一步到位的最大化一个统一的目标函数，理论上是更加简洁，更具有通用性。与Titans依赖“惊奇”启发式设计不同，Miras[^7]认为：<strong>所有的记忆更新，本质上是求解一个在线凸优化问题</strong>。它能够将DeltaNet、RWKV-7、Gated DeltaNet、TTT等一系列现代RNN的状态更新统一在同一优化框架下。</p>
+<h5 id="5-1、从梯度下降到近端正则化"><a href="#5-1、从梯度下降到近端正则化" class="headerlink" title="5.1、从梯度下降到近端正则化"></a>5.1、从梯度下降到近端正则化</h5><p>目标函数优化的梯度更新等价于线性近似加参数正则约束目标(Constrained Approximation)的优化。也就是说 $\displaystyle \min_{\bm{S}} \ell(\bm{S})$，执行梯度下降有 $\bm{S}_{t}= \bm{S}_{t-1}-\beta_t\nabla\ell(\bm{S}_t)$，可以使用如下优化目标函数代替：</p>
+<p>$$\begin{align}<br>\min_{\bm{x}} \tilde{\ell}(\bm{S})=[\bm{S}-\bm{S}_{t-1}]^\T\nabla_\bm{S} \ell(\bm{S})+\frac{1}{2\beta_t}|\bm{S}-\bm{S}_t|_F^2<br>\end{align}$$</p>
+<p>容易知道 $\nabla\tilde{\ell}(\bm{S})=0$可得：</p>
+<p>$$\begin{align}<br>&amp;\nabla \ell(\bm{S}_t) + \frac{1}{\beta_t}(\bm{S}-\bm{S}_{t-1})=0\\<br>\Leftrightarrow&amp;\bm{S} = \bm{S}_{t-1} - \beta_t\nabla_\bm{S} \tilde{\ell}(\bm{S}_t)<br>\end{align}$$</p>
+<p>这样把梯度更新的问题，转化为了一个最优化问题。实际上有内积符号 $\langle\cdot,\cdot\rangle$, 这样就有优化目标</p>
+<p>$$\begin{align}<br>\tilde{\ell}(\bm{S})<br>=\langle \bm{S}-\bm{S}_{t-1},\nabla\ell(\bm{S})\rangle+\frac{1}{2\beta_t}|\bm{S}-\bm{S}_t|_F^2<br>\end{align}$$</p>
+<p>这种<strong>单步梯度下降</strong>可以等价地转化为一个近端正则化问题：在 $\bm{S}_{t-1}$ 附近寻找一个点，使其在损失函数的一阶近似下表现良好，同时用二次正则项惩罚对旧状态的偏离。准确地说，梯度下降是如下优化问题的闭式解：</p>
+<p>$$\begin{align}<br>\bm{S}_{t} = \arg\min_{\bm{S}} \; \underbrace{\langle \bm{S} - \bm{S}_{t-1}, \nabla\ell(\bm{S}_{t-1}) \rangle}_{\text{局部损失近似}} \; + \; \frac{1}{2\beta_t}|\bm{S} - \bm{S}_{t-1}|_F^2<br>\end{align}$$</p>
+<p>这一目标函数的一阶最优条件恰好给出 $\nabla\ell(\bm{S}_{t-1}) + \frac{1}{\beta_t}(\bm{S} - \bm{S}_{t-1}) = 0$，即梯度下降更新。沿着这种思路，我们不再需要显式地计算梯度，而是直接定义一类更广义的优化问题来更新记忆。</p>
+<h5 id="5-2、统一性的数学基础"><a href="#5-2、统一性的数学基础" class="headerlink" title="5.2、统一性的数学基础"></a>5.2、统一性的数学基础</h5><p>在Miras的统一视角下，一切记忆更新皆可归结为在线凸优化的不同实例。这一论断的数学根基是“跟随正则化引导者”(FTRL)视角与“学习-保留”视角的等价性。这里我们将<strong>完全展开</strong>每一步推导，并先清晰界定两种视角的具体形式。</p>
+<h6 id="5-2-1、定义：FTRL视角"><a href="#5-2-1、定义：FTRL视角" class="headerlink" title="5.2.1、定义：FTRL视角"></a>5.2.1、定义：FTRL视角</h6><p>上述目标函数可视为在损失函数序列上执行的一步<strong>在线梯度下降</strong>：</p>
+<p>$$\begin{align}<br>\ell(\bm{W};\bm{k}_1,\bm{v}_1) , \ell(\bm{W};\bm{k}_2,\bm{v}_2), \ldots , \ell(\bm{W};\bm{k}_t,\bm{v}_t),\ldots<br>\end{align}$$</p>
+<p>众所周知，在线梯度下降可视为<strong>跟随正则化引导者</strong>FTRL（Follow-The-Regularized-Leader ）算法在特定损失函数选择下的特例（Shalev-Shwartz et al. 2012, Chapter 2; Hazan et al. 2016）。具体而言，若假设 $\bm{S}_0= \bm{0}$，则更新规则等价于给定到目前为止的所有键值对 $(\bm{k}_1,\bm{v}_1),\dots,(\bm{k}_t,\bm{v}_t)$，记忆参数 $\bm{S}$ 通过<strong>同时最小化所有过往损失与一个正则项</strong>来更新：</p>
+<p>$$\begin{align}<br>\widehat{\bm{S}}_t = \arg\min_{\bm{S}\in\mathcal{W}}\left\{\sum_{i=1}^{t} \widehat{\ell}_i(\bm{S}; \bm{k}_i, \bm{v}_i) \; + \; \frac{1}{\eta} R(\bm{S}) \right\}<br>\end{align}$$</p>
+<p>其中：</p>
+<ul>
+<li>$\widehat{\ell}_i(\cdot)$ 是某个衡量在第 $i$ 个样本上表现的损失函数（或其近似）。</li>
+<li>$R(\bm{S})$ 是一个不随时间变化的凸正则化函数（如 $L_2$ 范数）。</li>
+<li>$\eta &gt; 0$ 是全局学习率，此处假定为常数（命题3.2的前提）。</li>
+<li>$\mathcal{W}$ 为参数空间，命题中取 $\mathcal{W} = \mathbb{R}^d$（无约束）。</li>
+</ul>
+<p>由 (FTRL) 生成的记忆参数序列记为 $\{\widehat{\bm{S}}_1, \widehat{\bm{S}}_2, \dots\}$。</p>
+<h6 id="5-2-2、学习-保留视角"><a href="#5-2-2、学习-保留视角" class="headerlink" title="5.2.2、学习-保留视角"></a>5.2.2、学习-保留视角</h6><p>学习-保留视角则将记忆更新拆解为两个对抗力量的平衡：<strong>适应新样本（注意偏置）</strong> 与 <strong>保护旧记忆（保留机制）</strong>。其一般形式为：</p>
+<p>$$\begin{align}<br>\widetilde{\bm{S}}_t = \arg\min_{\bm{S} \in \mathcal{W}} \left\{\widetilde{\ell}_t(\bm{S};\bm{k}_t, \bm{v}_t) \; + \; \mathrm{Ret}_t(\bm{S}, \widetilde{\bm{S}}_{t-1}) \right\}<br>\end{align}$$</p>
+<p>有命题建立学习-保留视角与跟随正则化引导等价，对其中两项做了特定选择：</p>
+<ul>
+<li>1、<strong>注意偏置</strong> $\widetilde{\ell}_t$ 直接取为 FTRL 中的损失函数：$\widetilde{\ell}_t(\cdot) = \widehat{\ell}_t(\cdot)$。</li>
+<li>2、<strong>保留函数</strong> $\mathrm{Ret}_t(\bm{S}, \bm{S}’)$ 取为<strong>布雷格曼散度</strong> $\mathcal{D}_{h_t}(\bm{S}, \bm{S}’)$，该散度由函数 $h_t$ 生成，而 $h_t$ 又恰好是 FTRL 中截至 $t-1$ 步的历史代价：</li>
+</ul>
+<p>$$\begin{align}<br>h_t(\bm{S}) := \sum_{i=1}^{t-1} \widehat{\ell}_i(\bm{S}; \bm{k}_i, \bm{v}_i) + \frac{1}{\eta} R(\bm{S})<br>\end{align}$$</p>
+<p>布雷格曼散度的定义为：<br>$$\begin{align}<br>\mathcal{D}_{h_t}(\bm{S}, \bm{S}’) = h_t(\bm{S}) - h_t(\bm{S}’) - \langle \nabla h_t(\bm{S}’), \bm{S} - \bm{S}’ \rangle<br>\end{align}$$<br>它衡量用 $\bm{S}’$ 处的一阶泰勒展开近似 $h_t(\bm{S})$ 时产生的误差，是一种广义的“距离”。</p>
+<p>于是，学习-保留视角下的序列 $\{\widetilde{\bm{S}}_t\}$ 由下式生成：</p>
+<p>$$\begin{align}<br>\widetilde{\bm{S}}_t = \arg\min_{\bm{S}} \Big\{ \underbrace{\widehat{\ell}_t(\bm{S}; \bm{k}_t, \bm{v}_t)}_{\text{注意偏置}} \; + \; \underbrace{\mathcal{D}_{h_t}(\bm{S}, \widetilde{\bm{S}}_{t-1})}_{\text{保留}} \Big\}<br>\end{align}$$</p>
+<p>我们的目标是：若两序列初始相同，则对所有 $t$ 有 $\widetilde{\bm{S}}_t = \widehat{\bm{S}}_t$。下面用数学归纳法给出严格证明:</p>
+<h6 id="5-2-3、跟随正则化引导与学习-保留框架等价性证明"><a href="#5-2-3、跟随正则化引导与学习-保留框架等价性证明" class="headerlink" title="5.2.3、跟随正则化引导与学习-保留框架等价性证明"></a>5.2.3、跟随正则化引导与学习-保留框架等价性证明</h6><p><strong>1. 归纳基础</strong><br>假设两个过程从同一初始点 $W_0$ 启动。由 (FTRL) 得 $\widehat{\bm{S}}_1 = \arg\min_{\bm{S}} \big\{ \widehat{\ell}_1(\bm{S}) + \frac{1}{\eta}R(\bm{S}) \big\}$。<br>对于学习-保留视角，$t=1$ 时 $h_1(\bm{S}) = \frac{1}{\eta}R(\bm{S})$（求和为空）。于是</p>
+<p>$$\begin{align}<br>\mathcal{D}_{h_1}(\bm{S}, \bm{S}_0) = h_1(\bm{S}) - h_1(\bm{S}_0) - \langle \nabla h_1(\bm{S}_0), \bm{S} - \bm{S}_0 \rangle<br>\end{align}$$</p>
+<p>代入 (3)，并去掉常数项 $-h_1(\bm{S}_0) - \langle \nabla h_1(\bm{S}_0), -\bm{S}_0 \rangle$，得</p>
+<p>$$\begin{align}<br>\widetilde{\bm{S}}_1 = \arg\min_{\bm{S}} \big\{ \widehat{\ell}_1(\bm{S}) + h_1(\bm{S}) - \langle \nabla h_1(\bm{S}_0), \bm{S} \rangle \big\}<br>\end{align}$$</p>
+<p>通常可令 $\bm{S}_0 = \bm{0}$ 且 $R(\bm{0})=\bm{0}$，若 $R$ 在零点梯度也为 $\bm{0}$，则 $\nabla h_1(\bm{S}_0) = \frac{1}{\eta}\nabla R(\bm{0})=\bm{0}$，于是上式退化为 $\widehat{\ell}_1(\bm{S}) + \frac{1}{\eta}R(\bm{S})$，与 $\widehat{\bm{S}}_1$ 的目标一致，因此 $\widetilde{\bm{S}}_1 = \widehat{\bm{S}}_1$。若初始点非零点，可通过令 $h_1(\bm{S})$ 包含初始正则化项或调整定义来保证等价性——命题的核心在递推步骤，基础通常自然成立。我们可不失一般性地假设 $\widetilde{\bm{S}}_1 = \widehat{\bm{S}}_1$ 。</p>
+<p><strong>2. 归纳假设</strong><br>假设对某个 $t-1 \geqslant 1$，已有</p>
+<p>$$\begin{align}<br>\widetilde{\bm{S}}_{t-1} = \widehat{\bm{S}}_{t-1}<br>\end{align}$$</p>
+<p><strong>3. 归纳步骤（证明 $\widetilde{\bm{S}}_t = \widehat{\bm{S}}_t$）</strong>  </p>
+<p>由学习-保留视角的更新式和散度展开式：</p>
+<p>$$<br>\begin{aligned}<br>\widetilde{\bm{S}}_t<br>&amp;= \arg\min_{\bm{S}} \Big\{ \widehat{\ell}_t(\bm{S}) \;+\; h_t(\bm{S}) - h_t(\widetilde{\bm{S}}_{t-1}) - \langle \nabla h_t(\widetilde{\bm{S}}_{t-1}), \bm{S} - \widetilde{\bm{S}}_{t-1} \rangle \Big\} \\<br>&amp;= \arg\min_{\bm{S}} \Big\{ \widehat{\ell}_t(\bm{S}) + h_t(\bm{S}) - \langle \nabla h_t(\widetilde{\bm{S}}_{t-1}), \bm{S} \rangle \\<br>&amp;\qquad\qquad\qquad + \underbrace{\big[ -h_t(\widetilde{\bm{S}}_{t-1}) + \langle \nabla h_t(\widetilde{\bm{S}}_{t-1}), \widetilde{\bm{S}}_{t-1} \rangle \big]}_{\text{与 } \bm{S} \text{ 无关的常数}} \Big\}.<br>\end{aligned}<br>$$</p>
+<p>移除常数项，优化目标变为：</p>
+<p>$$\begin{align}<br>\widetilde{\bm{S}}_t = \arg\min_{\bm{S}} \Big\{ \widehat{\ell}_t(\bm{S}) + h_t(\bm{S}) - \langle \nabla h_t(\widetilde{\bm{S}}_{t-1}), \bm{S} \rangle \Big\}<br>\end{align}$$</p>
+<p>现在将 $h_t(\bm{S})$ 的定义 (1) 代入：</p>
+<p>$$\begin{align}<br>\widehat{\ell}_t(\bm{S}) + h_t(\bm{S}) = \widehat{\ell}_t(\bm{S}) + \sum_{i=1}^{t-1} \widehat{\ell}_i(\bm{S}) + \frac{1}{\eta} R(\bm{S})<br>= \sum_{i=1}^{t} \widehat{\ell}_i(\bm{S}) + \frac{1}{\eta} R(\bm{S})<br>\end{align}$$</p>
+<p>于是 (5) 变为：</p>
+<p>$$\begin{align}<br>\widetilde{\bm{S}}_t = \arg\min_{\bm{S}} \left\{ \sum_{i=1}^{t} \widehat{\ell}_i(\bm{S}) + \frac{1}{\eta} R(\bm{S}) \;-\; \langle \nabla h_t(\widetilde{\bm{S}}_{t-1}), \bm{S} \rangle \right\}<br>\end{align}$$</p>
+<p><strong>关键一步</strong>：利用归纳假设 (4)，$\widetilde{\bm{S}}_{t-1} = \widehat{\bm{S}}_{t-1}$。因此梯度项可以改写：</p>
+<p>$$<br>\nabla h_t(\widetilde{\bm{S}}_{t-1}) = \nabla h_t(\widehat{\bm{S}}_{t-1})<br>$$</p>
+<p>但 $\widehat{\bm{S}}_{t-1}$ 正是 FTRL 视角在第 $t-1$ 步的解，即</p>
+<p>$$<br>\widehat{\bm{S}}_{t-1} = \arg\min_{\bm{S}} \Big\{ \sum_{i=1}^{t-1} \widehat{\ell}_i(\bm{S}) + \frac{1}{\eta} R(\bm{S}) \Big\} = \arg\min_{\bm{S}} h_t(\bm{S})<br>$$</p>
+<p>因为 $h_t(\bm{S})$ 严格凸且定义域为全空间 $\mathbb{R}^d$，该无约束优化问题在最小值点 $\widehat{\bm{S}}_{t-1}$ 处梯度为零：</p>
+<p>$$<br>\nabla h_t(\widehat{\bm{S}}_{t-1}) = \bm{0}<br>$$</p>
+<p>将 (8) 代入 (7)，内积项 $\langle \bm{0}, W \rangle = 0$，目标函数简化为：</p>
+<p>$$<br>\widetilde{\bm{S}}_t = \arg\min_{\bm{S}} \left\{ \sum_{i=1}^{t} \widehat{\ell}_i(\bm{S}) + \frac{1}{\eta} R(W) \right\}<br>$$</p>
+<p>而式 (9) 的右边正是 FTRL 视角对 $\widehat{\bm{S}}_t$ 的定义。因此</p>
+<p>$$<br>\widetilde{\bm{S}}_t = \widehat{\bm{S}}_t<br>$$</p>
+<p><strong>4. 归纳完成</strong><br>由归纳原理，对所有 $t \ge 1$ 均有 $\widetilde{\bm{S}}_t = \widehat{\bm{S}}_t$，即两个视角产生的记忆更新序列完全一致。</p>
+<blockquote>
+<p>个人评述<br>这个证明的核心在于“构造”了一个巧妙的保留函数——布雷格曼散度 $\mathcal{D}_{h_t}$。当将基于该散度的“学习-保留”优化目标展开后，历史损失的信息通过 $h_t(W)$ 被自然引入，而一阶内积项 $\langle \nabla h_t(\widetilde{\bm{S}}_{t-1}), \bm{S} \rangle$ 恰好因 FTRL 前一步的最优性而消失。这就使得“在新数据上学习+靠近旧状态”的局部操作，精妙地等价于“重新求解整个历史序列损失加正则”的全局操作。换言之，<strong>只要保留机制选择为历史累积损失的布雷格曼散度，局部记忆更新就能忠实地模拟全局重演</strong>。这一结论为Miras将各类RNN状态更新统一为注意偏置与保留机制的不同实例提供了坚实的理论基座。</p>
+</blockquote>
+<h5 id="5-3-从学习-保留到统一框架"><a href="#5-3-从学习-保留到统一框架" class="headerlink" title="5.3 从学习-保留到统一框架"></a>5.3 从学习-保留到统一框架</h5><p>已经证明在温和的凸性假设下，学习-保留视角与FTRL(跟随正则化引导者)视角是等价的。这为我们提供了统一众多模型的钥匙。现在，我们将这一等价性具体化为Miras的统一框架：<strong>任何线性RNN的记忆更新，都可以写成如下形式的“学习-保留”优化问题</strong></p>
+<p>$$\begin{align}<br>\boxed{<br>\bm{S}_{t} = \arg\min_{\bm{S}} \;<br>\underbrace{\widetilde{\ell}_t(\bm{S}; \bm{k}_t, \bm{v}_t)}_{\text{注意偏置（学习新信息）}} \; + \;<br>\underbrace{\operatorname{Ret}_t(\bm{S}, \bm{S}_{t-1})}_{\text{保留机制（巩固旧记忆）}}<br>}<br>\end{align}$$</p>
+<p>其中，$\widetilde{\ell}_t$ 是瞬时损失 $\ell_t$ 的某种近似，而 $\operatorname{Ret}_t$ 控制对前一时刻状态 $\bm{S}_{t-1}$ 的偏离程度，并可进一步分解为局部保留和全局保留部分：</p>
+<p>$$<br>\operatorname{Ret}_t(\bm{S}, \bm{S}_{t-1}) = \frac{1}{\eta_t} D_t(\bm{S}, \bm{S}_{t-1}) \; + \; \frac{1}{\alpha_t} G_t(\bm{S}). \tag{5.3}<br>$$</p>
+<p>不同的模型实质上就是对<strong>近似损失</strong> $\widetilde{\ell}_t$、<strong>局部散度</strong> $D_t$、<strong>全局正则项</strong> $G_t$ 以及<strong>元学习率</strong> $\eta_t,\alpha_t$ 做出不同选择的结果。下面我们以几个典型模型为例，展示它们如何被嵌入这一框架。</p>
+<h6 id="5-3-1、原始线性注意力（Hebb学习规则）"><a href="#5-3-1、原始线性注意力（Hebb学习规则）" class="headerlink" title="5.3.1、原始线性注意力（Hebb学习规则）"></a>5.3.1、原始线性注意力（Hebb学习规则）</h6><p>取瞬时损失 $\ell(\bm{S}) = -\langle \bm{S}, \bm{k}_t\bm{v}_t^\T \rangle$ （旨在最大化输入键值对的内积），并令 $D_t(\bm{S},\bm{S}_{t-1}) = \frac{1}{2}|\bm{S} - \bm{S}_{t-1}|_F^2$，不设全局保留项。此时，(5.2)的解析解为：</p>
+<p>$$<br>\bm{S}_{t} = \bm{S}_{t-1} + \eta_t \bm{v}_t\bm{k}_t^\T,<br>$$</p>
+<p>即Hebb加性更新。</p>
+<h6 id="5-3-2、DeltaNet"><a href="#5-3-2、DeltaNet" class="headerlink" title="5.3.2、DeltaNet"></a>5.3.2、DeltaNet</h6><p>使用平方误差的线性化近似：$\widetilde{\ell}_t(\bm{S}) = \bm{\beta}_t\langle \bm{S} - \bm{S}_{t-1}, \nabla\ell(\bm{S}_{t-1}) \rangle$，其中 $\nabla\ell(\bm{S}_{t-1}) = \bm{S}_{t-1}\bm{k}_t\bm{k}_t^\T - \bm{v}_t\bm{k}_t^\T$，并采用二次局部保留 $D_t(\bm{S},\bm{S}_{t-1}) = \frac{1}{2}|\bm{S} - \bm{S}_{t-1}|_F^2$，得到<strong>优化目标</strong>：</p>
+<p>$$\begin{align}<br>\min_{\bm{S}}<br>\bm{\beta}_t\langle \bm{S} - \bm{S}_{t-1}, \nabla\ell(\bm{S}_{t-1}) \rangle+<br>\frac{1}{2}|\bm{S} - \bm{S}_{t-1}|_F^2<br>\end{align}$$</p>
+<p>为了求解 $\bm{S}_t$，我们需要对目标函数关于 $\bm{S}$ 求导，并令其等于零。</p>
+<p>第一步：展开目标函数<br>利用矩阵内积与 Frobenius 范数的性质 $\langle \bm{A}, \bm{B} \rangle = \mathrm{Tr}(\bm{A}^\T \bm{B})$ 和 $|\bm{A}|_F^2 = \mathrm{Tr}(\bm{A}^\T \bm{A})$，目标函数可以写为：</p>
+<p>$$\begin{align}<br>J(\bm{S}) = \bm{\beta}_t\mathrm{Tr}((\bm{S} - \bm{S}_{t-1})^\T \nabla\ell(\bm{S}_{t-1})) + \frac{1}{2} \mathrm{Tr}((\bm{S} - \bm{S}_{t-1})^\T (\bm{S} - \bm{S}_{t-1}))<br>\end{align}$$</p>
+<p>第二步：对 $\bm{S}$ 求导<br>利用矩阵求导法则：1. $\frac{\partial}{\partial \bm{X}} \mathrm{Tr}(\bm{X}^\T \bm{A}) = \bm{A}$; 2. $\frac{\partial}{\partial \bm{X}} \mathrm{Tr}((\bm{X} - \bm{B})^\T (\bm{X} - \bm{B})) = 2(\bm{X} - \bm{B})$，对 $J(\bm{S})$ 关于 $\bm{S}$ 求导，得到：</p>
+<p>$$\begin{align}<br>\frac{\partial J(\bm{S})}{\partial \bm{S}} = \bm{\beta}_t\nabla\ell(\bm{S}_{t-1}) + (\bm{S} - \bm{S}_{t-1})<br>\end{align}$$</p>
+<p>第三步：令导数为零$\frac{\partial J(\bm{S})}{\partial \bm{S}} = \bm{0}$，并求解 $\bm{S}_t$得：</p>
+<p>$$\begin{align}<br>\bm{\beta}_t\nabla\ell(\bm{S}_{t-1}) + \bm{S}_t - \bm{S}_{t-1} = \bm{0}<br>\end{align}$$</p>
+<p>移项即可得到 $\bm{S}_t$ 的更新规则（本质上是步长为 1 的梯度下降）：</p>
+<p>$$\begin{align}<br>\bm{S}_t = \bm{S}_{t-1} - \bm{\beta}_t\nabla\ell(\bm{S}_{t-1})<br>\end{align}$$</p>
+<p>第四步：代入给定的梯度表达式 已知 $\nabla\ell(\bm{S}_{t-1}) = \bm{S}_{t-1}\bm{k}_t\bm{k}_t^\T - \bm{v}_t\bm{k}_t^\T$，代入上式：</p>
+<p>$$\begin{align}<br>\bm{S}_t = \bm{S}_{t-1} - \bm{\beta}_t(\bm{S}_{t-1}\bm{k}_t\bm{k}_t^\T - \bm{v}_t\bm{k}_t^\T)<br>\end{align}$$</p>
+<p>第五步：整理得到最终结果 将 $\bm{S}_{t-1}$ 提取公因式，得到 DeltaNet 的标准递推形式：</p>
+<p>$$\begin{align}<br>\bm{S}_{t}<br>= \bm{S}_{t-1}(\bm{E} - \beta_t \bm{k}_t\bm{k}_t^\T) + \beta_t \bm{v}_t\bm{k}_t^\T<br>\end{align}$$</p>
+<h6 id="5-3-3、RWKV-7的状态更新"><a href="#5-3-3、RWKV-7的状态更新" class="headerlink" title="5.3.3、RWKV-7的状态更新"></a>5.3.3、RWKV-7的状态更新</h6><p>RWKV-7引入了数据依赖的衰减和向量化学率，它的记忆更新机制很精细：</p>
+<p>$$\begin{align}<br>\bm{S}_t= \bm{S}_{t-1}\big[\mathrm{diag}[\bm{w}_t]-\bm{\kappa}_t(\bm{\beta}_t\odot\bm{\kappa}_t)^\T\big]+ \bm{v}_t(\bm{\eta}_t\odot\bm{k}_t)^\T<br>\end{align}$$<br>其中 $\bm{\kappa}_t=\bm{k}_t\odot \bm{\xi}$。如何用 Miras的统一框架的目标函数理解，需要费点神。</p>
+<p>1、<strong>注意力偏置(学习新信息)</strong> $\widetilde{\ell}_t(\bm{S}) = \langle \bm{S} - \bm{S}_{t-1}, \nabla\ell(\bm{S}_{t-1}) \rangle$，这个没有变化。区别在于 $\ell(\bm{S}_{t-1})$, <strong>RWKV</strong>对于记忆写入加入了调制，其中 $\bm{k}_{write} = \bm{\eta}_t\odot\bm{k}_t$，用 $\bm{\eta}_t$控制。</p>
+<p>$$\begin{align}<br>\ell(\bm{S}_{t-1}) = \underbrace{\frac{1}{2}|\bm{S}_{t-1}\bm{k}_{write} - \bm{v}_t|_F^2}_{\text{写入对齐}}<br>\end{align}$$</p>
+<p>2、<strong>保留项</strong> $\mathrm{Ret}_t(\bm{S}, \bm{S}_{t-1})$，分为两个部分局部保留 $D_t(\bm{S},\bm{S}_{t-1})$和全局保留 $G_t(\bm{S})$。</p>
+<ul>
+<li>局部保留 $D_t(\bm{S},\bm{S}_{t-1})$</li>
+</ul>
+<p>$$\begin{align}<br>D_t(\bm{S},\bm{S}_{t-1}) = \underbrace{\frac{1}{2}\left|\bm{S} - \bm{S}_{t-1}\mathrm{diag}(\bm{w}_t)\right|_F^2}_{\text{近端约束}}<br>\end{align}$$</p>
+<ul>
+<li>全局保留 $G_t(\bm{S})$, 使用加权范数控制遗忘，Frobenius 范数控制写入， 其中$\bm{k}_{write}=\bm{\kappa}_t = \bm{\xi}\odot \bm{k}_t$具体如下：</li>
+</ul>
+<p>$$\begin{align}<br>G_t(\bm{S}) =<br>\underbrace{\frac{1}{2}|\bm{S}\bm{k}_{forget}|_{\mathrm{diag}(\bm{\beta}_t)}^2}_{\text{定向遗忘}} -<br>\underbrace{\frac{1}{2}|\bm{S}\bm{k}_{write}|_F^2}_{\text{写入保护}}<br>\end{align}$$</p>
+<p>RWKV的记忆目标函数就是</p>
+<p>$$\begin{align}\min_{\bm{S}} \underbrace{\langle \bm{S} - \bm{S}_{t-1}, \nabla\ell(\bm{S}_{t-1}) \rangle \vphantom{\frac{1}{2}\left|\bm{S}\right|_F^2}}_{\text{注意力偏置 (写入一阶近似)}}+ \underbrace{\frac{1}{2}\left|\bm{S} - \bm{S}_{t-1}\mathrm{diag}(\bm{w}_t)\right|_F^2}_{\text{局部保留 (近端约束)}}+ \underbrace{\langle\bm{S} - \bm{S}_{t-1}, \nabla G_t(\bm{S}_{t-1}) \rangle \vphantom{\frac{1}{2}\left|\bm{S}\right|_F^2}}_{\text{全局保留 (遗忘与写入一阶近似)}}<br>\end{align}<br>$$</p>
+<p>其中：</p>
+<p>基础损失梯度：$\nabla\ell(\bm{S}_{t-1}) = \bm{S}_{t-1}\bm{k}_{write}\bm{k}_{write}^\T - \bm{v}_t\bm{k}_{write}^\T$<br>全局保留的梯度：$\nabla G_t(\bm{S}_{t-1}) = \bm{S}_{t-1}\bm{k}_{forget}(\bm{\beta}_t\odot\bm{k}_{forget})^\T - \bm{S}_{t-1}\bm{k}_{write}\bm{k}_{write}^\T$</p>
+<p>对目标函数关于 $\bm{S}$ 求导，并令其为零：</p>
+<p>$$\begin{align}<br> \nabla\ell(\bm{S}_{t-1}) + \nabla G_t(\bm{S}_{t-1}) + (\bm{S}_t - \bm{S}_{t-1}\mathrm{diag}(\bm{w}_t)) = \bm{0}<br>\end{align}$$</p>
+<p>解出 $\bm{S}_t$ ：</p>
+<p>$$\begin{align}<br>\bm{S}_t = \bm{S}_{t-1}\mathrm{diag}(\bm{w}_t) - \big[ \nabla\ell(\bm{S}_{t-1}) + \nabla G_t(\bm{S}_{t-1}) \big]<br>\end{align}$$</p>
+<p>代入两个梯度的具体表达式：</p>
+<p>$$<br>\begin{aligned}<br>\bm{S}_t &amp;= \bm{S}_{t-1}\mathrm{diag}(\bm{w}_t) - \big[ (\bm{S}_{t-1}\bm{k}_{write}\bm{k}_{write}^\T - \bm{v}_t\bm{k}_{write}^\T) + (\bm{S}_{t-1}\bm{k}_{forget}(\bm{\beta}_t\odot\bm{k}_{forget})^\T - \bm{S}_{t-1}\bm{k}_{write}\bm{k}_{write}^\T) \big] \\<br>&amp;= \bm{S}_{t-1}\mathrm{diag}(\bm{w}_t) - \bm{S}_{t-1}\bm{k}_{forget}(\bm{\beta}_t\odot\bm{k}_{forget})^\T + \bm{v}_t\bm{k}_{write}^\T<br>\underbrace{- \bm{S}_{t-1}\bm{k}_{write}\bm{k}_{write}^\T + \bm{S}_{t-1}\bm{k}_{write}\bm{k}_{write}^\T}_{\text{完美抵消！}}<br>\end{aligned}<br>$$</p>
+<p>得到最终结果：</p>
+<p>$$\bm{S}_t = \bm{S}_{t-1}\big[\mathrm{diag}(\bm{w}_t) - \bm{\kappa}_t(\bm{\beta}_t\odot\bm{\kappa}_t)^\T\big] + \bm{v}_t(\bm{\eta}_t\odot\bm{k}_t)^\T$$</p>
+<p>可以看到</p>
+<p>1、<strong>二次型惩罚是硬约束</strong>：如果使用 $\frac{1}{2}|\bm{S}\bm{k}_{forget}|^2$，而不是 $\langle \bm{S} - \bm{S}_{t-1}, \nabla G_t \rangle$，它的物理意义是“我要求 $\bm{S}_t$ 在 $\bm{k}_{forget}$ 方向上的能量必须小”。这会压榨 $\bm{S}_t$ 的空间，导致新信息 $\bm{v}_t\bm{k}_{write}^\T$ 难以写入，这个时候在求解 $\bm{S}_t$就必须引入复杂的矩阵求逆（隐式更新）才能平衡。<br>2、<strong>线性偏置是软推力</strong>：使用 $\langle \bm{S} - \bm{S}_{t-1}, \nabla G_t \rangle$，它的物理意义是“我不管 $\bm{S}_t$ 最终长什么样，我只是沿着当前估算的梯度 $\nabla G_t$ 推它一把”。<br>3、<strong>写入保护的本质</strong>：在梯度相加时，$\nabla\ell$ 中的 $+\bm{S}_{t-1}\bm{k}_{write}\bm{k}_{write}^\T$ 和 $\nabla G_t$ 中的 $-\bm{S}_{t-1}\bm{k}_{write}\bm{k}_{write}^\T$ 完美抵消。这说明，“写入保护”的本质，就是提供一个与“写入对齐”方向相反的梯度推力，用来抵消基础损失试图无限制拉扯旧状态的趋势，从而为真正的信息写入 $\bm{v}_t\bm{k}_{write}^\T$ 腾出干净的更新空间。</p>
+<p>总的来说，RWKV-7 的精细门控并非来自对最终状态的复杂二次惩罚，而是来自<strong>对更新方向（梯度）的精细拆解与抵消</strong>。</p>
+<h6 id="5-3-4、Attention（注意力机制）"><a href="#5-3-4、Attention（注意力机制）" class="headerlink" title="5.3.4、Attention（注意力机制）"></a>5.3.4、Attention（注意力机制）</h6><p>正如 Sun et al. (2024) 所指出，softmax 注意力是 MSE 损失函数（即 ）的非参数解，对应于 Nadaraya-Watson 估计器。因此，当我们使用 Nadaraya-Watson 估计器找到 MSE 损失的非参数解，且不使用任何保持项（retention）时，softmax 注意力就是 Miras 框架的一个特例。知乎已有很多文章解释注意力机制和Nadaraya-Watson的核回归的关系，这里不在赘述。</p>
+<h5 id="5-4-Miras评述"><a href="#5-4-Miras评述" class="headerlink" title="5.4 Miras评述"></a>5.4 Miras评述</h5><p>Miras框架的精妙之处在于：<strong>将看似启发式的记忆更新解耦为两个正交的设计维度——如何从新样本中学习（注意偏置），以及如何保护旧知识（保留机制）</strong>。这不仅为DeltaNet、RWKV-7等模型提供了严格的数学解释，更指明了未来创新的方向：</p>
+<ul>
+<li>改进<strong>注意偏置</strong> $\widetilde{\ell}_t$：可以设计更贴近实际任务损失的近似，例如对比损失、自适应惊奇度量等。</li>
+<li>设计<strong>保留机制</strong> $\operatorname{Ret}_t$：可以在布雷格曼散度的框架下，引入结构化的局部与全局正则，实现更精细的记忆控制，如选择性遗忘、层级记忆压缩等。</li>
+<li><strong>元学习率</strong> 的数据依赖化：$\eta_t, \alpha_t$ 可被小型网络动态预测，实现上下文感知的记忆持久性，这正是RWKV-7等模型已经验证有效的路径。</li>
+</ul>
+<p>通过优化视角重新审视循环神经网络的记忆，我们已将“记忆”从一个经验概念提升为一种<strong>可设计、可分析、可优化的数学对象</strong>。</p>
+<h4 id="六、RWKV的Emdbed改造"><a href="#六、RWKV的Emdbed改造" class="headerlink" title="六、RWKV的Emdbed改造"></a>六、RWKV的Emdbed改造</h4><h5 id="6-1、Mixture-of-Lookup-Experts的探索"><a href="#6-1、Mixture-of-Lookup-Experts的探索" class="headerlink" title="6.1、Mixture of Lookup Experts的探索"></a>6.1、Mixture of Lookup Experts的探索</h5><p>FFN层一般认为是存储知识的地方，原则上也可以认为是记忆，FFN的计算量也相当可观，如果FFN能变成数据库直接查询知识，岂不妙哉？MoLE(Mixture of Lookup Experts)[^9]就是这样的。相对于 MOE的 FFN，在 MoLE中，FFN 接收的是共享的词表 Embedding，而不是前面任意层的隐藏向量，但因为每一层的 FFN 专家权重是独立的，所以可以按层独立重参数化生成的 Lookup Table（查找表）。MoLE 的机制：<strong>共享输入 Embedding + 独立的 FFN 权重 → 独立的 LUT</strong></p>
+<div align="center"><img src="/images/mole.png" width="1000" ==""><br></div>
+
+<p><strong>传统 MoE</strong></p>
+<p>每一层的输出 $\bm{y}$ 由隐藏状态 $\bm{x}$ 和多个专家 $E_i$ 决定：</p>
+<p>$$\begin{align}<br>\bm{y} = \sum_{i} g_i(\bm{x}) E_i(\bm{x})<br>\end{align}$$</p>
+<p>这里的 $\bm{x}$ 是当前层的隐藏状态，每层不同，且随上下文变化，因此无法提前计算。</p>
+<p><strong>MoLE 的改造</strong></p>
+<p>强制专家的输入<strong>只能是原始的词表 Embedding</strong> $e_{token}$，而不是隐藏状态 $\bm{x}$。路由器 $g$ 依然依赖于上下文 $\bm{x}$, 其中输入的 Embedding就是模型第一层那个固定的词表嵌入向量，所有层、所有专家接收的同名 token 的输入是同一个向量。<strong>FFN 专家是按层独立的</strong>：第 $l$ 层的专家 $E_i^{(l)}$ 拥有自己独立的参数，所以依然是可学习的。</p>
+<p>$$\begin{align}<br>\bm{y} = \sum_{i} g_i(\bm{x}) E_i(e_{token})<br>\end{align}$$</p>
+<p>在推理阶段，<strong>按层独立生成的 LUT </strong>：因为 $E_i^{(l)}$ 每层不同，所以同一个 token 在不同层经过专家计算后的输出也不同。预计算时，必须为<strong>每一层</strong>单独建一个查找表：</p>
+<p>$$\begin{align}<br>LUT^{(l)}[token_id, expert_id] = E_i^{(l)}(e_{token})<br>\end{align}$$</p>
+<p>MoLE本质上是<strong>用共享的 Embedding 去查询各层独立的 FFN</strong>，它的 LUT 是 FFN推理结果的离线缓存。</p>
+<h5 id="6-2、RWKV的DeepEmdbed"><a href="#6-2、RWKV的DeepEmdbed" class="headerlink" title="6.2、RWKV的DeepEmdbed"></a>6.2、RWKV的DeepEmdbed</h5><p>RWKV 的DeepEmbed 则完全抛弃了“FFN 专家”的壳，走向了更简洁的稀疏设计。<strong>DeepEmbed</strong>：直接在每一层的 FFN 旁边，挂载一个<strong>独立的、可学习的 Embedding层</strong>。</p>
+<p>$$\begin{align}<br>\bm{y} = \mathrm{FFN}(\bm{x}) \odot Emb^{(l)}(token_id)<br>\end{align}$$</p>
+<p>1、<strong>没有共享输入的限制</strong>：FFN 的主干的输入依然是上一层的隐藏状态 $x$，保留了模型对上下文的深度非线性变换能力。<br>2、<strong>每层拥有独立的 Embedding 表</strong>：第 $l$ 层的 $Emb^{(l)}$ 与第 $m$ 层的 $Emb^{(m)}$ 参数完全独立，直接作为该层的私有参数存在。<br>3、<strong>无需预计算 LUT</strong>：它本身就是一个 Embedding 层，推理时直接根据 token_id查表得到向量，然后与 FFN 的输出做逐元素乘法（Channel-wise Scaling）。</p>
+<p>DeepEmbed 本质上是<strong>“为每一层独立分配一组可学习的 Token 向量”</strong>，它不是 FFN 的缓存，而是直接作为乘性偏置参与计算。 它不改动主干 $\mathrm{FFN}(\bm{x})$，而是给模型“外挂”了一个巨大的知识库。在 FFN 算力已经够用、但知识容量不够用”的场景下，提供一种比扩大 FFN 维度性价比高得多的扩容方案。用少量的额外计算（查表） + 系统内存的存储空间，换取了模型参数容量的大幅提升。</p>
+<h5 id="6-3、RWKV的AttenDeepEmdbed（DEA）"><a href="#6-3、RWKV的AttenDeepEmdbed（DEA）" class="headerlink" title="6.3、RWKV的AttenDeepEmdbed（DEA）"></a>6.3、RWKV的AttenDeepEmdbed（DEA）</h5><p>DeepEmbedAttention (DEA)是 RWKV-v7b在 DeepEmbed 基础上，对注意力侧的扩展。DeepEmbed 只在 <strong>FFN 通路</strong> 做 token-dependent 缩放，而DEA 则进一步在 <strong>Q/K/V 通路</strong> 引入基于 token id 的查表向量，对注意力计算进行调制。目标：让注意力机制对 token 的语义/类别更敏感，而不是只依赖隐层表示。</p>
+<p>在 RWKV-v7b 的演示代码中，可以看到 DEA 的关键实现：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> range(self.n_layer):</span><br><span class="line">    ...</span><br><span class="line">    qkv = <span class="string">f'blocks.<span class="subst">&#123;i&#125;</span>.qkv.'</span></span><br><span class="line">    q = x @ z[qkv+<span class="string">'qq.weight'</span>]</span><br><span class="line">    k = x @ z[qkv+<span class="string">'k1'</span>]</span><br><span class="line">    state[...] = torch.cat((state[...], k), dim=<span class="number">0</span>)         <span class="comment"># 缓存 k 用于后续时间步</span></span><br><span class="line">    k = (state[...] @ z[qkv+<span class="string">'k2'</span>]) * (z[qkv+<span class="string">'k_emb.weight'</span>][ctx])  <span class="comment"># ★ k_emb 查表调制</span></span><br><span class="line">    v = x @ z[qkv+<span class="string">'v1'</span>]</span><br><span class="line">    state[...] = torch.cat((state[...], v), dim=<span class="number">0</span>)</span><br><span class="line">    v = torch.tanh(state[...] @ z[qkv+<span class="string">'v2'</span>]) * (z[qkv+<span class="string">'v_emb.weight'</span>][ctx])  <span class="comment"># ★ v_emb 查表调制</span></span><br><span class="line">    q = F.layer_norm(q, (<span class="number">256</span>,), weight=z[qkv+<span class="string">'lnq.weight'</span>], bias=z[qkv+<span class="string">'lnq.bias'</span>])</span><br><span class="line">    ...</span><br></pre></td></tr></table></figure>
+<p>其中 ctx 是 token index 序列（历史 token id 序列），z[qkv+’k_emb.weight’] 和 z[qkv+’v_emb.weight’] 就是<strong>基于 token id 的查表嵌入</strong>（k_emb / v_emb）。上述实现将RWKV的时间混合和 DEA 调制耦合在一起了，不是很好懂，说白了就是核心在于：在生成 Key ($\bm{k}$) 和 Value ($\bm{v}$) 之后、参与状态更新之前，引入基于 Token ID 的查表向量进行乘性调制。</p>
+<p>定义 DEA 的两个可学习查表矩阵：<br>$\mathrm{Embed_K} \in \mathbb{R}^{|V| \times d_{model}}$：Key 侧的 DeepEmbed 矩阵。<br>$\mathrm{Embed_V} \in \mathbb{R}^{|V| \times d_{model}}$：Value 侧的 DeepEmbed 矩阵。<br>其中，$|V|$ 是词表大小，$d_{model}$ 是隐藏层维度。</p>
+<p>$$\begin{align}<br>\tilde{\bm{k}}_t = \bm{k}_t \odot \mathrm{Embed_K}(t)<br>\end{align}$$</p>
+<p>原本的 $\bm{k}_t$ 决定了当前 token 与哪些上下文相关（即“这个 token 能被谁检索到”）。DEA 的 $\mathrm{Embed_K}$ 向量相当于给每个 token 加了一个固定的、可学习的“身份滤镜”。例如，对于 token “Apple”，它的 $\mathrm{Embed_K}$ 可能在“水果”维度上权重很大，在“科技公司”维度上权重很小。这迫使模型在训练时学会：“当遇到 ‘Apple’ 时，强化其在某些语义通道上的 Key 特征”。</p>
+<p>同理，对记忆内容的调制（Value 侧）</p>
+<p>$$\begin{align}<br>\tilde{\bm{v}}_t = \bm{v}_t \odot \mathrm{Embed_V}(t)<br>\end{align}$$</p>
+<p>$\bm{v}_t$ 是当前 token 存入记忆的实际内容。DEA 的 $\mathrm{Embed_V}(t)$ 向量决定了这个 token “以什么姿态”被存储。这相当于给每个 token 的内容赋予了特定的权重分布。比如，遇到数字 token 时，$\mathrm{Embed_V}(t)$ 可能会强化数值处理相关的通道，抑制语义情感通道。</p>
+<ul>
+<li>每个 token 的 K/V 表示不仅取决于当前隐层 x，还<strong>显式依赖该 token 的 id</strong>，通过 emb_k / emb_v 进行调整。</li>
+<li>这相当于在注意力中引入了 <strong>token-type / token-semantic 的先验</strong>，有利于不同语义类型的 token 使用不同的键值表示。</li>
+</ul>
+<p>DeepEmbed 和 DEA 组合从模型视角看，这相当于在 RWKV 的 RNN 循环中，引入了一组按 token 索引寻址的“记忆槽”，既影响当前层的 FFN 计算，也影响跨时间步的注意力传播。</p>
+<h4 id="七、RockAI的方案"><a href="#七、RockAI的方案" class="headerlink" title="七、RockAI的方案"></a>七、RockAI的方案</h4><p>2025WAIC上的岩芯数智（RockAI）也展示了一种可微的神经网络记忆单元。他们称之为Yan 2.0 Preview,  但并非开源模型，不通过他们公开的构图大致实现思路是清楚的。<strong>Yan 2.0 Preview所声称的原生记忆力，不过是线性注意力的机制的MOE版本</strong>。笔者重新绘制了架构图，如下：</p>
+<div align="center"><img src="/images/yan架构.png" width="1000" ==""><br></div>
+
+
+<p>$$\begin{align}M_t = \underbrace{\textit{decay}_t\cdot M_{t-1}}_{门控式更新\quad 保留长期依赖}+ \underbrace{\eta_t \cdot \nabla_{M_{t-1}} \overbrace{\ell(f(M_{t-1};\textit{key}_t),\textit{value}_t)}^{优化目标}}_{基于输入分布整合新知识}<br>\end{align}$$</p>
+<p>1、Yan 2.0 Preview中的函数 $f(\cdot)$其实就是记忆读取函数 $\textit{Memory}_{read}$。一般就 $f(\bm{M}_{t-1},\bm{k}_t)=\mathrm{Norm}(\bm{M}_{t-1}\bm{k}_t)+\bm{k}_t$, 这个加 $\bm{k}_t$的操作很让人疑惑。严重怀疑是图画错了。<br>2、记忆的目标函数是 $\ell(f(\bm{M}_{t-1},\bm{k}_t)-\bm{v}_t)$， $\ell(\cdot)$合理选择应该是 $\frac{1}{2}|\cdot|_F^2$, 也是就说 $\ell(f(\bm{M}_{t-1};\bm{k}_t),\bm{v}_t) =\frac{1}{2}|\mathrm{Norm}(\bm{M}_{t-1}\bm{k}_t)+\bm{k}_t-\bm{v}_t|_F^2$。加 $\bm{k}_t$ 的操作让人疑惑， $\bm{k}$ 和$\bm{v}$是不同的东西，做相减操作让人疑惑。<br>3、如果忽略那个令人疑惑的“加 $\bm{k}_t$”,和 $\eta_t$ 符号问题，记忆更新公式其实就是和RWKV差不多的操作，可以修正为</p>
+<p>$$\begin{align}M_t = \textit{decay}_t\cdot M_{t-1}- \eta_t \cdot \nabla_{M_{t-1}}\ell(f(M_{t-1};\textit{key}_t),\textit{value}_t)<br>\end{align}$$</p>
+<p>它是实际上带累计记忆衰减 $\textit{decay}_t = \bm{w}_t$的更新公式。如果令 $\ell(f(\bm{M}_{t-1};\bm{k}_t),\bm{v}_t) =\frac{1}{2}|\bm{M}_{t-1}\bm{k}_t-\bm{v}_t|_F^2$ 那么有</p>
+<p>$$\begin{align}<br>\nabla_{\bm{M}_{t-1}} \ell(\bm{M}_{t-1}) = \bm{M}_{t-1}\bm{k}_t\bm{k}_t^\T - \bm{v}_t\bm{k}_t^\T<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\bm{M}_t = \bm{w}_t\odot\bm{M}_{t-1} - \bm{\eta}_t\odot(\bm{M}_{t-1}\bm{k}_t\bm{k}_t^\T - \bm{v}_t\bm{k}_t^\T)<br>=\bm{M}_{t-1}(\bm{w}_t - \bm{\eta}_t \odot \bm{k}_t\bm{k}_t^\T) + \bm{\eta}_t\odot\bm{v}_t\bm{k}_t^\T<br>\end{align}$$</p>
+<p>4、对于MOE记忆模块<br>单纯图上看，存在一个共享记忆和并行的记忆模块，固定一个共享记忆加上动态选择2个并行的记忆。</p>
+<p>$$<br>\begin{aligned}<br>\mathbf{O} =\sigma(\mathbf{W}_g \mathbf{x} + \mathbf{b}_g) \odot(f_0(\mathbf{x})+f_1(\mathbf{x})+f_2(\mathbf{x}))<br>\end{aligned}<br>$$</p>
+<p>让了疑惑的是几个记忆直接先加 $f_0(\cdot) + f_1(\cdot) + f_2(\cdot)$后再门控。这个和MOE中常见的加权相加是不一样的。实际代码应该是加权更为合理。</p>
+<p>$$<br>\begin{aligned}<br>\mathbf{O} =\sigma(\mathbf{W}_g \mathbf{x} + \mathbf{b}_g) \odot\left(\sum g_i(\bm{x})f_i(\mathbf{x}\right)<br>\end{aligned}<br>$$</p>
+<p>总的来说 Yan 2.0 Preview架构图中体现的 基于线性注意力的MOE记忆机制还是一个可以参考的思路。</p>
+<h4 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h4><p>[^1]: Schlag, I., Irie, K., &amp; Schmidhuber, J. (2021, June 9). Linear Transformers Are Secretly Fast Weight Programmers. arXiv. <a href="https://doi.org/10.48550/arXiv.2102.11174ll" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2102.11174ll</a><br>[^2]: Peng, B., Zhang, R., Goldstein, D., Alcaide, E., Du, X., Hou, H., et al. (2025, March 30). RWKV-7 “Goose” with Expressive Dynamic State Evolution. arXiv. <a href="https://doi.org/10.48550/arXiv.2503.14456" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2503.14456</a><br>[^3]: Yang, S., Kautz, J., &amp; Hatamizadeh, A. (2025, March 6). Gated Delta Networks: Improving Mamba2 with Delta Rule. arXiv. <a href="https://doi.org/10.48550/arXiv.2412.06464" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2412.06464</a><br>[^4]: Sun, Y., Li, X., Dalal, K., Xu, J., Vikram, A., Zhang, G., et al. (2025, April 3). Learning to (Learn at Test Time): RNNs with Expressive Hidden States. arXiv. <a href="https://doi.org/10.48550/arXiv.2407.04620" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2407.04620</a><br>[^5]: Behrouz, A., Zhong, P., &amp; Mirrokni, V. (2024, December 31). Titans: Learning to Memorize at Test Time. arXiv. <a href="https://doi.org/10.48550/arXiv.2501.00663" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2501.00663</a><br>[^6]: 新智元 <a href="https://zhuanlan.zhihu.com/p/1932500604414068556" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/1932500604414068556</a><br>[^7]: Behrouz, A., Razaviyayn, M., Zhong, P., &amp; Mirrokni, V. (2025, April 17). It’s All Connected: A Journey Through Test-Time Memorization, Attentional Bias, Retention, and Online Optimization. arXiv. <a href="https://doi.org/10.48550/arXiv.2504.13173" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2504.13173</a><br>[^8]: MiniMax, Li, A., Gong, B., Yang, B., Shan, B., Liu, C., et al. (2025, January 14). MiniMax-01: Scaling Foundation Models with Lightning Attention. arXiv. <a href="https://doi.org/10.48550/arXiv.2501.08313" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2501.08313</a><br>[^9]:Jie, S., Tang, Y., Han, K., Li, Y., Tang, D., Deng, Z.-H., &amp; Wang, Y. (n.d.). Mixture of lookup experts, 1–12.</p>
+<p><hr></p>
+<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%">httpss://<a href="http://www.limoncc.com/post/1a40fb91b4777636/">www.limoncc.com/post/1a40fb91b4777636/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (Jul. 27, 2025). 《RNN的复兴02_什么是记忆》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/1a40fb91b4777636">https://www.limoncc.com/post/1a40fb91b4777636</a></td></tr><tr><td align="left" width="100%">@online{limoncc-1a40fb91b4777636,<br>title={RNN的复兴02_什么是记忆},<br>author={引线小白},<br>year={2025},<br>month={Jul},<br>date={27},<br>url={\url{<a href="https://www.limoncc.com/post/1a40fb91b4777636}}">https://www.limoncc.com/post/1a40fb91b4777636}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/大语言模型/" rel="tag">#大语言模型</a>
+          
+            <a href="/tags/强化学习/" rel="tag">#强化学习</a>
+          
+            <a href="/tags/LLM/" rel="tag">#LLM</a>
+          
+            <a href="/tags/Householder变换/" rel="tag">#Householder变换</a>
+          
+            <a href="/tags/DPLR/" rel="tag">#DPLR</a>
+          
+            <a href="/tags/对角加秩一矩阵/" rel="tag">#对角加秩一矩阵</a>
+          
+            <a href="/tags/矩阵微分/" rel="tag">#矩阵微分</a>
+          
+            <a href="/tags/向量微分/" rel="tag">#向量微分</a>
+          
+            <a href="/tags/矩阵导数/" rel="tag">#矩阵导数</a>
+          
+            <a href="/tags/向量导数/" rel="tag">#向量导数</a>
+          
+            <a href="/tags/记忆/" rel="tag">#记忆</a>
+          
+            <a href="/tags/Titans/" rel="tag">#Titans</a>
+          
+            <a href="/tags/线性注意力/" rel="tag">#线性注意力</a>
+          
+            <a href="/tags/DeltaNet/" rel="tag">#DeltaNet</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/ab2342877c86f7c1/" rel="next" title="RNN的复兴01:向量和矩阵微分-大语言模型研究08">
+                <i class="fa fa-chevron-left"></i> RNN的复兴01:向量和矩阵微分-大语言模型研究08
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/post/2823bb8e386a0878/" rel="prev" title="RNN的复兴03:现代RNN的并行计算">
+                RNN的复兴03:现代RNN的并行计算 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+<!--           </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div> -->
+        <div id="vcomments"></div>
+        <script>new Valine({
+          el: "#vcomments",
+      appId: "BVjuNRCpkVSkz82jFmadIvY8-gzGzoHsz",
+    appKey: "bRjXPp55dop7RTC2xgunGdiP"})
+  </script>'
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="引线小白" />
+          <p class="site-author-name" itemprop="name">引线小白</p>
+          <p class="site-description motion-element" itemprop="description">小湖椰影廊桥,曾记否,谷围晓月,灯影朦胧。</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">58</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">117</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="" target="_blank" title="Design">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  Design
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.behance.net/limoncc" target="_blank" title="Behance">
+                  
+                    <i class="fa fa-fw fa-behance"></i>
+                  
+                  Behance
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.pinterest.com/aegeanfan/" target="_blank" title="Pinterest">
+                  
+                    <i class="fa fa-fw fa-pinterest"></i>
+                  
+                  Pinterest
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://github.com/limoncc" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://weibo.com/3483157951" target="_blank" title="微博">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  微博
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://www.zhihu.com/people/limoncc" target="_blank" title="知乎">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  知乎
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              设计不止，折腾不息。
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://chuangzaoshi.com" title="创造狮" target="_blank">创造狮</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、引言"><span class="nav-number">1.</span> <span class="nav-text">一、引言</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#二、原始线性注意力"><span class="nav-number">2.</span> <span class="nav-text">二、原始线性注意力</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#2-1、线性注意力的并行计算"><span class="nav-number">2.1.</span> <span class="nav-text">2.1、线性注意力的并行计算</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-2、Hebb学习规则"><span class="nav-number">2.2.</span> <span class="nav-text">2.2、Hebb学习规则</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#三、绕不开的DeltaNet"><span class="nav-number">3.</span> <span class="nav-text">三、绕不开的DeltaNet</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#3-1、历史悠久的-delta-规则"><span class="nav-number">3.1.</span> <span class="nav-text">3.1、历史悠久的 $\delta$ 规则</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-1、对角加秩一矩阵-DPLR"><span class="nav-number">3.2.</span> <span class="nav-text">3.1、对角加秩一矩阵(DPLR)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-3、RWKV7的状态更新"><span class="nav-number">3.3.</span> <span class="nav-text">3.3、RWKV7的状态更新</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#四、Titans的解释"><span class="nav-number">4.</span> <span class="nav-text">四、Titans的解释</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#4-1、定义惊奇度"><span class="nav-number">4.1.</span> <span class="nav-text">4.1、定义惊奇度</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#4-2、惊奇分解"><span class="nav-number">4.2.</span> <span class="nav-text">4.2、惊奇分解</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#4-3、统一的解释"><span class="nav-number">4.3.</span> <span class="nav-text">4.3、统一的解释</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#五、Miras的统一框架"><span class="nav-number">5.</span> <span class="nav-text">五、Miras的统一框架</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#5-1、从梯度下降到近端正则化"><span class="nav-number">5.1.</span> <span class="nav-text">5.1、从梯度下降到近端正则化</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#5-2、统一性的数学基础"><span class="nav-number">5.2.</span> <span class="nav-text">5.2、统一性的数学基础</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#5-2-1、定义：FTRL视角"><span class="nav-number">5.2.1.</span> <span class="nav-text">5.2.1、定义：FTRL视角</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#5-2-2、学习-保留视角"><span class="nav-number">5.2.2.</span> <span class="nav-text">5.2.2、学习-保留视角</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#5-2-3、跟随正则化引导与学习-保留框架等价性证明"><span class="nav-number">5.2.3.</span> <span class="nav-text">5.2.3、跟随正则化引导与学习-保留框架等价性证明</span></a></li></ol></li><li class="nav-item nav-level-5"><a class="nav-link" href="#5-3-从学习-保留到统一框架"><span class="nav-number">5.3.</span> <span class="nav-text">5.3 从学习-保留到统一框架</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#5-3-1、原始线性注意力（Hebb学习规则）"><span class="nav-number">5.3.1.</span> <span class="nav-text">5.3.1、原始线性注意力（Hebb学习规则）</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#5-3-2、DeltaNet"><span class="nav-number">5.3.2.</span> <span class="nav-text">5.3.2、DeltaNet</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#5-3-3、RWKV-7的状态更新"><span class="nav-number">5.3.3.</span> <span class="nav-text">5.3.3、RWKV-7的状态更新</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#5-3-4、Attention（注意力机制）"><span class="nav-number">5.3.4.</span> <span class="nav-text">5.3.4、Attention（注意力机制）</span></a></li></ol></li><li class="nav-item nav-level-5"><a class="nav-link" href="#5-4-Miras评述"><span class="nav-number">5.4.</span> <span class="nav-text">5.4 Miras评述</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#六、RWKV的Emdbed改造"><span class="nav-number">6.</span> <span class="nav-text">六、RWKV的Emdbed改造</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#6-1、Mixture-of-Lookup-Experts的探索"><span class="nav-number">6.1.</span> <span class="nav-text">6.1、Mixture of Lookup Experts的探索</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#6-2、RWKV的DeepEmdbed"><span class="nav-number">6.2.</span> <span class="nav-text">6.2、RWKV的DeepEmdbed</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#6-3、RWKV的AttenDeepEmdbed（DEA）"><span class="nav-number">6.3.</span> <span class="nav-text">6.3、RWKV的AttenDeepEmdbed（DEA）</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#七、RockAI的方案"><span class="nav-number">7.</span> <span class="nav-text">七、RockAI的方案</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#参考文献"><span class="nav-number">8.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">引线小白&nbsp &nbsp |&nbsp &nbsp  一个理想主义者，再造自我，以期未来。</span>
+</div>
+
+<div class="powered-by">
+  由 <a rel="external nofollow" class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a rel="external nofollow" class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>&nbsp &nbsp| &nbsp &nbsp Hosted by  <a href="https://github.com" style="font-weight: bold">Github Pages</a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+<!--   
+   
+  
+
+  
+
+ -->
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+       search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+    'use strict';
+    $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+            // get the contents from search data
+            isfetched = true;
+            $('.popup').detach().appendTo('.header-inner');
+            var datas = $( "entry", xmlResponse ).map(function() {
+                return {
+                    title: $( "title", this ).text(),
+                    content: $("content",this).text(),
+                    url: $( "url" , this).text()
+                };
+            }).get();
+            var $input = document.getElementById(search_id);
+            var $resultContent = document.getElementById(content_id);
+            $input.addEventListener('input', function(){
+                var matchcounts = 0;
+                var str='<ul class=\"search-result-list\">';                
+                var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                $resultContent.innerHTML = "";
+                if (this.value.trim().length > 1) {
+                // perform local searching
+                datas.forEach(function(data) {
+                    var isMatch = true;
+                    var content_index = [];
+                    var data_title = data.title.trim().toLowerCase();
+                    var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                    var data_url = data.url;
+                    var index_title = -1;
+                    var index_content = -1;
+                    var first_occur = -1;
+                    // only match artiles with not empty titles and contents
+                    if(data_title != '' && data_content != '') {
+                        keywords.forEach(function(keyword, i) {
+                            index_title = data_title.indexOf(keyword);
+                            index_content = data_content.indexOf(keyword);
+                            if( index_title < 0 && index_content < 0 ){
+                                isMatch = false;
+                            } else {
+                                if (index_content < 0) {
+                                    index_content = 0;
+                                }
+                                if (i == 0) {
+                                    first_occur = index_content;
+                                }
+                            }
+                        });
+                    }
+                    // show search results
+                    if (isMatch) {
+                        matchcounts += 1;
+                        str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                        var content = data.content.trim().replace(/<[^>]+>/g,"");
+                        if (first_occur >= 0) {
+                            // cut out 100 characters
+                            var start = first_occur - 20;
+                            var end = first_occur + 80;
+                            if(start < 0){
+                                start = 0;
+                            }
+                            if(start == 0){
+                                end = 50;
+                            }
+                            if(end > content.length){
+                                end = content.length;
+                            }
+                            var match_content = content.substring(start, end);
+                            // highlight all keywords
+                            keywords.forEach(function(keyword){
+                                var regS = new RegExp(keyword, "gi");
+                                match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                            });
+                            
+                            str += "<p class=\"search-result\">" + match_content +"...</p>"
+                        }
+                        str += "</li>";
+                    }
+                })};
+                str += "</ul>";
+                if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+                if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+                $resultContent.innerHTML = str;
+            });
+            proceedsearch();
+        }
+    });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').mousedown(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+  
+<!--   <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+     showMathMenu: false,
+     showMathMenuMSIE: false,
+     tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+          displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+          processEscapes: true
+        },
+        TeX: {
+          equationNumbers: {autoNumber: 'AMS'},
+          Macros: {bm: "\\boldsymbol"}
+        },
+        'HTML-CSS': {
+          imageFont: null
+        }
+    });
+  </script> -->
+<!--     MathJax.Hub.Queue(function() {
+      var all = MathJax.Hub.getAllJax(), i;
+      for (i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+      }
+    }); -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+    processEscapes: true,
+    tags: 'ams',
+    macros: {
+                                            bm: "\\boldsymbol",
+					    T:"\\intercal",
+                                            oiint: "{\\iint\\kern{-20mu}{\\unicode{x2B2D}}}",
+                                            oiiint: "{\\iiint\\kern{-24.5mu}\\large{\\unicode{x2B2D}}}"
+                                },
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};
+</script>
+  <script type="text/x-mathjax-config">
+MathJax.texReset();
+MathJax.typeset();
+  </script>
+<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_SVG-full"></script> -->
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("Es7wAnqi0QiGhMLoyl7mkrQo-gzGzoHsz", "BxPXaoPFp3PzWqBTSe6VUuQS");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+</body>
+</html>
