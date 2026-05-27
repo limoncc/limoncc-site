@@ -98,7 +98,7 @@
 <meta property="og:image" content="https://www.limoncc.com/images/现代RNN并行计算.png">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-05-26T01:06:13.271Z">
+<meta property="og:updated_time" content="2026-05-27T15:09:36.360Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="RNN的复兴03:现代RNN的并行计算">
 <meta name="twitter:description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
@@ -399,7 +399,7 @@
 <p>基于Delta规则的状态更新机制会自然引入了一种类似经典 <strong>Householder</strong> 变换形式。标准的Householder变换定义如下：给定一个非零向量 $\bm{k} \in \mathbb{R}^n$，其对应的Householder矩阵 $\bm{H}$ 为：<br>$$\begin{align}<br>\bm{H} = \bm{E} - \beta \bm{k} \bm{k}^\T, \quad \beta = \frac{2}{\bm{k}^\top \bm{k}}<br>\end{align}$$<br>其中 $\beta$ 是一个由向量 $\bm{v}$ 的模长<strong>唯一确定的标量</strong>。</p>
 <p>然而，在RNN的状态更新机制中，虽然采用了形如 $\bm{H} = \bm{E} - \beta \bm{k}\bm{k}^\T$ （或类似结构）的变换形式，但其参数化方式与严格意义上的Householder变换<strong>存在关键区别</strong>：$\beta$ 通常被设计为一个<strong>独立的、可学习的标量参数</strong>，而非固定地等于 $\frac{2}{\bm{k}^\top \bm{k}}$。向量 $\bm{k}$ 本身一般也是由网络（如前一层状态、当前输入）计算得到的可学习函数输出。计算Householder变换连积的<strong>WY</strong>表示方法可以很好将状态的顺序计算转变为并行计算。从而实现现代RNN的并行计算。接下来将重点讨论以下状态形式的并行计算：</p>
 <p>$$\begin{align}<br>\bm{S}_t<br>= \bm{S}_{t-1}\big[\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T\big]+ \eta_t \bm{v}_t\bm{k}_t^\T<br>\end{align}$$</p>
-<p>无论形式如何，这里的关键结构是<strong>对角加秩一</strong>(<strong>DPLR</strong>:Diagonal Plus Low-Rank）  $\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T$，其中 $\bm{E}$是对角矩阵， $\beta_t\bm{k}_t \bm{k}_t^\T$的秩 $\mathrm{rank}[\beta_t\bm{k}_t \bm{k}_t^\T]=1$, 对角加秩一的几何意义在RNN的复兴02<a href="尚未整理好">^1</a>中已经解释，这里上个图回忆一下：</p>
+<p>无论形式如何，这里的关键结构是<strong>对角加秩一</strong>(<strong>DPLR</strong>:Diagonal Plus Low-Rank）  $\bm{E}-\beta_t\bm{k}_t \bm{k}_t^\T$，其中 $\bm{E}$是对角矩阵， $\beta_t\bm{k}_t \bm{k}_t^\T$的秩 $\mathrm{rank}[\beta_t\bm{k}_t \bm{k}_t^\T]=1$, 对角加秩一的几何意义在RNN的复兴02<a href="https://limoncc.com/post/1a40fb91b4777636/" target="_blank" rel="noopener">^1</a>中已经解释，这里上个图回忆一下：</p>
 <div align="center"><img src="/images/对角加秩一矩阵.png" width="1000" ==""><br></div>
 
 <p>对角加秩一矩阵的实质是<strong>通过迭代变换构建记忆状态</strong>: 对于任意向量 $\bm{s}$，变换后沿 $\bm{k}$方向的分量被衰减、保留或放大，而正交分量保持不变，从而实现精细化的记忆控制。 $\beta$用于动态调整记忆衰减强度，确保模型仅遗忘与当前任务无关的信息。</p>
