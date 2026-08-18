@@ -99,7 +99,7 @@
 <meta property="og:image" content="https://www.limoncc.com/images/yan架构.png">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-05-27T15:05:38.874Z">
+<meta property="og:updated_time" content="2026-08-18T06:14:20.301Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="RNN的复兴02_什么是记忆">
 <meta name="twitter:description" content="本文主要总结了现代RNN中记忆的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
@@ -589,7 +589,7 @@
 </ul>
 <p>$$\begin{align}<br>D_t(\bm{S},\bm{S}_{t-1}) = \underbrace{\frac{1}{2}\left|\bm{S} - \bm{S}_{t-1}\mathrm{diag}(\bm{w}_t)\right|_F^2}_{\text{近端约束}}<br>\end{align}$$</p>
 <ul>
-<li>全局保留 $G_t(\bm{S})$, 使用加权范数控制遗忘，Frobenius 范数控制写入， 其中$\bm{k}_{write}=\bm{\kappa}_t = \bm{\xi}\odot \bm{k}_t$具体如下：</li>
+<li>全局保留 $G_t(\bm{S})$, 使用加权范数控制遗忘，其中$\bm{k}_{forget}=\bm{\kappa}_t = \bm{\xi}\odot \bm{k}_t$，Frobenius 范数控制写入具体如下：</li>
 </ul>
 <p>$$\begin{align}<br>G_t(\bm{S}) =<br>\underbrace{\frac{1}{2}|\bm{S}\bm{k}_{forget}|_{\mathrm{diag}(\bm{\beta}_t)}^2}_{\text{定向遗忘}} -<br>\underbrace{\frac{1}{2}|\bm{S}\bm{k}_{write}|_F^2}_{\text{写入保护}}<br>\end{align}$$</p>
 <p>RWKV的记忆目标函数就是</p>
