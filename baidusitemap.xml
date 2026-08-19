@@ -17,12 +17,6 @@
          
         <tag>LLM</tag>
          
-        <tag>Householder变换</tag>
-         
-        <tag>DPLR</tag>
-         
-        <tag>对角加秩一矩阵</tag>
-         
         <tag>矩阵微分</tag>
          
         <tag>向量微分</tag>
@@ -30,6 +24,12 @@
         <tag>矩阵导数</tag>
          
         <tag>向量导数</tag>
+         
+        <tag>Householder变换</tag>
+         
+        <tag>DPLR</tag>
+         
+        <tag>对角加秩一矩阵</tag>
          
         <tag>记忆</tag>
          
@@ -65,12 +65,6 @@
          
         <tag>LLM</tag>
          
-        <tag>Householder变换</tag>
-         
-        <tag>DPLR</tag>
-         
-        <tag>对角加秩一矩阵</tag>
-         
         <tag>矩阵微分</tag>
          
         <tag>向量微分</tag>
@@ -78,6 +72,12 @@
         <tag>矩阵导数</tag>
          
         <tag>向量导数</tag>
+         
+        <tag>Householder变换</tag>
+         
+        <tag>DPLR</tag>
+         
+        <tag>对角加秩一矩阵</tag>
          
          
            
@@ -1190,9 +1190,9 @@
         <title>矩阵高斯分布</title>
         <pubTime>2017-01-11T03:45:17.000Z</pubTime>
         
-        <tag>统计学</tag>
-         
         <tag>机器学习</tag>
+         
+        <tag>统计学</tag>
          
         <tag>矩阵高斯分布</tag>
          

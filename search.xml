@@ -12,13 +12,13 @@
         <tag>生成模型</tag>
         <tag>强化学习</tag>
         <tag>LLM</tag>
-        <tag>Householder变换</tag>
-        <tag>DPLR</tag>
-        <tag>对角加秩一矩阵</tag>
         <tag>矩阵微分</tag>
         <tag>向量微分</tag>
         <tag>矩阵导数</tag>
         <tag>向量导数</tag>
+        <tag>Householder变换</tag>
+        <tag>DPLR</tag>
+        <tag>对角加秩一矩阵</tag>
       </tags>
   </entry>
   <entry>
@@ -32,13 +32,13 @@
         <tag>大语言模型</tag>
         <tag>强化学习</tag>
         <tag>LLM</tag>
-        <tag>Householder变换</tag>
-        <tag>DPLR</tag>
-        <tag>对角加秩一矩阵</tag>
         <tag>矩阵微分</tag>
         <tag>向量微分</tag>
         <tag>矩阵导数</tag>
         <tag>向量导数</tag>
+        <tag>Householder变换</tag>
+        <tag>DPLR</tag>
+        <tag>对角加秩一矩阵</tag>
         <tag>记忆</tag>
         <tag>Titans</tag>
         <tag>线性注意力</tag>
@@ -630,8 +630,8 @@
         <category>统计学</category>
       </categories>
       <tags>
-        <tag>统计学</tag>
         <tag>机器学习</tag>
+        <tag>统计学</tag>
         <tag>矩阵高斯分布</tag>
       </tags>
   </entry>
