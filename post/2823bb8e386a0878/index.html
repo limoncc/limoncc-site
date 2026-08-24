@@ -98,7 +98,7 @@
 <meta property="og:image" content="https://www.limoncc.com/images/现代RNN并行计算.png">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-05-27T15:09:36.360Z">
+<meta property="og:updated_time" content="2026-08-24T15:22:58.071Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="RNN的复兴03:现代RNN的并行计算">
 <meta name="twitter:description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
@@ -543,24 +543,7 @@
 <p>当 $t \ll d$的时候，也就是说序列长度小于特征维度。对于长序列而言，可以分块计算，从而减小 $t$。说白了其实就是切分为若干段来计算，一张图说明所有：<strong>块内并行，块间依赖</strong>。</p>
 <div align="center"><img src="/images/现代RNN并行计算.png" width="1000" ==""><br></div>
 
-<p>那么又有好事者问：先计算 $\bm{S}=\bm{S}_0+\big[\bm{U}-\bm{W}\bm{S}_0^\T\big]^\T\bm{K}$，再计算 $\bm{O}=\bm{Q}\bm{S}^\T$，和直接按 $\bm{O}=\bm{Q}\bm{S}^\T+(\bm{Q}\bm{K}^\T\odot\bm{M}) (\bm{U} - \bm{W}\bm{S}^\T) $公式计算，有什么不同？后面的复杂度要越高一点，因为前者只需三次矩阵乘法，后者需要4次矩阵乘法。</p>
-<p>分开计算</p>
-<ol>
-<li>$\bm{T}_1 =  \bm{U} - \bm{W}\bm{S}_0^\T$：$O(td^2+td)$</li>
-<li>$\bm{T}_2 = \bm{T}_1\bm{K}$：$O(t^2d)$</li>
-<li>$\bm{S} = \bm{S}_0+\bm{T}_2$：$O(d^2)$</li>
-<li>$\bm{O} = \bm{Q} \bm{S}^\T$：$O(td^2)$</li>
-</ol>
-<p><strong>总复杂度</strong>：$O(2td^2+t^2d+d^2+td)$</p>
-<ol>
-<li>$\bm{T}_1 = \bm{Q} \bm{K}^\T$：$O(t^2 d)$</li>
-<li>$\bm{T}_2 = \bm{T}_1 \odot \bm{M}$：$O(t^2)$ (轻量)</li>
-<li>$\bm{T}_3 = \bm{U} - \bm{W}\bm{S}_0^\T$：$O(td^2+td)$</li>
-<li>$\bm{T}_4 = \bm{T}_2 \bm{T}_3$：$O(t^2 d)$</li>
-<li>$\bm{T}_5 = \bm{Q} \bm{S}_0^\T$：$O(td^2)$</li>
-<li>$\bm{O} = \bm{T}_5 + \bm{T}_4$：$O(t^2)$</li>
-</ol>
-<p>合计计算<br><strong>总复杂度</strong>：$O(2td^2+2t^2d+2t^2+td)$</p>
+
 <h3 id="五、评述"><a href="#五、评述" class="headerlink" title="五、评述"></a>五、评述</h3><p>1、充分利用<strong>对角加秩一</strong>(DPLR:Diagonal Plus Low-Rank）的特点，实现了基于Delta规则RNN的并行计算。<br>2、并行计算公式中最重要的其实是两个信息传播算子 $\bm{W}$、 $\bm{U}$的计算。尤其以下三角矩阵 $\bm{A}$中元素 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)$最为关键。这就凸显了key矩阵 $\bm{K<br>}$的重要性。因为它元素的内积或者说自相关性直接影响每个token信息如何传播到瞬时记忆状态 $\bm{S}$。针对这个问题，在RWKV7中对 $\bm{K}$做了特殊处理，增强了 $\bm{K}$的表达能力。<br>3、现代RNN核心机制和计算问题解决后，如何进一步增强RNN的表达能力。就是本系列的下一篇内容了。<br>4、成文有些匆忙，难免有些错误，请大家批评指正。</p>
 <h3 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h3><p>[^2]: Yang, S., Wang, B., Zhang, Y., Shen, Y., &amp; Kim, Y. (2025, January 15). Parallelizing linear transformers with the delta rule over sequence length. arXiv. <a href="https://doi.org/10.48550/arXiv.2406.06484" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2406.06484</a></p>
 <p><hr></p>
