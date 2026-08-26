@@ -87,7 +87,7 @@
 <meta name="description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
 <meta name="keywords" content="大语言模型,LLM,矩阵微分,RNN,向量微分,现代RNN,状态的并行计算,Householder变换">
 <meta property="og:type" content="article">
-<meta property="og:title" content="RNN的复兴03:现代RNN的并行计算IPLR">
+<meta property="og:title" content="RNN的复兴03:线性注意力并行计算IPLR">
 <meta property="og:url" content="https://www.limoncc.com/post/2823bb8e386a0878/index.html">
 <meta property="og:site_name" content="柠檬CC">
 <meta property="og:description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
@@ -98,9 +98,9 @@
 <meta property="og:image" content="https://www.limoncc.com/images/现代RNN并行计算.png">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-08-26T01:49:26.619Z">
+<meta property="og:updated_time" content="2026-08-26T13:35:26.335Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="RNN的复兴03:现代RNN的并行计算IPLR">
+<meta name="twitter:title" content="RNN的复兴03:线性注意力并行计算IPLR">
 <meta name="twitter:description" content="本文主要总结了现代RNN的并行计算的若干基本问题，和我自己的一些体会。主要为接下来的RNN的复兴系列文章，做一点知识介绍。">
 <meta name="twitter:image" content="https://www.limoncc.com/images/对角加秩一矩阵.png">
 
@@ -121,7 +121,7 @@
 </script>
 
   <script src='//unpkg.com/valine/dist/Valine.min.js'></script>
-  <title> RNN的复兴03:现代RNN的并行计算IPLR | 柠檬CC </title>
+  <title> RNN的复兴03:线性注意力并行计算IPLR | 柠檬CC </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -322,7 +322,7 @@
             
             
               
-                RNN的复兴03:现代RNN的并行计算IPLR
+                RNN的复兴03:线性注意力并行计算IPLR
               
             
           </h1>
@@ -380,7 +380,7 @@
 
           
           
-             <span id="/post/2823bb8e386a0878/" class="leancloud_visitors" data-flag-title="RNN的复兴03:现代RNN的并行计算IPLR">
+             <span id="/post/2823bb8e386a0878/" class="leancloud_visitors" data-flag-title="RNN的复兴03:线性注意力并行计算IPLR">
                &nbsp; | &nbsp;
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -543,7 +543,7 @@
 <h3 id="五、评述"><a href="#五、评述" class="headerlink" title="五、评述"></a>五、评述</h3><p>1、充分利用<strong>对角加秩一</strong>(IPLR:Identity Plus Low Rank）的特点，实现了基于Delta规则RNN的并行计算。<br>2、并行计算公式中最重要的其实是两个信息传播算子 $\bm{W}$、 $\bm{U}$的计算。尤其以下三角矩阵 $\bm{A}$中元素 $A_{ij} = -\beta_i (\bm{k}_j^\T\bm{k}_i)$最为关键。这就凸显了key矩阵 $\bm{K<br>}$的重要性。因为它元素的内积或者说自相关性直接影响每个token信息如何传播到瞬时记忆状态 $\bm{S}$。针对这个问题，在RWKV7中对 $\bm{K}$做了特殊处理，增强了 $\bm{K}$的表达能力。<br>3、现代RNN核心机制和计算问题解决后，如何进一步增强RNN的表达能力。就是本系列的下一篇内容了。<br>4、成文有些匆忙，难免有些错误，请大家批评指正。</p>
 <h3 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h3><p>[^2]: Yang, S., Wang, B., Zhang, Y., Shen, Y., &amp; Kim, Y. (2025, January 15). Parallelizing linear transformers with the delta rule over sequence length. arXiv. <a href="https://doi.org/10.48550/arXiv.2406.06484" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2406.06484</a></p>
 <p><hr></p>
-<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%">httpss://<a href="http://www.limoncc.com/post/2823bb8e386a0878/">www.limoncc.com/post/2823bb8e386a0878/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (Aug. 17, 2025). 《RNN的复兴03:现代RNN的并行计算IPLR》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/2823bb8e386a0878">https://www.limoncc.com/post/2823bb8e386a0878</a></td></tr><tr><td align="left" width="100%">@online{limoncc-2823bb8e386a0878,<br>title={RNN的复兴03:现代RNN的并行计算IPLR},<br>author={引线小白},<br>year={2025},<br>month={Aug},<br>date={17},<br>url={\url{<a href="https://www.limoncc.com/post/2823bb8e386a0878}}">https://www.limoncc.com/post/2823bb8e386a0878}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
+<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%">httpss://<a href="http://www.limoncc.com/post/2823bb8e386a0878/">www.limoncc.com/post/2823bb8e386a0878/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (Aug. 17, 2025). 《RNN的复兴03:线性注意力并行计算IPLR》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/2823bb8e386a0878">https://www.limoncc.com/post/2823bb8e386a0878</a></td></tr><tr><td align="left" width="100%">@online{limoncc-2823bb8e386a0878,<br>title={RNN的复兴03:线性注意力并行计算IPLR},<br>author={引线小白},<br>year={2025},<br>month={Aug},<br>date={17},<br>url={\url{<a href="https://www.limoncc.com/post/2823bb8e386a0878}}">https://www.limoncc.com/post/2823bb8e386a0878}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
 <script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
 
       
