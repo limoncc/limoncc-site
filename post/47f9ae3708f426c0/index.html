@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-08-26T01:19:51.627Z">
+<meta property="og:updated_time" content="2026-08-26T01:26:13.132Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大模型中的强化学习实战1——大语言模型研究06">
 <meta name="twitter:description" content="本文主要总结了大语言模型中的强化学习的若干基本问题，和我自己的一些体会。">
@@ -413,7 +413,7 @@
 <li>如何构建自己的领域模型</li>
 </ul>
 <h4 id="二、RLHF实现的核心流程"><a href="#二、RLHF实现的核心流程" class="headerlink" title="二、RLHF实现的核心流程"></a>二、RLHF实现的核心流程</h4><h5 id="2-1、损失函数"><a href="#2-1、损失函数" class="headerlink" title="2.1、损失函数"></a>2.1、损失函数</h5><p>我们先回顾一下PPO的损失函数，笔者将以PPO损失函数为例，通过OpenRLHF代码核心逻辑来说明大模型中强化学习实现的核心流程。这里为什么不是通过trl的PPO或者GRPO，因为OpenRLHF代码非常优雅简洁，不像trl抽象太多；然后大厂都在用。总之OpenRLHF 是一个基于 Ray、DeepSpeed 和 HF Transformers 构建的高性能 RLHF 框架。用就对了。</p>
-<p>$$\begin{align}<br>\mathcal{L}_{\textit{PPO}}(\bm{\theta})<br>&amp;=\mathbb{E}_{q\sim \rho(Q),\bm{o}\sim \pi_{\bm{\theta}_\text{old}}}\frac{1}{|\bm{o}|}\sum_{t=1}^{|\bm{o}|}\bigg[\min\left[\frac{\pi_{\bm{\theta}}(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}_\text{old}}(o_t\mid q,o_{:t})},\mathrm{\text{clip}}\left[\frac{\pi_{\bm{\theta}}(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}_\text{old}}(o_t\mid q,o_{:t})},1-\epsilon,1+\epsilon\right]\right]\cdot A_{\pi}(q,o_t)\bigg]<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\mathcal{L}_{\textit{PPO}}(\bm{\theta})<br>&amp;=\mathbb{E}_{q\sim \rho(Q),\bm{o}\sim \pi_{\bm{\theta}_\text{old}}}\frac{1}{|\bm{o}|}\sum_{t=1}^{|\bm{o}|}\bigg[\min\left[\frac{\pi_{\bm{\theta}}(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}_\text{old}}(o_t\mid q,o_{:t})}\cdot A_{\pi}(q,o_t),\mathrm{\text{clip}}\left[\frac{\pi_{\bm{\theta}}(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}_\text{old}}(o_t\mid q,o_{:t})},1-\epsilon,1+\epsilon\right]\cdot A_{\pi}(q,o_t)\right]\bigg]<br>\end{align}$$</p>
 <p>其中</p>
 <ul>
 <li>数据集: $\mathcal{D}=\{(q_i,\bm{o}_i)\}_{i=1}^n$, 来自旧策略 $\pi_{\bm{\theta}_\text{old}}$的采样</li>
@@ -460,7 +460,7 @@
 <p>$$\begin{align}<br>r_t=\pi_{\bm{\theta}_{\textit{rm}}}(q,o_{:t})-\beta \mathbb{KL}\big[\pi_{\bm{\theta}} ||\pi_{\bm{\theta}_\textit{ref}}\big]<br>\end{align}$$</p>
 <p>和</p>
 <p>GRPO</p>
-<p>$$\begin{align}<br>\displaystyle \mathcal{L}_{\textit{GRPO}}(\bm{\theta})<br>=\mathbb{E}_{q\sim \rho(Q),\{\bm{o}_i\}_{i=1}^G\sim \pi_{\bm{\theta}_\text{old}}}\\<br>\frac{1}{G}\sum_{i=1}^G<br>\frac{1}{|\bm{o}_i|}\sum_{t=1}^{\bm{|\bm{o}_i|}}<br>\bigg[\min\left[\frac{\pi_{\bm{\theta}}(o_{i,t}\mid q,o_{i,:t})}{\pi_{\bm{\theta}_\text{old}}(o_{i,t}\mid q,o_{i,:t})}\cdot A_{\pi}(q,\bm{o}_i),\mathrm{\text{clip}}\left[\frac{\pi_{\bm{\theta}}(o_{i,t}\mid q,o_{i,:t})}{\pi_{\bm{\theta}_\text{old}}(o_{i,t}\mid q,o_{i,:t})},1-\epsilon,1+\epsilon\right]\cdot A_{\pi}(q,\bm{o}_i)\right]-\beta \mathbb{\hat{KL}}\big[\pi_{\bm{\theta}} ||\pi_{\bm{\theta}_\textit{ref}}\big]\bigg]<br>\end{align}$$</p>
+<p>$$\begin{align}<br>&amp;\mathcal{L}_{\textit{GRPO}}(\bm{\theta})<br>=\mathbb{E}_{q\sim \rho(Q),\{\bm{o}_i\}_{i=1}^G\sim \pi_{\bm{\theta}_\text{old}}}\\<br>&amp;\frac{1}{G}\sum_{i=1}^G<br>\frac{1}{|\bm{o}_i|}\sum_{t=1}^{\bm{|\bm{o}_i|}}<br>\bigg[\min\left[\frac{\pi_{\bm{\theta}}(o_{i,t}\mid q,o_{i,:t})}{\pi_{\bm{\theta}_\text{old}}(o_{i,t}\mid q,o_{i,:t})}\cdot A_{\pi}(q,\bm{o}_i),\mathrm{\text{clip}}\left[\frac{\pi_{\bm{\theta}}(o_{i,t}\mid q,o_{i,:t})}{\pi_{\bm{\theta}_\text{old}}(o_{i,t}\mid q,o_{i,:t})},1-\epsilon,1+\epsilon\right]\cdot A_{\pi}(q,\bm{o}_i)\right]-\beta \mathbb{\hat{KL}}\big[\pi_{\bm{\theta}} ||\pi_{\bm{\theta}_\textit{ref}}\big]\bigg]<br>\end{align}$$</p>
 <p>的做法都能解释的通,其实实质其实是一个贝叶斯推断[^26], 不想看文献，可以看笔者的写的[^27]<a href="https://www.limoncc.com/post/bd7e41e00dc8afad">介绍文章</a>。不过加入奖励函数里面控制粒度更细。训练应该更加稳定。但是皓天大佬用REINFORCE+++复现时候加入KL约束会限制模型探索空间[^28]。皓天大佬的文章很有启发性，指出在base模型变强以后，其实现有的RL算法在规则奖励上应该都能work。更加应该探索如何基于强base模型来优化RL算法。不应拘泥于原来RL训练不稳定，难训练这种传统观念。</p>
 <p>下面还是略微来解释一下KL的作用实质到底是什么：<br>一开始我们通过语料训练了一个预训练模型 $\pi_{\text{PT}}$，然后有得到一个 $\pi_{\text{SFT}}$模型，接下来通过RLHF我们要得到一个 $\pi_{\text{RLHF}}$的模型。这其实是什么？是不断调整分布的过程，或者说是语言模型不断调整信念的过程。</p>
 <p>符号说明$\mathcal{D}=\{(x_i,y_i)\}$，其中 $x_i$表示指令， $y_i$是预训练的语言模型的输出。 $\pi(y\mid x)$是从指令到输出的概率分布。</p>
