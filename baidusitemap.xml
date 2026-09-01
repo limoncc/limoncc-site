@@ -4,47 +4,6 @@
 
     
   <url>
-    <loc>https://www.limoncc.com/post/9e070b6858f0e490/</loc>
-    <lastmod>2026-09-01T12:58:24.976Z</lastmod>
-    <data>
-        <display>
-        <title>RNN的复兴04:线性注意力并行计算DPLR</title>
-        <pubTime>2026-08-18T07:06:56.000Z</pubTime>
-        
-        <tag>大语言模型</tag>
-         
-        <tag>生成模型</tag>
-         
-        <tag>强化学习</tag>
-         
-        <tag>LLM</tag>
-         
-        <tag>矩阵微分</tag>
-         
-        <tag>向量微分</tag>
-         
-        <tag>矩阵导数</tag>
-         
-        <tag>向量导数</tag>
-         
-        <tag>DPLR</tag>
-         
-        <tag>对角加秩一矩阵</tag>
-         
-         
-           
-             
-              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
-          
-             
-              <breadCrumb title="RNN的复兴" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/RNN%E7%9A%84%E5%A4%8D%E5%85%B4/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
     <loc>https://www.limoncc.com/post/1a40fb91b4777636/</loc>
     <lastmod>2026-08-27T07:41:52.438Z</lastmod>
     <data>
@@ -101,9 +60,9 @@
         <title>RNN的复兴03:线性注意力并行计算IPLR</title>
         <pubTime>2025-08-17T01:57:34.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
          
         <tag>强化学习</tag>
          
@@ -202,9 +161,9 @@
         <title>述往事思来者</title>
         <pubTime>2022-07-20T06:37:42.000Z</pubTime>
         
-        <tag>大数据</tag>
-         
         <tag>工程问题</tag>
+         
+        <tag>大数据</tag>
          
          
            
@@ -268,9 +227,9 @@
         
         <tag>概率论</tag>
          
-        <tag>弱收敛</tag>
-         
         <tag>大数定律</tag>
+         
+        <tag>弱收敛</tag>
          
         <tag>连续定理</tag>
          
@@ -294,9 +253,9 @@
         
         <tag>概率论</tag>
          
-        <tag>大数定律</tag>
-         
         <tag>弱大数定律</tag>
+         
+        <tag>大数定律</tag>
          
          
            
@@ -316,9 +275,9 @@
         <title>矩阵高斯分布</title>
         <pubTime>2017-01-11T03:45:17.000Z</pubTime>
         
-        <tag>机器学习</tag>
-         
         <tag>统计学</tag>
+         
+        <tag>机器学习</tag>
          
         <tag>矩阵高斯分布</tag>
          
@@ -388,9 +347,9 @@
         <title>KBALM-知识库增强型语言模型-大语言模型研究07</title>
         <pubTime>2025-03-21T06:36:47.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
          
         <tag>强化学习</tag>
          
@@ -425,9 +384,9 @@
         <title>RNN的复兴01:向量和矩阵微分-大语言模型研究08</title>
         <pubTime>2025-07-20T03:42:14.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
          
         <tag>强化学习</tag>
          
@@ -576,11 +535,11 @@
         <title>大模型时代的交互语言——Autogen系列03</title>
         <pubTime>2023-10-14T13:07:23.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
          
         <tag>AI-Agent</tag>
+         
+        <tag>大语言模型</tag>
          
         <tag>autogen</tag>
          
@@ -617,9 +576,9 @@
          
         <tag>AI-Agent</tag>
          
-        <tag>大模型</tag>
-         
         <tag>autogen</tag>
+         
+        <tag>大模型</tag>
          
         <tag>管理系统</tag>
          
@@ -648,11 +607,11 @@
         <title>初见AI-Agent——Autogen系列01</title>
         <pubTime>2023-10-13T02:07:23.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
          
         <tag>AI-Agent</tag>
+         
+        <tag>大语言模型</tag>
          
         <tag>autogen</tag>
          
@@ -677,9 +636,9 @@
         <title>大模型中的强化学习实战1——大语言模型研究06</title>
         <pubTime>2025-02-11T07:43:15.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
          
         <tag>强化学习</tag>
          
@@ -714,9 +673,9 @@
         <title>大模型中的强化学习——大语言模型研究05</title>
         <pubTime>2025-01-31T10:30:56.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
          
         <tag>强化学习</tag>
          
@@ -745,9 +704,9 @@
         <title>Bone微调,超越LoRA系列的高效微调方法——大语言模型研究04</title>
         <pubTime>2024-12-12T09:10:49.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
          
         <tag>Bone微调</tag>
          
@@ -772,9 +731,9 @@
         <title>如何微调十问——大语言模型研究03</title>
         <pubTime>2024-06-21T09:16:10.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
          
         <tag>LLM</tag>
          
@@ -805,17 +764,17 @@
         <title>如何训练——大语言模型研究02</title>
         <pubTime>2023-12-07T09:16:10.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
          
-        <tag>LLM</tag>
+        <tag>大语言模型</tag>
          
-        <tag>RLFT</tag>
+        <tag>LLM</tag>
          
         <tag>条件强化学习微调</tag>
          
         <tag>C-RLFT</tag>
+         
+        <tag>RLFT</tag>
          
         <tag>多模态学习</tag>
          
@@ -840,9 +799,9 @@
         <title>理解RWKV模型一_大语言模型研究01</title>
         <pubTime>2023-05-18T12:40:02.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
          
         <tag>RWKV模型</tag>
          
@@ -935,13 +894,13 @@
          
         <tag>AI</tag>
          
-        <tag>gguf原理</tag>
-         
-        <tag>gguf</tag>
-         
         <tag>聊天格式</tag>
          
         <tag>Chat Format,</tag>
+         
+        <tag>gguf原理</tag>
+         
+        <tag>gguf</tag>
          
          
            
@@ -968,13 +927,13 @@
          
         <tag>AI</tag>
          
-        <tag>模型量化</tag>
-         
-        <tag>CPU部署</tag>
-         
         <tag>gguf原理</tag>
          
         <tag>gguf</tag>
+         
+        <tag>模型量化</tag>
+         
+        <tag>CPU部署</tag>
          
          
            
@@ -1027,11 +986,11 @@
         <title>致敬一个新时代：AI-Agent</title>
         <pubTime>2023-10-13T02:06:10.000Z</pubTime>
         
-        <tag>大语言模型</tag>
-         
         <tag>生成模型</tag>
          
         <tag>AI-Agent</tag>
+         
+        <tag>大语言模型</tag>
          
         <tag>autogen</tag>
          
@@ -1217,13 +1176,13 @@
         <title>pyhton-notebook主题颜色配置</title>
         <pubTime>2016-05-01T07:50:12.000Z</pubTime>
         
-        <tag>工程问题</tag>
-         
         <tag>python</tag>
          
         <tag>notebook</tag>
          
         <tag>计算环境</tag>
+         
+        <tag>工程问题</tag>
          
          
            
@@ -1459,8 +1418,6 @@
         <title>贝塔-伯努利模型(Beta-Binomial Model)</title>
         <pubTime>2017-03-07T13:54:02.000Z</pubTime>
         
-        <tag>大数据</tag>
-         
         <tag>机器学习</tag>
          
         <tag>神经网络</tag>
@@ -1468,6 +1425,8 @@
         <tag>人工智能</tag>
          
         <tag>大数据分析</tag>
+         
+        <tag>大数据</tag>
          
         <tag>贝塔-伯努利模型</tag>
          
@@ -1489,8 +1448,6 @@
         <title>贝叶斯统计学概论</title>
         <pubTime>2017-03-06T03:16:01.000Z</pubTime>
         
-        <tag>大数据</tag>
-         
         <tag>机器学习</tag>
          
         <tag>神经网络</tag>
@@ -1498,6 +1455,8 @@
         <tag>人工智能</tag>
          
         <tag>大数据分析</tag>
+         
+        <tag>大数据</tag>
          
          
            
@@ -1517,8 +1476,6 @@
         <title>机器学习概论</title>
         <pubTime>2017-01-08T07:34:53.000Z</pubTime>
         
-        <tag>大数据</tag>
-         
         <tag>机器学习</tag>
          
         <tag>神经网络</tag>
@@ -1526,6 +1483,8 @@
         <tag>人工智能</tag>
          
         <tag>大数据分析</tag>
+         
+        <tag>大数据</tag>
          
          
            
