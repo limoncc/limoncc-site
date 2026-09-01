@@ -25,19 +25,19 @@
          
         <tag>向量导数</tag>
          
-        <tag>Householder变换</tag>
-         
-        <tag>DPLR</tag>
-         
-        <tag>对角加秩一矩阵</tag>
-         
         <tag>记忆</tag>
          
         <tag>Titans</tag>
          
         <tag>线性注意力</tag>
          
+        <tag>Householder变换</tag>
+         
+        <tag>DPLR</tag>
+         
         <tag>DeltaNet</tag>
+         
+        <tag>对角加秩一矩阵</tag>
          
          
            
@@ -227,9 +227,9 @@
         
         <tag>概率论</tag>
          
-        <tag>大数定律</tag>
-         
         <tag>弱收敛</tag>
+         
+        <tag>大数定律</tag>
          
         <tag>连续定理</tag>
          
@@ -253,9 +253,9 @@
         
         <tag>概率论</tag>
          
-        <tag>弱大数定律</tag>
-         
         <tag>大数定律</tag>
+         
+        <tag>弱大数定律</tag>
          
          
            
@@ -770,11 +770,11 @@
          
         <tag>LLM</tag>
          
+        <tag>RLFT</tag>
+         
         <tag>条件强化学习微调</tag>
          
         <tag>C-RLFT</tag>
-         
-        <tag>RLFT</tag>
          
         <tag>多模态学习</tag>
          
@@ -894,13 +894,13 @@
          
         <tag>AI</tag>
          
-        <tag>聊天格式</tag>
-         
-        <tag>Chat Format,</tag>
-         
         <tag>gguf原理</tag>
          
         <tag>gguf</tag>
+         
+        <tag>聊天格式</tag>
+         
+        <tag>Chat Format,</tag>
          
          
            
@@ -927,13 +927,13 @@
          
         <tag>AI</tag>
          
-        <tag>gguf原理</tag>
-         
-        <tag>gguf</tag>
-         
         <tag>模型量化</tag>
          
         <tag>CPU部署</tag>
+         
+        <tag>gguf原理</tag>
+         
+        <tag>gguf</tag>
          
          
            
