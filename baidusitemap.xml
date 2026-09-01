@@ -4,6 +4,261 @@
 
     
   <url>
+    <loc>https://www.limoncc.com/post/5981c46065ab066d/</loc>
+    <lastmod>2026-09-01T14:06:51.083Z</lastmod>
+    <data>
+        <display>
+        <title>大语言模型研究08：internlm2系列</title>
+        <pubTime>2024-03-27T11:23:52.000Z</pubTime>
+        
+        <tag>大语言模型</tag>
+         
+        <tag>AI</tag>
+         
+        <tag>书生·浦语2.0</tag>
+         
+        <tag>InternLM2,</tag>
+         
+        <tag>技术报告</tag>
+         
+         
+           
+             
+              <breadCrumb title="工程实践" url="https://www.limoncc.com/categories/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>https://www.limoncc.com/post/6c5064b1a9544809/</loc>
+    <lastmod>2026-09-01T14:06:44.061Z</lastmod>
+    <data>
+        <display>
+        <title>大语言模型研究07：KBALM-知识库增强型语言模型</title>
+        <pubTime>2025-03-21T06:36:47.000Z</pubTime>
+        
+        <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
+         
+        <tag>强化学习</tag>
+         
+        <tag>LLM</tag>
+         
+        <tag>KBALM</tag>
+         
+        <tag>RAG</tag>
+         
+        <tag>知识库</tag>
+         
+        <tag>检索增强生成</tag>
+         
+         
+           
+             
+              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
+          
+             
+              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>https://www.limoncc.com/post/47f9ae3708f426c0/</loc>
+    <lastmod>2026-09-01T14:06:26.565Z</lastmod>
+    <data>
+        <display>
+        <title>大语言模型研究06：大模型中的强化学习实战</title>
+        <pubTime>2025-02-11T07:43:15.000Z</pubTime>
+        
+        <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
+         
+        <tag>强化学习</tag>
+         
+        <tag>LLM</tag>
+         
+        <tag>RLFT</tag>
+         
+        <tag>OpenRLHF</tag>
+         
+        <tag>REINFORCE+++</tag>
+         
+        <tag>GRPO</tag>
+         
+         
+           
+             
+              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
+          
+             
+              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>https://www.limoncc.com/post/c0a3be9c86b2b4cd/</loc>
+    <lastmod>2026-09-01T14:06:13.372Z</lastmod>
+    <data>
+        <display>
+        <title>大语言模型研究05：大模型中的强化学习</title>
+        <pubTime>2025-01-31T10:30:56.000Z</pubTime>
+        
+        <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
+         
+        <tag>强化学习</tag>
+         
+        <tag>LLM</tag>
+         
+        <tag>RLFT</tag>
+         
+         
+           
+             
+              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
+          
+             
+              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>https://www.limoncc.com/post/d9321405ef13c11b/</loc>
+    <lastmod>2026-09-01T14:06:02.948Z</lastmod>
+    <data>
+        <display>
+        <title>大语言模型研究04：Bone微调,超越LoRA系列的高效微调方法</title>
+        <pubTime>2024-12-12T09:10:49.000Z</pubTime>
+        
+        <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
+         
+        <tag>Bone微调</tag>
+         
+         
+           
+             
+              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
+          
+             
+              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>https://www.limoncc.com/post/bd7e41e00dc8afad/</loc>
+    <lastmod>2026-09-01T14:05:51.660Z</lastmod>
+    <data>
+        <display>
+        <title>大语言模型研究02：如何训练</title>
+        <pubTime>2023-12-07T09:16:10.000Z</pubTime>
+        
+        <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
+         
+        <tag>LLM</tag>
+         
+        <tag>RLFT</tag>
+         
+        <tag>条件强化学习微调</tag>
+         
+        <tag>C-RLFT</tag>
+         
+        <tag>多模态学习</tag>
+         
+         
+           
+             
+              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
+          
+             
+              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>https://www.limoncc.com/post/8d670d28c70bf231/</loc>
+    <lastmod>2026-09-01T14:05:45.625Z</lastmod>
+    <data>
+        <display>
+        <title>大语言模型研究03：如何微调十问</title>
+        <pubTime>2024-06-21T09:16:10.000Z</pubTime>
+        
+        <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
+         
+        <tag>LLM</tag>
+         
+        <tag>LoRA</tag>
+         
+        <tag>QLoRA</tag>
+         
+        <tag>ORPO</tag>
+         
+         
+           
+             
+              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
+          
+             
+              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
+    <loc>https://www.limoncc.com/post/7a57a5a743894a0e/</loc>
+    <lastmod>2026-09-01T14:05:24.271Z</lastmod>
+    <data>
+        <display>
+        <title>大语言模型研究01：理解RWKV模型</title>
+        <pubTime>2023-05-18T12:40:02.000Z</pubTime>
+        
+        <tag>生成模型</tag>
+         
+        <tag>大语言模型</tag>
+         
+        <tag>RWKV模型</tag>
+         
+         
+           
+             
+              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
+          
+             
+              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
+          
+        </display>
+    </data>
+    </url>
+
+    
+  <url>
     <loc>https://www.limoncc.com/post/9e070b6858f0e490/</loc>
     <lastmod>2026-09-01T13:59:58.193Z</lastmod>
     <data>
@@ -130,34 +385,6 @@
           
              
               <breadCrumb title="RNN的复兴" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/RNN%E7%9A%84%E5%A4%8D%E5%85%B4/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>https://www.limoncc.com/post/5981c46065ab066d/</loc>
-    <lastmod>2026-08-26T13:34:15.242Z</lastmod>
-    <data>
-        <display>
-        <title>大语言模型研究08——internlm2系列</title>
-        <pubTime>2024-03-27T11:23:52.000Z</pubTime>
-        
-        <tag>大语言模型</tag>
-         
-        <tag>AI</tag>
-         
-        <tag>书生·浦语2.0</tag>
-         
-        <tag>InternLM2,</tag>
-         
-        <tag>技术报告</tag>
-         
-         
-           
-             
-              <breadCrumb title="工程实践" url="https://www.limoncc.com/categories/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E8%B7%B5/"/>
           
         </display>
     </data>
@@ -374,43 +601,6 @@
            
              
               <breadCrumb title="诗集" url="https://www.limoncc.com/categories/%E8%AF%97%E9%9B%86/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>https://www.limoncc.com/post/6c5064b1a9544809/</loc>
-    <lastmod>2026-08-26T01:53:03.491Z</lastmod>
-    <data>
-        <display>
-        <title>KBALM-知识库增强型语言模型-大语言模型研究07</title>
-        <pubTime>2025-03-21T06:36:47.000Z</pubTime>
-        
-        <tag>生成模型</tag>
-         
-        <tag>大语言模型</tag>
-         
-        <tag>强化学习</tag>
-         
-        <tag>LLM</tag>
-         
-        <tag>KBALM</tag>
-         
-        <tag>RAG</tag>
-         
-        <tag>知识库</tag>
-         
-        <tag>检索增强生成</tag>
-         
-         
-           
-             
-              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
-          
-             
-              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
           
         </display>
     </data>
@@ -663,196 +853,6 @@
           
              
               <breadCrumb title="Autogen系列" url="https://www.limoncc.com/categories/%E5%A4%A7%E6%A8%A1%E5%9E%8B%E5%BA%94%E7%94%A8%E5%BC%80%E5%8F%91/Autogen%E7%B3%BB%E5%88%97/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>https://www.limoncc.com/post/47f9ae3708f426c0/</loc>
-    <lastmod>2026-08-26T01:48:04.281Z</lastmod>
-    <data>
-        <display>
-        <title>大模型中的强化学习实战1——大语言模型研究06</title>
-        <pubTime>2025-02-11T07:43:15.000Z</pubTime>
-        
-        <tag>生成模型</tag>
-         
-        <tag>大语言模型</tag>
-         
-        <tag>强化学习</tag>
-         
-        <tag>LLM</tag>
-         
-        <tag>RLFT</tag>
-         
-        <tag>OpenRLHF</tag>
-         
-        <tag>REINFORCE+++</tag>
-         
-        <tag>GRPO</tag>
-         
-         
-           
-             
-              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
-          
-             
-              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>https://www.limoncc.com/post/c0a3be9c86b2b4cd/</loc>
-    <lastmod>2026-08-26T01:47:55.898Z</lastmod>
-    <data>
-        <display>
-        <title>大模型中的强化学习——大语言模型研究05</title>
-        <pubTime>2025-01-31T10:30:56.000Z</pubTime>
-        
-        <tag>生成模型</tag>
-         
-        <tag>大语言模型</tag>
-         
-        <tag>强化学习</tag>
-         
-        <tag>LLM</tag>
-         
-        <tag>RLFT</tag>
-         
-         
-           
-             
-              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
-          
-             
-              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>https://www.limoncc.com/post/d9321405ef13c11b/</loc>
-    <lastmod>2026-08-26T01:47:48.994Z</lastmod>
-    <data>
-        <display>
-        <title>Bone微调,超越LoRA系列的高效微调方法——大语言模型研究04</title>
-        <pubTime>2024-12-12T09:10:49.000Z</pubTime>
-        
-        <tag>生成模型</tag>
-         
-        <tag>大语言模型</tag>
-         
-        <tag>Bone微调</tag>
-         
-         
-           
-             
-              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
-          
-             
-              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>https://www.limoncc.com/post/8d670d28c70bf231/</loc>
-    <lastmod>2026-08-26T01:47:40.178Z</lastmod>
-    <data>
-        <display>
-        <title>如何微调十问——大语言模型研究03</title>
-        <pubTime>2024-06-21T09:16:10.000Z</pubTime>
-        
-        <tag>生成模型</tag>
-         
-        <tag>大语言模型</tag>
-         
-        <tag>LLM</tag>
-         
-        <tag>LoRA</tag>
-         
-        <tag>QLoRA</tag>
-         
-        <tag>ORPO</tag>
-         
-         
-           
-             
-              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
-          
-             
-              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>https://www.limoncc.com/post/bd7e41e00dc8afad/</loc>
-    <lastmod>2026-08-26T01:47:28.889Z</lastmod>
-    <data>
-        <display>
-        <title>如何训练——大语言模型研究02</title>
-        <pubTime>2023-12-07T09:16:10.000Z</pubTime>
-        
-        <tag>生成模型</tag>
-         
-        <tag>大语言模型</tag>
-         
-        <tag>LLM</tag>
-         
-        <tag>RLFT</tag>
-         
-        <tag>条件强化学习微调</tag>
-         
-        <tag>C-RLFT</tag>
-         
-        <tag>多模态学习</tag>
-         
-         
-           
-             
-              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
-          
-             
-              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
-          
-        </display>
-    </data>
-    </url>
-
-    
-  <url>
-    <loc>https://www.limoncc.com/post/7a57a5a743894a0e/</loc>
-    <lastmod>2026-08-26T01:47:19.289Z</lastmod>
-    <data>
-        <display>
-        <title>理解RWKV模型一_大语言模型研究01</title>
-        <pubTime>2023-05-18T12:40:02.000Z</pubTime>
-        
-        <tag>生成模型</tag>
-         
-        <tag>大语言模型</tag>
-         
-        <tag>RWKV模型</tag>
-         
-         
-           
-             
-              <breadCrumb title="机器学习" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/"/>
-          
-             
-              <breadCrumb title="大语言模型研究" url="https://www.limoncc.com/categories/%E6%9C%BA%E5%99%A8%E5%AD%A6%E4%B9%A0/%E5%A4%A7%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%A0%94%E7%A9%B6/"/>
           
         </display>
     </data>

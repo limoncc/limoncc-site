@@ -87,7 +87,7 @@
 <meta name="description" content="本文主要总结了知识库增强型语言模型的若干基本问题，和我自己的一些体会。">
 <meta name="keywords" content="大语言模型,LLM,强化学习,KBALM,RAG,知识库,检索增强生成">
 <meta property="og:type" content="article">
-<meta property="og:title" content="KBALM-知识库增强型语言模型-大语言模型研究07">
+<meta property="og:title" content="大语言模型研究07：KBALM-知识库增强型语言模型">
 <meta property="og:url" content="https://www.limoncc.com/post/6c5064b1a9544809/index.html">
 <meta property="og:site_name" content="柠檬CC">
 <meta property="og:description" content="本文主要总结了知识库增强型语言模型的若干基本问题，和我自己的一些体会。">
@@ -96,9 +96,9 @@
 <meta property="og:image" content="https://www.limoncc.com/images/RAG研究-KBLAM02.png">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-08-26T01:53:03.491Z">
+<meta property="og:updated_time" content="2026-09-01T14:06:44.061Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="KBALM-知识库增强型语言模型-大语言模型研究07">
+<meta name="twitter:title" content="大语言模型研究07：KBALM-知识库增强型语言模型">
 <meta name="twitter:description" content="本文主要总结了知识库增强型语言模型的若干基本问题，和我自己的一些体会。">
 <meta name="twitter:image" content="https://www.limoncc.com/images/RAG研究-KBLAM.png">
 
@@ -119,7 +119,7 @@
 </script>
 
   <script src='//unpkg.com/valine/dist/Valine.min.js'></script>
-  <title> KBALM-知识库增强型语言模型-大语言模型研究07 | 柠檬CC </title>
+  <title> 大语言模型研究07：KBALM-知识库增强型语言模型 | 柠檬CC </title>
 </head>
 
 <body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
@@ -320,7 +320,7 @@
             
             
               
-                KBALM-知识库增强型语言模型-大语言模型研究07
+                大语言模型研究07：KBALM-知识库增强型语言模型
               
             
           </h1>
@@ -378,7 +378,7 @@
 
           
           
-             <span id="/post/6c5064b1a9544809/" class="leancloud_visitors" data-flag-title="KBALM-知识库增强型语言模型-大语言模型研究07">
+             <span id="/post/6c5064b1a9544809/" class="leancloud_visitors" data-flag-title="大语言模型研究07：KBALM-知识库增强型语言模型">
                &nbsp; | &nbsp;
                <span class="post-meta-item-icon">
                  <i class="fa fa-eye"></i>
@@ -452,7 +452,7 @@
 <h4 id="四、评述"><a href="#四、评述" class="headerlink" title="四、评述"></a>四、评述</h4><p>1、论文指出，KBLAM的知识令牌将三元组中的句子编码为固定长度的向量，因此KBLAM可能无法精确地逐词生成文本。对于这个问题，笔者认为引入诸如gte-qwen2-7b-instruct的模型可以动态编码知识。<br>2、对于KBLAM知识三元组，例如「爱因斯坦的物理学贡献是相对论」，训练一个知识的属性编码器，来表示抽象语义（如”成就类型”）；训练一个值编码器保留细节（如具体理论名称）。而不是KBLAM中的硬编码三元组<br>3、对于矩形注意力的计算问题，目前KBLAM是没有做筛选的，即全部知识都参与计算。笔者认为可以加入一种动态因果掩码的机制在动态筛选知识，而不是全部知识参与计算。<br>4、随着KBLAM后续改进模型的出现，嵌入外部知识将会有更多的新选择，而传统RAG的优势还有多少，大家拭目以待。尤其是线性注意力模型的兴起，将极大改变现有技术范式。<br>5、历史终将证明复杂工程化注定会被模型碾碎，依靠强化学习提升模型端到端能力将比工作流加知识库越来越有竞争力。</p>
 <p>[^1]: Wang, X., Isazawa, T., Mikaelyan, L., &amp; Hensman, J. (2025, February 9). KBLaM: Knowledge Base augmented Language Model. arXiv. <a href="https://doi.org/10.48550/arXiv.2410.10450" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2410.10450</a></p>
 <p><hr></p>
-<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%">httpss://<a href="http://www.limoncc.com/post/6c5064b1a9544809/">www.limoncc.com/post/6c5064b1a9544809/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (Mar. 21, 2025). 《KBALM-知识库增强型语言模型-大语言模型研究07》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/6c5064b1a9544809">https://www.limoncc.com/post/6c5064b1a9544809</a></td></tr><tr><td align="left" width="100%">@online{limoncc-6c5064b1a9544809,<br>title={KBALM-知识库增强型语言模型-大语言模型研究07},<br>author={引线小白},<br>year={2025},<br>month={Mar},<br>date={21},<br>url={\url{<a href="https://www.limoncc.com/post/6c5064b1a9544809}}">https://www.limoncc.com/post/6c5064b1a9544809}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
+<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%">httpss://<a href="http://www.limoncc.com/post/6c5064b1a9544809/">www.limoncc.com/post/6c5064b1a9544809/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (Mar. 21, 2025). 《大语言模型研究07：KBALM-知识库增强型语言模型》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/6c5064b1a9544809">https://www.limoncc.com/post/6c5064b1a9544809</a></td></tr><tr><td align="left" width="100%">@online{limoncc-6c5064b1a9544809,<br>title={大语言模型研究07：KBALM-知识库增强型语言模型},<br>author={引线小白},<br>year={2025},<br>month={Mar},<br>date={21},<br>url={\url{<a href="https://www.limoncc.com/post/6c5064b1a9544809}}">https://www.limoncc.com/post/6c5064b1a9544809}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
 <script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
 
       
@@ -498,8 +498,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/post/47f9ae3708f426c0/" rel="next" title="大模型中的强化学习实战1——大语言模型研究06">
-                <i class="fa fa-chevron-left"></i> 大模型中的强化学习实战1——大语言模型研究06
+              <a href="/post/47f9ae3708f426c0/" rel="next" title="大语言模型研究06：大模型中的强化学习实战">
+                <i class="fa fa-chevron-left"></i> 大语言模型研究06：大模型中的强化学习实战
               </a>
             
           </div>
