@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-16T16:15:04.474Z">
+<meta property="og:updated_time" content="2026-09-16T16:20:50.299Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究16——注意力机制优化之稀疏注意">
 <meta name="twitter:description" content="本文主要总结了注意力机制优化之稀疏注意的若干基本问题，和我自己的一些体会。">
@@ -405,7 +405,7 @@
 <li>计算量：$O(L^2)$（序列长度 L）</li>
 <li>KV Cache 显存：$O(L)$</li>
 </ul>
-<p>当上下文从 4K → 128K → 1M token，计算和显存会爆炸式增长，长上下文非常贵。  DSA 的目标就是：让长上下文训练/推理又快又省，同时不把模型搞笨。DSA 的核心思路（通俗版）一句话概括：  <strong>不是所有 token 都需要“一对一精算注意力”，DSA 用一个“闪电索引器（Lightning Indexer）”先选出少量关键token，只对这些做精细注意力，其它的或被跳过、或被粗略处理。</strong>可以理解为：</p>
+<p>当上下文从 4K → 128K → 1M token，计算和显存会爆炸式增长，长上下文非常贵。  DSA 的目标就是：让长上下文训练/推理又快又省，同时不把模型搞笨。DSA 的核心思路（通俗版）一句话概括：  不是所有 token 都需要“一对一精算注意力”，DSA 用一个“闪电索引器（Lightning Indexer）”先选出少量关键token，只对这些做精细注意力，其它的或被跳过、或被粗略处理。可以理解为：</p>
 <ol>
 <li>先用“轻量筛选器”给每个 query 选出最相关的 top-K 个 key（token 位置）；</li>
 <li>只在这些 top-K 位置上做正常的注意力计算；</li>
@@ -416,7 +416,74 @@
 <p>$$\begin{align}<br>\bm{Q} = \bm{X} \bm{W}_Q, \quad<br>\bm{K} = \bm{X} \bm{W}_K, \quad<br>\bm{V} = \bm{X} \bm{W}_V<br>\end{align}$$</p>
 <p>$$\begin{align}<br>\text{Attention}(\bm{Q}, \bm{K}, \bm{V}) = \text{softmax}\left( \frac{\bm{Q} \bm{K}^\top}{\sqrt{d_k}} \right) \bm{V}<br>\end{align}$$</p>
 <p>其中 $d_k$ 是 Key 的维度，计算复杂度为 $O(L^2 d)$。</p>
-<p>DSA 的核心思想：<strong>对每个 Query，只选择与其最相关的 $K$ 个 Key（$K \ll L$）参与注意力计算</strong>。选择过程通过一个轻量级的 <strong>Indexer</strong> 完成。</p>
+<p>DSA 的核心思想：对每个 Query，只选择与其最相关的 $K$ 个 Key（$K \ll L$）参与注意力计算。选择过程通过一个轻量级的 Indexer 完成。</p>
+<p>步骤 1：Indexer 计算 Query 和 Key</p>
+<p>Indexer 使用独立的投影矩阵，从输入 $\bm{X}$ 和 MLA 压缩后的 Query 表示 $\bm{q}_r$ 生成索引用的 Query 和 Key：</p>
+<p>$$\begin{align}<br>\bm{Q}_{\text{idx}} = \text{RoPE}\left( \bm{q}_r \bm{W}_{Q_{\text{idx}}} \right), \quad<br>\bm{K}_{\text{idx}} = \text{RoPE}\left( \bm{X} \bm{W}_{K_{\text{idx}}} \right)<br>\end{align}$$</p>
+<p>$\bm{q}_r \in \mathbb{R}^{L \times d_q}$：MLA 压缩后的 Query 表示（$d_q \ll d$）<br>$\bm{W}_{Q_{\text{idx}}} \in \mathbb{R}^{d_q \times d_{\text{idx}}}$, $\bm{W}_{K_{\text{idx}}} \in \mathbb{R}^{d \times d_{\text{idx}}}$：Indexer 的投影矩阵<br>$\text{RoPE}$：旋转位置编码<br>$d_{\text{idx}}$：Indexer 的维度（通常远小于 $d$）</p>
+<p>步骤 2：计算相关性分数并选择 Top-K 位置</p>
+<p>对每个 Query 位置 $i$，计算其与所有 Key 位置的相关性分数，并选出分数最高的 $K$ 个位置：<br>$$\begin{align}<br>\bm{S}_i &amp;= \bm{Q}_{\text{idx},i} \bm{K}_{\text{idx}}^\top \in \mathbb{R}^{1 \times L}\\<br>\mathcal{I}_i &amp;= \text{TopK}(\bm{S}_i, K) \subset \{1, 2, \dots, L\}, \quad |\mathcal{I}_i| = K<br>\end{align}$$</p>
+<p>其中：<br>$\mathcal{I}_i$：位置 $i$ 的稀疏索引集合<br>实际实现中，该步骤通过优化的 FP8 Kernel（如 <code>fp8_index</code>）高效完成</p>
+<p>步骤 3：构造稀疏掩码</p>
+<p>根据 Top-K 索引构造二值掩码：</p>
+<p>$$\begin{align}<br>\bm{M}_{i,j} =<br>\begin{cases}<br>1, &amp; \text{if } j \in \mathcal{I}_i \\<br>0, &amp; \text{otherwise}<br>\end{cases}<br>\end{align}$$</p>
+<p>步骤 4：稀疏注意力计算</p>
+<p>在主注意力路径（MLA）中，只对掩码选中的位置计算注意力：<br>$$\begin{align}<br>\bm{Q} = \bm{X} \bm{W}_Q, \quad<br>\bm{K} = \bm{X} \bm{W}_K, \quad<br>\bm{V} = \bm{X} \bm{W}_V<br>\end{align}$$<br>对于每个 Query 位置 $i$：</p>
+<p>$$\begin{align}<br>\bm{A}_i = \text{softmax}\left( \frac{\bm{Q}_i \bm{K}_{\mathcal{I}_i}^\top}{\sqrt{d_k}} \right) \bm{V}_{\mathcal{I}_i}<br>\end{align}$$</p>
+<ul>
+<li><p>$ \bm{K}_{\mathcal{I}_i}, \bm{V}_{\mathcal{I}_i} $：仅索引集合 $ \mathcal{I}_i $ 中位置的 Key 和 Value</p>
+</li>
+<li><p>注意：在 DeepSeek 的 MLA 中，$\bm{K}$ 和 $\bm{V}$是从压缩表示恢复的，但这里为清晰起见省略了压缩步骤。最终输出为所有 $\bm{A}_i $ 拼接的结果。</p>
+</li>
+</ul>
+<p>复杂度对比</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>计算复杂度</th>
+<th>KV Cache 显存</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>标准注意力</td>
+<td>$O(L^2 d)$</td>
+<td>$O(L d)$</td>
+</tr>
+<tr>
+<td>DSA 稀疏注意力</td>
+<td>$O(L K d)$</td>
+<td>$O(L d)$ 但计算时只需访问 $K$ 个位置</td>
+</tr>
+</tbody>
+</table>
+<p>由于 $K \ll L$（例如 $L=128K$, $K=2048$ ），计算量从二次降为线性级别。</p>
+<h4 id="二、数值例子"><a href="#二、数值例子" class="headerlink" title="二、数值例子"></a>二、数值例子</h4><p>为直观理解，我们构造一个极简的数值例子，假设：</p>
+<ul>
+<li>序列长度 $L=4$，隐藏维度 $d=2$</li>
+<li>Top-K 参数 $K=1$（每个 Query 只选 1 个最相关的 Key）</li>
+<li>忽略 RoPE、MLA 压缩等细节，聚焦核心选择逻辑</li>
+</ul>
+<ol>
+<li>输入序列</li>
+</ol>
+<p>$$\begin{align}<br>\bm{X} = \begin{bmatrix}<br>1 &amp; 2 \\<br>3 &amp; 4 \\<br>5 &amp; 6 \\<br>7 &amp; 8<br>\end{bmatrix} \in \mathbb{R}^{4 \times 2}<br>\end{align}$$</p>
+<ol start="2">
+<li>Indexer 投影（简化）</li>
+</ol>
+<p>假设 Indexer 的投影矩阵为：</p>
+<p>$$\begin{align}<br>\bm{W}_{Q_{\text{idx}}} = \begin{bmatrix} 1 &amp; 0 \ 0 &amp; 1 \end{bmatrix}, \quad<br>\bm{W}_{K_{\text{idx}}} = \begin{bmatrix} 1 &amp; 1 \ 1 &amp; -1 \end{bmatrix}<br>\end{align}$$</p>
+<p>计算 Indexer 的 Query 和 Key（忽略 RoPE）：<br>$$\begin{align}<br>\bm{Q}_{\text{idx}} = \bm{X} \bm{W}_{Q_{\text{idx}}} = \bm{X} = \begin{bmatrix}<br>1 &amp; 2 \\<br>3 &amp; 4 \\<br>5 &amp; 6 \\<br>7 &amp; 8<br>\end{bmatrix}<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\bm{K}_{\text{idx}} = \bm{X} \bm{W}_{K_{\text{idx}}} = \begin{bmatrix}<br>1\cdot1+2\cdot1 &amp; 1\cdot1+2\cdot(-1) \\<br>3\cdot1+4\cdot1 &amp; 3\cdot1+4\cdot(-1) \\<br>5\cdot1+6\cdot1 &amp; 5\cdot1+6\cdot(-1) \\<br>7\cdot1+8\cdot1 &amp; 7\cdot1+8\cdot(-1)<br>\end{bmatrix} = \begin{bmatrix}<br>3 &amp; -1 \\<br>7 &amp; -1 \\<br>11 &amp; -1 \\<br>15 &amp; -1<br>\end{bmatrix}<br>\end{align}$$</p>
+<ol start="3">
+<li>计算相关性分数并选择 Top-1</li>
+</ol>
+<p>计算相关性矩阵 $\bm{S} = \bm{Q}_{\text{idx}} \bm{K}_{\text{idx}}^\T$：</p>
+<p>$$\begin{align}<br>\bm{S} = \begin{bmatrix}<br>1\cdot3 + 2\cdot(-1) &amp; 1\cdot7 + 2\cdot(-1) &amp; 1\cdot11 + 2\cdot(-1) &amp; 1\cdot15 + 2\cdot(-1) \\<br>3\cdot3 + 4\cdot(-1) &amp; 3\cdot7 + 4\cdot(-1) &amp; 3\cdot11 + 4\cdot(-1) &amp; 3\cdot15 + 4\cdot(-1) \\<br>5\cdot3 + 6\cdot(-1) &amp; 5\cdot7 + 6\cdot(-1) &amp; 5\cdot11 + 6\cdot(-1) &amp; 5\cdot15 + 6\cdot(-1) \\<br>7\cdot3 + 8\cdot(-1) &amp; 7\cdot7 + 8\cdot(-1) &amp; 7\cdot11 + 8\cdot(-1) &amp; 7\cdot15 + 8\cdot(-1)<br>\end{bmatrix} = \begin{bmatrix}<br>1 &amp; 5 &amp; 9 &amp; 13 \\<br>5 &amp; 17 &amp; 29 &amp; 41 \\<br>9 &amp; 29 &amp; 49 &amp; 69 \\<br>13 &amp; 41 &amp; 69 &amp; 97<br>\end{bmatrix}<br>\end{align}$$</p>
+<p>对每行（每个 Query）选择最大值对应的索引（Top-1）：</p>
+<p>Query 0：最大值 13 → 索引 3 → $ \mathcal{I}_0 = \{3\} $<br>Query 1：最大值 41 → 索引 3 → $ \mathcal{I}_1 = \{3\} $<br>Query 2：最大值 69 → 索引 3 → $ \mathcal{I}_2 = \{3\} $<br>Query 3：最大值 97 → 索引 3 → $ \mathcal{I}_3 = \{3\} $</p>
+<p>在这个例子中，所有 Query 都只关注位置 3（最后一个 token）。</p>
 <p><hr></p>
 <p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%"><a href="https://www.limoncc.com/post/1540fb65f18f359a/">https://www.limoncc.com/post/1540fb65f18f359a/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (May. 25, 2026). 《大语言模型研究16——注意力机制优化之稀疏注意》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/1540fb65f18f359a">https://www.limoncc.com/post/1540fb65f18f359a</a></td></tr><tr><td align="left" width="100%">@online{limoncc-1540fb65f18f359a,<br>title={大语言模型研究16——注意力机制优化之稀疏注意},<br>author={引线小白},<br>year={2026},<br>month={May},<br>date={25},<br>url={\url{<a href="https://www.limoncc.com/post/1540fb65f18f359a}}">https://www.limoncc.com/post/1540fb65f18f359a}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
 <script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
@@ -660,7 +727,7 @@
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、什么是DSA"><span class="nav-number">1.</span> <span class="nav-text">一、什么是DSA</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-1、核心技巧"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、核心技巧</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-2、DSA核心数学公式"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、DSA核心数学公式</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、什么是DSA"><span class="nav-number">1.</span> <span class="nav-text">一、什么是DSA</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-1、核心技巧"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、核心技巧</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-2、DSA核心数学公式"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、DSA核心数学公式</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#二、数值例子"><span class="nav-number">2.</span> <span class="nav-text">二、数值例子</span></a></li></ol></div>
             
           </div>
         </section>
