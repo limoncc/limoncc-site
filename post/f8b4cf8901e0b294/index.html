@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-16T13:09:59.294Z">
+<meta property="og:updated_time" content="2026-09-16T13:10:39.681Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究14——注意力机制优化之FlashAttention">
 <meta name="twitter:description" content="本文主要总结了注意力机制优化之FlashAttention的若干基本问题，和我自己的一些体会。">
@@ -411,7 +411,7 @@
 <p>假设我们将 $\bm{x}$ 分成 K 个块，定义到第 k 块为止的局部最大值为 $m_k$ ，局部指数和为 $s_k$ ,当我们从第k-1块推进到第k块时，局部最大值发生了更新</p>
 <p>$$\begin{align}<br>\displaystyle m_k=\max(m_{k-1},m^*_k)<br>\end{align}$$</p>
 <p>其中 $\displaystyle  m^*_k=\max[\bm{x}_k]$ 是当前块的局部最大值。由于减去的最大值变大了 $\displaystyle m_k\geqslant m_{k-1}$ ,之前累加的 $s_k$ 整体缩小了。缩小的倍数正是 $\displaystyle \mathrm{e}^{m_{k-1} - m_k}$ 。于是我们可以得到如下的递推公式：</p>
-<p>$$\begin{align}<br>s_k<br>&amp;=\sum_{i\in [1,k-1]}\sum_{j\in \bm{x}_i}\mathrm{e}^{x_j - m_k}<br>+\underbrace{\sum_{j \in \bm{x}_k} \mathrm{e}^{x_j-m_k}}_{b_k}\\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k}\underbrace{\sum_{i \in [1, k-1]} \sum_{j \in \bm{x}_i} \mathrm{e}^{x_j-m_{k-1}}}_{s_{k-1}}<br>+\mathrm{e}^{m^<em>_k-m_k}\underbrace{\sum_{j \in \bm{x}_k}\mathrm{e}^{x_j-m^</em>_k}}_{\hat{b}_k}\\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k}s_{k-1}+\mathrm{e}^{m^*_k - m_k} \hat{b}_k\\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k}s_{k-1}+b_k<br>\end{align}$$</p>
+<p>$$\begin{align}<br>s_k<br>&amp;=\sum_{i\in [1,k-1]}\sum_{j\in \bm{x}_i}\mathrm{e}^{x_j - m_k}<br>+\underbrace{\sum_{j \in \bm{x}_k} \mathrm{e}^{x_j-m_k}}_{b_k}\\\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k}\underbrace{\sum_{i \in [1, k-1]} \sum_{j \in \bm{x}_i} \mathrm{e}^{x_j-m_{k-1}}}_{s_{k-1}}<br>+\mathrm{e}^{m^<em>_k-m_k}\underbrace{\sum_{j \in \bm{x}_k}\mathrm{e}^{x_j-m^</em>_k}}_{\hat{b}_k}\\\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k}s_{k-1}+\mathrm{e}^{m^*_k - m_k} \hat{b}_k\\\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k}s_{k-1}+b_k<br>\end{align}$$</p>
 <p>也就是有</p>
 <p>$$\begin{align}<br>s_k=\mathrm{e}^{m_{k-1}-m_k}s_{k-1}+b_k<br>\end{align}$$</p>
 <p>其中，$m_k=\max_{i\in [1, k]} (\max[\bm{x}_i])$, $b_k = \sum_{j \in \bm{x}_k} \mathrm{e}^{x_j - m_k}$ 是<strong>完全基于历史最大值和当前块内部最大值</strong>算出来的局部和，这可以在SRAM中直接防溢出计算。</p>
