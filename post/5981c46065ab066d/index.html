@@ -99,7 +99,7 @@
 <meta property="og:image" content="https://www.limoncc.com/images/loss02.png">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-16T07:56:56.081Z">
+<meta property="og:updated_time" content="2026-09-16T09:42:16.884Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究08：internlm2系列">
 <meta name="twitter:description" content="本文主要总结了internlm2的一个大致印象，并结合internlm2点技术报告讨论了笔者感兴趣的内容，和我自己的一些体会，如有错误请指正。">
@@ -349,7 +349,19 @@
               <span class="post-meta-item-text">分类于</span>
               
                 <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/大语言模型研究/" itemprop="url" rel="index">
+                  <a href="/categories/机器学习/" itemprop="url" rel="index">
+                    <span itemprop="name">机器学习</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/机器学习/大语言模型研究/" itemprop="url" rel="index">
                     <span itemprop="name">大语言模型研究</span>
                   </a>
                 </span>
@@ -391,7 +403,7 @@
       
 
       
-        <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：httpss://<a href="http://www.limoncc.com/post/5981c46065ab066d/">www.limoncc.com/post/5981c46065ab066d/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
+        <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：<a href="https://www.limoncc.com/post/5981c46065ab066d/">https://www.limoncc.com/post/5981c46065ab066d/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
 <h4 id="一、internlm2的初步印象"><a href="#一、internlm2的初步印象" class="headerlink" title="一、internlm2的初步印象"></a>一、internlm2的初步印象</h4><p>说说个人观感，大模型在中国，有两股政府力量，一股是北京的智源、一股是上海人工智能实验室。在前期(202301-202401)智源的可谓风头十足，Aquila、BGE(BAAI General  Embedding)、天宝1.0(智能线虫)。无论是学术还是产业引来一波关注。后来智源陷入了人事动荡。上海人工智能实验室自从发布internlm2后，开始的加大了宣传。OpenLLM开源社区也应该是得到了上海政府的支持，有一说一上海政府对大模型开源的支持应该比任何中国地方政府都要大。笔者认为要发展一方IT产业，政府支持关键基础设施开源应该是必由之路。而笔者所在的重庆目前似乎没有摸到门道，政府成立的一大帮国企做项目不是好方法。回到正题，书生.浦语建立了一整套开源体系，这包括：</p>
 <ul>
 <li><strong>数据</strong>：书生.万卷</li>
@@ -467,7 +479,7 @@
 <h4 id="三、一个简单的评述"><a href="#三、一个简单的评述" class="headerlink" title="三、一个简单的评述"></a>三、一个简单的评述</h4><p>1、InternLM2-20b的性能还是比较全面的，技术报告也有很多细节，先写这么多吧，毕竟internStudio给我了很多免费算力哇。改天在做分享。<br>2、要说InternLM2亮眼之处：1、PPO的条件奖励模型，2、对工具的支持、3、200k上下文，不过你要使用LMDeploy，llama.cpp只支持原生的32k。4、整体性能提升了</p>
 <h4 id="四、参考文献"><a href="#四、参考文献" class="headerlink" title="四、参考文献"></a>四、参考文献</h4><p>[^1]: Cai, Z., Cao, M., Chen, H., Chen, K., Chen, K., Chen, X., et al. (2024, March 25). InternLM2 Technical Report. arXiv. <a href="http://arxiv.org/abs/2403.17297" target="_blank" rel="noopener">http://arxiv.org/abs/2403.17297</a>. Accessed 29 March 2024<br>[^2]: Lin, T.-Y., Goyal, P., Girshick, R., He, K., &amp; Dollár, P. (2018, February 7). Focal Loss for Dense Object Detection. arXiv. <a href="http://arxiv.org/abs/1708.02002" target="_blank" rel="noopener">http://arxiv.org/abs/1708.02002</a>. Accessed 29 March 2024</p>
 <p><hr></p>
-<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%">httpss://<a href="http://www.limoncc.com/post/5981c46065ab066d/">www.limoncc.com/post/5981c46065ab066d/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (Mar. 27, 2024). 《大语言模型研究08：internlm2系列》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/5981c46065ab066d">https://www.limoncc.com/post/5981c46065ab066d</a></td></tr><tr><td align="left" width="100%">@online{limoncc-5981c46065ab066d,<br>title={大语言模型研究08：internlm2系列},<br>author={引线小白},<br>year={2024},<br>month={Mar},<br>date={27},<br>url={\url{<a href="https://www.limoncc.com/post/5981c46065ab066d}}">https://www.limoncc.com/post/5981c46065ab066d}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
+<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%"><a href="https://www.limoncc.com/post/5981c46065ab066d/">https://www.limoncc.com/post/5981c46065ab066d/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (Mar. 27, 2024). 《大语言模型研究08：internlm2系列》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/5981c46065ab066d">https://www.limoncc.com/post/5981c46065ab066d</a></td></tr><tr><td align="left" width="100%">@online{limoncc-5981c46065ab066d,<br>title={大语言模型研究08：internlm2系列},<br>author={引线小白},<br>year={2024},<br>month={Mar},<br>date={27},<br>url={\url{<a href="https://www.limoncc.com/post/5981c46065ab066d}}">https://www.limoncc.com/post/5981c46065ab066d}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
 <script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
 
       

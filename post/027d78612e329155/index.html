@@ -95,7 +95,7 @@
 <meta property="og:image" content="https://www.limoncc.com/images/加性位置编码.png">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-16T09:37:05.913Z">
+<meta property="og:updated_time" content="2026-09-16T09:42:37.488Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究13——长度外推">
 <meta name="twitter:description" content="本文主要总结了LLM的长度外推若干基本问题，和我自己的一些体会。">
@@ -345,7 +345,19 @@
               <span class="post-meta-item-text">分类于</span>
               
                 <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/大语言模型研究/" itemprop="url" rel="index">
+                  <a href="/categories/机器学习/" itemprop="url" rel="index">
+                    <span itemprop="name">机器学习</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/机器学习/大语言模型研究/" itemprop="url" rel="index">
                     <span itemprop="name">大语言模型研究</span>
                   </a>
                 </span>
@@ -421,39 +433,15 @@
 <p>$a_{mn}=a_{nm}$ 表示轮换对称，即「我爱=爱我」<br>$a_{mn}= a_{m,(n+\Delta t)}$表示非衰减，即「我爱=我……爱」<br>$a_{mn}= a_{(m+\Delta t),(n+\Delta t)}$表示平移不变，即「我爱=……我爱」</p>
 <p>我们继续，为了打破这种对称性同时实现衰减以及保留一定的平移不变形，令 $\displaystyle f(\bm{x}_m,\bm{x}_n)=a_{mn}$，我们希望引入位置信息，使得注意力分数满足下述性质：非对称性、远程衰减、平移不变。</p>
 <p>$$\begin{align}<br>\left\{<br>\begin{aligned}<br>&amp;\tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_n+\bm{p}_n)<br>\neq \tilde{f}(\bm{y}_m+\bm{p}_m,\bm{x}_n+\bm{p}_n)\\<br>&amp;\displaystyle \lim_{\Delta t\to\infty} \tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_{n+\Delta t}+\bm{p}_{n+\Delta t}) \downarrow a \\<br>&amp;\tilde{f}(\bm{x}_{m+\Delta t}+\bm{p}_{m+\Delta t},\bm{y}_{n+\Delta t}+\bm{p}_{n+\Delta t}) = \tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_n+\bm{p}_n)<br>\end{aligned}<br>\right.<br>\end{align}$$</p>
-<h6 id="2-1-1、非对称性"><a href="#2-1-1、非对称性" class="headerlink" title="2.1.1、非对称性"></a>2.1.1、非对称性</h6><p>为了便于分析，我们对两边在点 $(\bm{x}_m,\bm{y}_n)$出进行泰勒展开到二阶微分<br>$$\begin{align}<br>\tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_n+\bm{p}_n)<br>&amp;\approx f(\bm{x}_m,\bm{y}_n) </p>
-<ul>
-<li>\bm{p}_m^\T \frac{\partial f}{\partial \bm{x}_m} </li>
-<li>\bm{p}_n^\T \frac{\partial f}{\partial \bm{y}_n} </li>
-<li>\frac{1}{2}\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{x}_m^2}\bm{p}_m </li>
-<li>\frac{1}{2}\bm{p}_n^\T \frac{\partial^2 f}{\partial \bm{y}_n^2}\bm{p}_n </li>
-<li>\underbrace{\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}\bm{p}_n}_{\bm{p}_m^\T \bm{H} \bm{p}_n}\\<br>\tilde{f}(\bm{y}_m+\bm{p}_m,\bm{x}_n+\bm{p}_n)<br>&amp;\approx f(\bm{y}_m,\bm{x}_n) </li>
-<li>\bm{p}_m^\T \frac{\partial f}{\partial \bm{y}_m} </li>
-<li>\bm{p}_n^\T \frac{\partial f}{\partial \bm{x}_n} </li>
-<li>\frac{1}{2}\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{y}_m^2}\bm{p}_m </li>
-<li>\frac{1}{2}\bm{p}_n^\T \frac{\partial^2 f}{\partial \bm{x}_n^2}\bm{p}_n </li>
-<li>\underbrace{\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}\bm{p}_n}_{\bm{p}_m^\T \bm{H} \bm{p}_n}\\<br>\end{align}$$<br>可以看到第二项到第三项是关于位置的绝对信息。第六项，特别的记为 $ \bm{p}_m^\T \bm{H} \bm{p}_n$是关于位置的相对信息。显然第二项到第三项是关于位置的绝对信息打破了轮换对称。</li>
-</ul>
+<h6 id="2-1-1、非对称性"><a href="#2-1-1、非对称性" class="headerlink" title="2.1.1、非对称性"></a>2.1.1、非对称性</h6><p>为了便于分析，我们对两边在点 $(\bm{x}_m,\bm{y}_n)$出进行泰勒展开到二阶微分</p>
+<p>$$\begin{align}<br>\tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_n+\bm{p}_n)<br>&amp;\approx f(\bm{x}_m,\bm{y}_n)<br>+\bm{p}_m^\T \frac{\partial f}{\partial \bm{x}_m}<br>+\bm{p}_n^\T \frac{\partial f}{\partial \bm{y}_n}<br>+\frac{1}{2}\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{x}_m^2}\bm{p}_m<br>+\frac{1}{2}\bm{p}_n^\T \frac{\partial^2 f}{\partial \bm{y}_n^2}\bm{p}_n<br>+\underbrace{\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}\bm{p}_n}_{\bm{p}_m^\T \bm{H} \bm{p}_n}\\<br>\tilde{f}(\bm{y}_m+\bm{p}_m,\bm{x}_n+\bm{p}_n)<br>&amp;\approx f(\bm{y}_m,\bm{x}_n)<br>+\bm{p}_m^\T \frac{\partial f}{\partial \bm{y}_m}<br>+\bm{p}_n^\T \frac{\partial f}{\partial \bm{x}_n}<br>+\frac{1}{2}\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{y}_m^2}\bm{p}_m<br>+\frac{1}{2}\bm{p}_n^\T \frac{\partial^2 f}{\partial \bm{x}_n^2}\bm{p}_n<br>+\underbrace{\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}\bm{p}_n}_{\bm{p}_m^\T \bm{H} \bm{p}_n}\\<br>\end{align}$$</p>
+<p>可以看到第二项到第三项是关于位置的绝对信息。第六项，特别的记为 $ \bm{p}_m^\T \bm{H} \bm{p}_n$是关于位置的相对信息。显然第二项到第三项是关于位置的绝对信息打破了轮换对称。</p>
 <h6 id="2-1-2、远程衰减"><a href="#2-1-2、远程衰减" class="headerlink" title="2.1.2、远程衰减"></a>2.1.2、远程衰减</h6><p>要实现衰减，考察 $\tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_n+\bm{p}_{n+\Delta t})$</p>
-<p>$$\begin{align}<br>&amp;\tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_{n+\Delta t}+\bm{p}_{n+\Delta t}) \\<br>&amp;\approx f(\bm{x}_m,\bm{y}_n) </p>
-<ul>
-<li>\bm{p}_m^\T \frac{\partial f}{\partial \bm{x}_m} </li>
-<li>\bm{p}_{n+\Delta t}^\T \frac{\partial f}{\partial \bm{y}_n} </li>
-<li>\frac{1}{2}\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{x}_m^2}\bm{p}_m </li>
-<li>\frac{1}{2}\bm{p}_{n+\Delta t}^\T \frac{\partial^2 f}{\partial \bm{y}_n^2}\bm{p}_{n+\Delta t} </li>
-<li>\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}\bm{p}_{n+\Delta t}<br>\end{align}$$</li>
-</ul>
-<p>与 $\tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_n+\bm{p}_n)$比较，我们暂且认为 $\displaystyle  \frac{\partial^2 f}{\partial \bm{x}_m^2}、\frac{\partial^2 f}{\partial \bm{y}_n^2}、\frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}$是对称矩阵。这样显然 $\bm{p}_n，|\bm{p}_n| $应该是关于位置 $n$的减函数，而且内积 $ &lt;\bm{p}_{m},\bm{p}_n&gt;$也应该是关于相对位置 $n-m$的减函数</p>
+<p>$$\begin{align}<br>&amp;\tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_{n+\Delta t}+\bm{p}_{n+\Delta t}) \\<br>&amp;\approx f(\bm{x}_m,\bm{y}_n)<br>+\bm{p}_m^\T \frac{\partial f}{\partial \bm{x}_m}<br>+\bm{p}_{n+\Delta t}^\T \frac{\partial f}{\partial \bm{y}_n}<br>+\frac{1}{2}\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{x}_m^2}\bm{p}_m<br>+\frac{1}{2}\bm{p}_{n+\Delta t}^\T \frac{\partial^2 f}{\partial \bm{y}_n^2}\bm{p}_{n+\Delta t}<br>+\bm{p}_m^\T \frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}\bm{p}_{n+\Delta t}<br>\end{align}$$</p>
+<p>与 $\tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_n+\bm{p}_n)$ 比较，我们暂且认为 $\displaystyle  \frac{\partial^2 f}{\partial \bm{x}_m^2}、\frac{\partial^2 f}{\partial \bm{y}_n^2}、\frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}$ 是对称矩阵。这样显然 $\bm{p}_n\mid\bm{p}_n\mid$ 应该是关于位置 $n$的减函数，而且内积 $&lt;\bm{p}_{m},\bm{p}_n&gt;$ 也应该是关于相对位置 $n-m$ 的减函数</p>
 <h6 id="2-1-3、平移不变"><a href="#2-1-3、平移不变" class="headerlink" title="2.1.3、平移不变"></a>2.1.3、平移不变</h6><p>要实现平移不变，考察 $\tilde{f}(\bm{x}_{m+\Delta t}+\bm{p}_{m+\Delta t},\bm{y}_n+\bm{p}_{n+\Delta t})$</p>
-<p>$$\begin{align}<br>&amp;\tilde{f}(\bm{x}_{m+\Delta t}+\bm{p}_{m+\Delta t},\bm{y}_{n+\Delta t}+\bm{p}_{n+\Delta t}) \\<br>&amp;\approx f(\bm{x}_m,\bm{y}_n) </p>
-<ul>
-<li>\bm{p}_{m+\Delta t}^\T \frac{\partial f}{\partial \bm{x}_m} </li>
-<li>\bm{p}_{n+\Delta t}^\T \frac{\partial f}{\partial \bm{y}_n} </li>
-<li>\frac{1}{2}\bm{p}_{m+\Delta t}^\T \frac{\partial^2 f}{\partial \bm{x}_m^2}\bm{p}_{m+\Delta t} </li>
-<li>\frac{1}{2}\bm{p}_{n+\Delta t}^\T \frac{\partial^2 f}{\partial \bm{y}_n^2}\bm{p}_{n+\Delta t} </li>
-<li>\bm{p}_{m+\Delta t}^\T \frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}\bm{p}_{n+\Delta t}<br>\end{align}$$</li>
-</ul>
-<p>与 $\tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_n+\bm{p}_n)$比较，我们暂且认为 $\displaystyle  \frac{\partial^2 f}{\partial \bm{x}_m^2}、\frac{\partial^2 f}{\partial \bm{y}_n^2}、\frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}$是对称矩阵。由于一阶项的存在，要可能保留平移不变形必然要求 $ |\bm{p}_n|、&lt;\bm{p}_{m},\bm{p}_n&gt;$应该与绝对位置无关，而只与绝对位置相关。也就是要求内积应该形如如下函数</p>
+<p>$$\begin{align}<br>&amp;\tilde{f}(\bm{x}_{m+\Delta t}+\bm{p}_{m+\Delta t},\bm{y}_{n+\Delta t}+\bm{p}_{n+\Delta t}) \\<br>&amp;\approx f(\bm{x}_m,\bm{y}_n)<br>+\bm{p}_{m+\Delta t}^\T \frac{\partial f}{\partial \bm{x}_m}<br>+\bm{p}_{n+\Delta t}^\T \frac{\partial f}{\partial \bm{y}_n}<br>+\frac{1}{2}\bm{p}_{m+\Delta t}^\T \frac{\partial^2 f}{\partial \bm{x}_m^2}\bm{p}_{m+\Delta t}<br>+\frac{1}{2}\bm{p}_{n+\Delta t}^\T \frac{\partial^2 f}{\partial \bm{y}_n^2}\bm{p}_{n+\Delta t}<br>+\bm{p}_{m+\Delta t}^\T \frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}\bm{p}_{n+\Delta t}<br>\end{align}$$</p>
+<p>与 $\tilde{f}(\bm{x}_m+\bm{p}_m,\bm{y}_n+\bm{p}_n)$比较，我们暂且认为 $\displaystyle  \frac{\partial^2 f}{\partial \bm{x}_m^2}、\frac{\partial^2 f}{\partial \bm{y}_n^2}、\frac{\partial^2 f}{\partial \bm{x}_m \partial \bm{y}_n}$ 是对称矩阵。由于一阶项的存在，要可能保留平移不变形必然要求 $ |\bm{p}_n|、&lt;\bm{p}_{m},\bm{p}_n&gt;$ 应该与绝对位置无关，而只与绝对位置相关。也就是要求内积应该形如如下函数</p>
 <p>$$\begin{align}<br>&lt;\bm{p}_{m},\bm{p}_n&gt; = g(m-n) = g(n-m)<br>\end{align}$$</p>
 <h5 id="2-2、正弦位置编码"><a href="#2-2、正弦位置编码" class="headerlink" title="2.2、正弦位置编码"></a>2.2、正弦位置编码</h5><p>为了简化分析我们暂时只考虑两个特征维度 $\dim[\bm{p}_m]=2$。我们有 $ \bm{p}_m=[x_m,y_m]^\T，\bm{p}_n=[x_n,y_n]^\T$。当做复数看待，就有</p>
 <p>$$\begin{align}<br>\left\{\begin{aligned}<br>&amp;p_m = x_m + \mathrm{i}y_m=R_m \mathrm{e}^{\mathrm{i}\varPsi_m}\\<br>&amp;p_n = x_n + \mathrm{i}y_n=R_n \mathrm{e}^{\mathrm{i}\varPsi_n}\\<br>&amp;q(n-m) = S_{n-m}\mathrm{e}^{\mathrm{i}\varPhi_{n-m}}<br>\end{aligned}<br>\right.<br>\end{align}$$<br>其中 $q(n-m)$的实部 $\mathbb{R}[q(n-m)] = g(n-m)$。根据引理1我们有</p>
@@ -503,10 +491,7 @@
 <p>$$<br>\tilde{\bm{q}}_m^\top \tilde{\bm{k}}_n<br>= \bm{q}^\top \bm{R}_m^\top \bm{R}_n \bm{k}<br>= \bm{q}^\top \bm{R}_{n-m} \bm{k}.<br>$$</p>
 <p>这正是<strong>旋转位置编码（Rotary Position Embedding, RoPE）</strong> 的核心[^2]：内积仅依赖于相对位置 $n-m$，且编码以乘法形式施加在 $\bm{q},\bm{k}$ 上。</p>
 <p>将内积展开，可得</p>
-<p>$$<br>\tilde{\bm{q}}_m^\top \tilde{\bm{k}}_n<br>= \sum_{i=0}^{d/2-1} \big( q_{2i}k_{2i} + q_{2i+1}k_{2i+1} \big) \cos[(n-m)\theta_i] </p>
-<ul>
-<li>\big( q_{2i}k_{2i+1} - q_{2i+1}k_{2i} \big) \sin[(n-m)\theta_i].<br>$$</li>
-</ul>
+<p>$$<br>\tilde{\bm{q}}_m^\top \tilde{\bm{k}}_n<br>=\sum_{i=0}^{d/2-1} \big( q_{2i}k_{2i} + q_{2i+1}k_{2i+1} \big) \cos[(n-m)\theta_i]<br>+\big( q_{2i}k_{2i+1} - q_{2i+1}k_{2i} \big) \sin[(n-m)\theta_i].<br>$$</p>
 <p>这可以看作原始内积被各个频率下的相对位置信号加权。若频率 $\theta_i$ 选取适当（例如 $\theta_i = 10000^{-2i/d}$，与正弦编码相同的衰减律），那么众多频率叠加的结果，随着相对距离 $|n-m|$ 增大，叠加信号会因相消干涉而逐渐衰减，最终趋近于零。这就是远程衰减在乘性编码中的实现机制。它不需要像加性编码那样对 $\bm{H}$ 施加硬性约束，而是通过高维频率的集体效应自然达成，因此<strong>鲁棒性远优于正弦位置编码</strong>。</p>
 <h5 id="3-3、RoPE的具体实现"><a href="#3-3、RoPE的具体实现" class="headerlink" title="3.3、RoPE的具体实现"></a>3.3、RoPE的具体实现</h5><p>不同配对方式，决定了 rotate_half(x) 的样子。</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RoPE(x) = x * cos(θ) + rotate_half(x) * sin(θ)</span><br></pre></td></tr></table></figure>
@@ -618,7 +603,7 @@
 <h5 id="5-6、PoPE的问题"><a href="#5-6、PoPE的问题" class="headerlink" title="5.6、PoPE的问题"></a>5.6、PoPE的问题</h5><h6 id="5-6-1、PoPE必须加-softplus-激活"><a href="#5-6-1、PoPE必须加-softplus-激活" class="headerlink" title="5.6.1、PoPE必须加 softplus 激活"></a>5.6.1、PoPE必须加 softplus 激活</h6><p>要使用PoPE，必须引入极坐标，需要对 k,v 加 softplus 激活，让模长为非负。在 RoPE 中，Q 和 K 的点积展开是：</p>
 <p>$$\begin{align}<br>q \cdot k = |q||k| \cos(\theta_q - \theta_k + m\Delta\theta)<br>\end{align}$$</p>
 <p>注意看 $\theta_q - \theta_k$ 这一项。在 RoPE 里，<strong>内容（词向量）不仅决定了模长 $|q|, |k|$，还决定了初始相位 $\theta_q, \theta_k$</strong>。这意味着模型可以学习让两个意思相近的词，不仅模长大，而且<strong>初始相位也接近</strong>，从而在距离较远时依然能产生较高的注意力分数。</p>
-<p>而在 PoPE 中，因为强制进入了极坐标，且加了 softplus：<br>$$ \mu_q = \text{softplus}(q), \quad \mu_k = \text{softplus}(k) $$<br>点积变成了：<br>$$ \mu_q \mu_k \cos(m\Delta\theta + \delta) $$</p>
+<p>而在 PoPE 中，因为强制进入了极坐标，且加了 softplus：<br>$$\mu_q = \text{softplus}(q), \quad \mu_k = \text{softplus}(k) $$<br>点积变成了：<br>$$\mu_q \mu_k \cos(m\Delta\theta + \delta) $$</p>
 <p><strong>这里 $\theta_q$ 和 $\theta_k$ 被彻底剥离了！</strong> 内容只能去控制模长 $\mu$（而且被 softplus 压缩到了非负数），再也无法影响初始相位了。 <strong>所以模型失去了“用初始相位来编码内容相似度”的能力。</strong> 而且 softplus 把 $(-\infty, +\infty)$ 压缩到 $(0, +\infty)$，相比 RoPE 不做处理的线性投影，确实也是一种信息压缩。</p>
 <p>那我不加 softplus，直接让模长 $r$ 可以为负不行吗？<strong>不行，因为负的模长会破坏“解耦”。</strong></p>
 <p>在极坐标下，如果 $r &lt; 0$，数学上等价于 $|r| e^{i(\theta + \pi)}$。也就是说，如果你允许内容（Q/K值）通过正负号来影响模长，<strong>正负号的翻转实际上就是偷偷给相位加了 180度 $(\pi)$ 的偏移！</strong></p>
