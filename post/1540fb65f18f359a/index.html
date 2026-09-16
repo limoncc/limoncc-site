@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-16T16:20:50.299Z">
+<meta property="og:updated_time" content="2026-09-16T16:22:03.469Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究16——注意力机制优化之稀疏注意">
 <meta name="twitter:description" content="本文主要总结了注意力机制优化之稀疏注意的若干基本问题，和我自己的一些体会。">
@@ -465,25 +465,35 @@
 <li>Top-K 参数 $K=1$（每个 Query 只选 1 个最相关的 Key）</li>
 <li>忽略 RoPE、MLA 压缩等细节，聚焦核心选择逻辑</li>
 </ul>
-<ol>
-<li>输入序列</li>
-</ol>
+<p>1.输入序列</p>
 <p>$$\begin{align}<br>\bm{X} = \begin{bmatrix}<br>1 &amp; 2 \\<br>3 &amp; 4 \\<br>5 &amp; 6 \\<br>7 &amp; 8<br>\end{bmatrix} \in \mathbb{R}^{4 \times 2}<br>\end{align}$$</p>
-<ol start="2">
-<li>Indexer 投影（简化）</li>
-</ol>
+<p>2.Indexer 投影（简化）</p>
 <p>假设 Indexer 的投影矩阵为：</p>
 <p>$$\begin{align}<br>\bm{W}_{Q_{\text{idx}}} = \begin{bmatrix} 1 &amp; 0 \ 0 &amp; 1 \end{bmatrix}, \quad<br>\bm{W}_{K_{\text{idx}}} = \begin{bmatrix} 1 &amp; 1 \ 1 &amp; -1 \end{bmatrix}<br>\end{align}$$</p>
 <p>计算 Indexer 的 Query 和 Key（忽略 RoPE）：<br>$$\begin{align}<br>\bm{Q}_{\text{idx}} = \bm{X} \bm{W}_{Q_{\text{idx}}} = \bm{X} = \begin{bmatrix}<br>1 &amp; 2 \\<br>3 &amp; 4 \\<br>5 &amp; 6 \\<br>7 &amp; 8<br>\end{bmatrix}<br>\end{align}$$</p>
 <p>$$\begin{align}<br>\bm{K}_{\text{idx}} = \bm{X} \bm{W}_{K_{\text{idx}}} = \begin{bmatrix}<br>1\cdot1+2\cdot1 &amp; 1\cdot1+2\cdot(-1) \\<br>3\cdot1+4\cdot1 &amp; 3\cdot1+4\cdot(-1) \\<br>5\cdot1+6\cdot1 &amp; 5\cdot1+6\cdot(-1) \\<br>7\cdot1+8\cdot1 &amp; 7\cdot1+8\cdot(-1)<br>\end{bmatrix} = \begin{bmatrix}<br>3 &amp; -1 \\<br>7 &amp; -1 \\<br>11 &amp; -1 \\<br>15 &amp; -1<br>\end{bmatrix}<br>\end{align}$$</p>
-<ol start="3">
-<li>计算相关性分数并选择 Top-1</li>
-</ol>
+<p>3.计算相关性分数并选择 Top-1</p>
 <p>计算相关性矩阵 $\bm{S} = \bm{Q}_{\text{idx}} \bm{K}_{\text{idx}}^\T$：</p>
 <p>$$\begin{align}<br>\bm{S} = \begin{bmatrix}<br>1\cdot3 + 2\cdot(-1) &amp; 1\cdot7 + 2\cdot(-1) &amp; 1\cdot11 + 2\cdot(-1) &amp; 1\cdot15 + 2\cdot(-1) \\<br>3\cdot3 + 4\cdot(-1) &amp; 3\cdot7 + 4\cdot(-1) &amp; 3\cdot11 + 4\cdot(-1) &amp; 3\cdot15 + 4\cdot(-1) \\<br>5\cdot3 + 6\cdot(-1) &amp; 5\cdot7 + 6\cdot(-1) &amp; 5\cdot11 + 6\cdot(-1) &amp; 5\cdot15 + 6\cdot(-1) \\<br>7\cdot3 + 8\cdot(-1) &amp; 7\cdot7 + 8\cdot(-1) &amp; 7\cdot11 + 8\cdot(-1) &amp; 7\cdot15 + 8\cdot(-1)<br>\end{bmatrix} = \begin{bmatrix}<br>1 &amp; 5 &amp; 9 &amp; 13 \\<br>5 &amp; 17 &amp; 29 &amp; 41 \\<br>9 &amp; 29 &amp; 49 &amp; 69 \\<br>13 &amp; 41 &amp; 69 &amp; 97<br>\end{bmatrix}<br>\end{align}$$</p>
 <p>对每行（每个 Query）选择最大值对应的索引（Top-1）：</p>
 <p>Query 0：最大值 13 → 索引 3 → $ \mathcal{I}_0 = \{3\} $<br>Query 1：最大值 41 → 索引 3 → $ \mathcal{I}_1 = \{3\} $<br>Query 2：最大值 69 → 索引 3 → $ \mathcal{I}_2 = \{3\} $<br>Query 3：最大值 97 → 索引 3 → $ \mathcal{I}_3 = \{3\} $</p>
 <p>在这个例子中，所有 Query 都只关注位置 3（最后一个 token）。</p>
+<p>4.稀疏注意力计算</p>
+<p>假设主注意力路径的投影矩阵均为单位矩阵（简化），即 $\bm{Q}=\bm{K}=\bm{V}=\bm{X}$。<br>以 Query 0 为例：</p>
+<p>1、$\bm{Q}_0 = [1, 2]$<br>2、只对 Key 位置 3 计算：$\bm{K}_3 = [7, 8]$, $\bm{V}_3 = [7, 8]$<br>3、注意力分数：$\bm{Q}_0 \bm{K}_3^\top = 1\cdot7 + 2\cdot8 = 23$<br>4、Softmax（只有一个选项）：$\text{softmax}(23/\sqrt{2}) \approx 1$<br>5、输出：$\bm{A}_0 = 1 \cdot [7, 8] = [7, 8]$</p>
+<p>同理：<br>Query 1：$\bm{Q}_1 = [3, 4]$, 分数 = 53 → 输出 $[7, 8]$<br>Query 2：$\bm{Q}_2 = [5, 6]$, 分数 = 83 → 输出 $[7, 8]$<br>Query 3：$\bm{Q}_3 = [7, 8]$, 分数 = 113 → 输出 $[7, 8]$<br>最终输出序列所有位置均为 $[7, 8]$。</p>
+<p>该例子中，Indexer 的投影使得所有 Query 都最关注最后一个 token，因此稀疏注意力只聚合了该位置的信息。</p>
+<p>实际中，$K$ 会更大（如 2048），且 Indexer 会学习到更丰富的模式（如局部性、语义相关性），不会出现所有 Query 只关注一个 token 的极端情况。</p>
+<p>DSA 的关键优势：通过 Indexer 动态选择少量关键位置，将计算量从 $O(L^2)$ 降至 $O(LK)$，同时保持模型性能。</p>
+<h4 id="三、DSA梯度问题"><a href="#三、DSA梯度问题" class="headerlink" title="三、DSA梯度问题"></a>三、DSA梯度问题</h4><h5 id="3-1、直通估计器"><a href="#3-1、直通估计器" class="headerlink" title="3.1、直通估计器"></a>3.1、直通估计器</h5><p>直通估计器（Straight-Through Estimator，简称 STE）是深度学习中用于解决“离散操作不可导”问题的经典技巧。它核心思想是“欺骗”梯度计算：在前向传播时做硬离散化（保证推理效果），在反向传播时假装前向做的是恒等映射（保证梯度流动）。</p>
+<h6 id="3-1-1、为什么需要-STE？"><a href="#3-1-1、为什么需要-STE？" class="headerlink" title="3.1.1、为什么需要 STE？"></a>3.1.1、为什么需要 STE？</h6><p>深度学习依赖反向传播算法，这要求网络中的每一步操作必须是可导的（或者至少是次可导的）。然而，很多操作本质上是离散的，比如：</p>
+<p>1.二值化：$x \in \mathbb{R} \to y \in \{-1, +1\}$。<br>2.量化：将浮点数转为定点整数。<br>3.采样：从离散分布中取出一个样本。<br>4.Top-K/Argmax：选出最大的那个数，输出是一个不可导的索引或硬掩码（DSA 中的场景）。</p>
+<p>这些函数的导数在数学上要么是 0（对于非边界点），要么未定义。如果直接用它们，梯度会断流，模型无法训练。<br>STE 的解决方案非常粗暴但有效：既然离散函数的导数没法算，那我们在反向传播时直接“无视”这个离散操作，把后层的梯度直接传给前层。也就是把离散操作当作“直通管道”来传梯度。</p>
+<p>假设有一个离散化函数 $\mathrm{operator}(\cdot)$（比如 Sign、Round 或 Top-K），它将连续输入 $x$ 映射为离散输出 $y$：</p>
+<p>$$\begin{align}<br>y=\mathrm{operator}(x)<br>\end{align}$$</p>
+<p>在前向传播中，我们老老实实地用 $y$。但在反向传播计算梯度时，STE 假设 $y$ 和 $x$ 之间存在如下关系： $y \approx x$。因此，梯度满足 $\displaystyle \frac{\partial y}{\partial x} \approx 1$， 根据链式法则，损失函数 $L$ 对 $x$ 的梯度为：</p>
+<p>$$\begin{align}<br>\frac{\partial \ell}{\partial x} = \frac{\partial \ell}{\partial y} \cdot \frac{\partial y}{\partial x} \approx \frac{\partial \ell}{\partial y} \cdot 1 = \frac{\partial \ell}{\partial y}<br>\end{align}$$</p>
+<p>这就是“直通”的含义：后层的梯度 $\frac{\partial \ell}{\partial y}$ 直接穿透离散操作，原封不动地变成了前层的梯度 $\frac{\partial \ell}{\partial x}$。</p>
 <p><hr></p>
 <p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%"><a href="https://www.limoncc.com/post/1540fb65f18f359a/">https://www.limoncc.com/post/1540fb65f18f359a/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (May. 25, 2026). 《大语言模型研究16——注意力机制优化之稀疏注意》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/1540fb65f18f359a">https://www.limoncc.com/post/1540fb65f18f359a</a></td></tr><tr><td align="left" width="100%">@online{limoncc-1540fb65f18f359a,<br>title={大语言模型研究16——注意力机制优化之稀疏注意},<br>author={引线小白},<br>year={2026},<br>month={May},<br>date={25},<br>url={\url{<a href="https://www.limoncc.com/post/1540fb65f18f359a}}">https://www.limoncc.com/post/1540fb65f18f359a}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
 <script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
@@ -628,7 +638,7 @@
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">135</span>
+                <span class="site-state-item-count">134</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>
@@ -727,7 +737,7 @@
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、什么是DSA"><span class="nav-number">1.</span> <span class="nav-text">一、什么是DSA</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-1、核心技巧"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、核心技巧</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-2、DSA核心数学公式"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、DSA核心数学公式</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#二、数值例子"><span class="nav-number">2.</span> <span class="nav-text">二、数值例子</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、什么是DSA"><span class="nav-number">1.</span> <span class="nav-text">一、什么是DSA</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-1、核心技巧"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、核心技巧</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-2、DSA核心数学公式"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、DSA核心数学公式</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#二、数值例子"><span class="nav-number">2.</span> <span class="nav-text">二、数值例子</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#三、DSA梯度问题"><span class="nav-number">3.</span> <span class="nav-text">三、DSA梯度问题</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#3-1、直通估计器"><span class="nav-number">3.1.</span> <span class="nav-text">3.1、直通估计器</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#3-1-1、为什么需要-STE？"><span class="nav-number">3.1.1.</span> <span class="nav-text">3.1.1、为什么需要 STE？</span></a></li></ol></li></ol></li></ol></div>
             
           </div>
         </section>

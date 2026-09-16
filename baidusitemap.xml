@@ -5,7 +5,7 @@
     
   <url>
     <loc>https://www.limoncc.com/post/1540fb65f18f359a/</loc>
-    <lastmod>2026-09-16T16:20:50.299Z</lastmod>
+    <lastmod>2026-09-16T16:22:03.469Z</lastmod>
     <data>
         <display>
         <title>大语言模型研究16——注意力机制优化之稀疏注意</title>
@@ -79,9 +79,9 @@
          
         <tag>AI</tag>
          
-        <tag>注意力机制</tag>
-         
         <tag>KV缓存</tag>
+         
+        <tag>注意力机制</tag>
          
          
            
@@ -108,9 +108,9 @@
          
         <tag>AI</tag>
          
-        <tag>FlashAttention</tag>
-         
         <tag>注意力机制</tag>
+         
+        <tag>FlashAttention</tag>
          
          
            
@@ -572,19 +572,19 @@
          
         <tag>向量导数</tag>
          
+        <tag>Householder变换</tag>
+         
+        <tag>DPLR</tag>
+         
+        <tag>对角加秩一矩阵</tag>
+         
         <tag>记忆</tag>
          
         <tag>Titans</tag>
          
         <tag>线性注意力</tag>
          
-        <tag>Householder变换</tag>
-         
-        <tag>DPLR</tag>
-         
         <tag>DeltaNet</tag>
-         
-        <tag>对角加秩一矩阵</tag>
          
          
            
@@ -746,9 +746,9 @@
         
         <tag>概率论</tag>
          
-        <tag>大数定律</tag>
-         
         <tag>弱收敛</tag>
+         
+        <tag>大数定律</tag>
          
         <tag>连续定理</tag>
          
@@ -772,9 +772,9 @@
         
         <tag>概率论</tag>
          
-        <tag>弱大数定律</tag>
-         
         <tag>大数定律</tag>
+         
+        <tag>弱大数定律</tag>
          
          
            
