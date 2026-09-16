@@ -1,0 +1,1189 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="大模型,强化学习.RubricRL,Rubric,量规" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="本文主要总结了大模型中分词器的若干基本问题，和我自己的一些体会。">
+<meta name="keywords" content="大模型,强化学习.RubricRL,Rubric,量规">
+<meta property="og:type" content="article">
+<meta property="og:title" content="大语言模型研究11——分词器从原理到实战">
+<meta property="og:url" content="https://www.limoncc.com/post/ac9b442b90c51cd5/index.html">
+<meta property="og:site_name" content="柠檬CC">
+<meta property="og:description" content="本文主要总结了大模型中分词器的若干基本问题，和我自己的一些体会。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://www.limoncc.com/images/cc.png">
+<meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
+<meta property="og:updated_time" content="2026-09-16T08:48:45.058Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="大语言模型研究11——分词器从原理到实战">
+<meta name="twitter:description" content="本文主要总结了大模型中分词器的若干基本问题，和我自己的一些体会。">
+<meta name="twitter:image" content="https://www.limoncc.com/images/cc.png">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: '博主'
+    }
+  };
+</script>
+
+  <script src='//unpkg.com/valine/dist/Valine.min.js'></script>
+  <title> 大语言模型研究11——分词器从原理到实战 | 柠檬CC </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-73837972-3', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?d225b8f8559eb2eb6a8bd8792e01ebb9";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//tajs.qq.com/stats?sId=60130136";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">柠檬CC</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">小白爱吃柠檬O(∩_∩)O</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-poetry">
+          <a href="/poetry" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-leaf"></i> <br />
+            
+            诗集
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="#" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                大语言模型研究11——分词器从原理到实战
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2026-05-11T17:16:48+08:00" content="2026-05-11">
+              2026-05-11
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/大语言模型研究/" itemprop="url" rel="index">
+                    <span itemprop="name">大语言模型研究</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+             <span id="/post/ac9b442b90c51cd5/" class="leancloud_visitors" data-flag-title="大语言模型研究11——分词器从原理到实战">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">阅读次数 </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：<a href="https://www.limoncc.com/post/ac9b442b90c51cd5/">https://www.limoncc.com/post/ac9b442b90c51cd5/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
+<h4 id="一、映射到-Unicode-可见字符"><a href="#一、映射到-Unicode-可见字符" class="headerlink" title="一、映射到 Unicode 可见字符"></a>一、映射到 Unicode 可见字符</h4><p>直接对原始 Unicode 字符集进行分词会面临一个根本性难题：基础字符数量极其庞大，且实际应用中总会出现训练时从未见过的罕见汉字、表情符号等，造成严重的 OOV（Out-Of-Vocabulary）问题。</p>
+<p>当前主流大模型的分词器普遍采用<strong>字节级子词分词</strong>来彻底解决这一难题。其核心思路是：任何 Unicode 文本都可以用 UTF-8 编码为一个字节序列，每个字节的取值范围是 0x00–0xFF（即 0–255）。既然只有 256 种基础字节，就可以把“字节”当作最小的词汇单元——这样一来，任何文本都能用这 256 个符号的组合来表示，永远不会出现未知字符。</p>
+<p>但单纯把字节当作字符存在工程问题：0x00–0x1F 等属于控制字符，直接放进文本中会带来各种麻烦。因此，常见的做法会额外引入一个无损映射，具体分为两步：</p>
+<ol>
+<li><strong>编码</strong>：<code>f(文本) = utf8_bytes(文本)</code>，将任意文本转换为 UTF-8 字节序列。</li>
+<li><strong>映射</strong>：<code>g(byte) = byte + 256</code>，将每个字节值（0–255）映射到 Unicode 码点区间 <strong>[U+0100, U+01FF]</strong>（即码点值 256–511）。</li>
+</ol>
+<p>这一步骤的必要性可以从两方面理解：</p>
+<ul>
+<li><strong>数学上</strong>：<code>byte → byte + 256</code> 是整数区间 [0, 255] 到 [256, 511] 的双射，可逆且无碰撞，保证了原始信息能够被完全还原。</li>
+<li><strong>工程上</strong>：[U+0100, U+01FF] 区间内的字符全部是可见字符（如 Ā、ā、Ă 等拉丁扩展字母），既避开了控制字符带来的处理麻烦，又能让分词算法把它们当作普通文本来工作。</li>
+</ul>
+<blockquote>
+<p><strong>评述</strong>：这个 +256 映射是所有字节级 BPE[^1][^2]算法中最安静也最关键的一步。它没有改变任何信息量，只是让后续的 BPE 算法可以“假装”自己在处理普通文本。早期我自己照着论文实现时，曾觉得这步可有可无，直到在日志里看到那些控制字符把终端搞乱，才明白工程上避开控制字符有多重要。</p>
+</blockquote>
+<p>经过这两步转换，任意一段文本都变成了由 [U+0100, U+01FF] 区间内字符构成的序列。接下来在这个序列上运行 <strong>BPE</strong>（字节对编码）算法。BPE 根本不需要知道这些字符背后代表的是“字节”，它看到的仅仅是 256 个初始符号。它会反复统计这些符号的共现频率，将最常相邻出现的符号对合并成一个新的 token，不断扩充词表。训练完成后，词表中的 token 既可能是单个字节映射符，也可能是多个字节合并而成的子词——比如一个完整汉字所对应的多字节组合（汉字在 UTF-8 中通常占 3 个字节，合并后就可能用一个 token 表示）。</p>
+<p>在推理时，处理流程完全对称：先将输入文本经 UTF-8 编码和 +256 映射转换为字符序列，再利用训练好的词表将其切分为 token ID；解码时，将 token 对应字符串中的每个字符减去 256，恢复为原始字节序列，最后用 UTF-8 解码，即可完美还原文本。这样，无论输入中包含多么罕见或全新的符号，都能被表示为若干字节级子词的组合，从而从根源上消灭了 OOV 问题。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">text = <span class="string">"中"</span></span><br><span class="line">print(<span class="string">f"原始字符串: <span class="subst">&#123;text&#125;</span>"</span>)</span><br><span class="line">utf8_bytes = text.encode(<span class="string">'utf-8'</span>)</span><br><span class="line">print(<span class="string">f"utf8字节: <span class="subst">&#123;utf8_bytes&#125;</span>"</span>)</span><br><span class="line">mapped_chars = [chr(b + <span class="number">256</span>) <span class="keyword">for</span> b <span class="keyword">in</span> utf8_bytes]</span><br><span class="line">mapped_str = <span class="string">''</span>.join(mapped_chars)</span><br><span class="line">print(<span class="string">f"映射后字符串: <span class="subst">&#123;mapped_str!r&#125;</span>"</span>)</span><br><span class="line">recovered_bytes = bytes(ord(c) - <span class="number">256</span> <span class="keyword">for</span> c <span class="keyword">in</span> mapped_str)</span><br><span class="line">recovered_text = recovered_bytes.decode(<span class="string">'utf-8'</span>)</span><br><span class="line">print(<span class="string">f"解码字符串: <span class="subst">&#123;recovered_text&#125;</span>"</span>)</span><br><span class="line"><span class="comment"># 原始字符串: 中</span></span><br><span class="line"><span class="comment"># utf8字节: b'\xe4\xb8\xad'</span></span><br><span class="line"><span class="comment"># 映射后字符串: 'ǤƸƭ'</span></span><br><span class="line"><span class="comment"># 解码字符串: 中</span></span><br></pre></td></tr></table></figure>
+<h4 id="二、Byte-level-BPE-分词原理"><a href="#二、Byte-level-BPE-分词原理" class="headerlink" title="二、Byte-level BPE 分词原理"></a>二、Byte-level BPE 分词原理</h4><p>Byte Pair Encoding（BPE，字节对编码）原本是一种数据压缩算法，2016 年被应用到自然语言处理中的子词切分，成为现代大模型分词的核心方法之一。它的核心思想很简单：用当下最频繁的相邻符号对，不断合并生成新的子词，直到词汇表达到预定大小。这样既能保留常见词的整体性，又能把罕见词拆成可理解的片段，大幅度缓解未登录词问题。</p>
+<p>下面给出一个最小的 MVP 例子，方便大家理解。</p>
+<h5 id="2-1、准备训练语料（模拟词频）"><a href="#2-1、准备训练语料（模拟词频）" class="headerlink" title="2.1、准备训练语料（模拟词频）"></a>2.1、准备训练语料（模拟词频）</h5><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">corpus_words = &#123;</span><br><span class="line">    <span class="string">"low"</span>: <span class="number">5</span>,</span><br><span class="line">    <span class="string">"lower"</span>: <span class="number">2</span>,</span><br><span class="line">    <span class="string">"newest"</span>: <span class="number">6</span>,</span><br><span class="line">    <span class="string">"widest"</span>: <span class="number">3</span>,</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 用空格把每个词重复相应次数，构造一个字符串文本</span></span><br><span class="line"><span class="comment"># 因为字节级 BPE 把空格当作普通字节，天然就是词边界</span></span><br><span class="line">raw_corpus = <span class="string">""</span></span><br><span class="line"><span class="keyword">for</span> word, freq <span class="keyword">in</span> corpus_words.items():</span><br><span class="line">    raw_corpus += (word + <span class="string">" "</span>) * freq</span><br><span class="line"></span><br><span class="line"><span class="comment"># 把文本转换成 UTF-8 字节序列 → 初始 token ids 就是这些字节值</span></span><br><span class="line">print(<span class="string">f"训练文本: <span class="subst">&#123;raw_corpus&#125;</span>"</span>)</span><br><span class="line">raw_bytes = raw_corpus.encode(<span class="string">"utf-8"</span>)</span><br><span class="line">token_ids = list(raw_bytes)</span><br><span class="line"></span><br><span class="line">print(<span class="string">f"初始 token ids 数量: <span class="subst">&#123;len(token_ids)&#125;</span>"</span>)</span><br><span class="line">print(<span class="string">f"前 20 个 token ids: <span class="subst">&#123;token_ids[:<span class="number">20</span>]&#125;</span>"</span>)</span><br><span class="line">print(<span class="string">f"对应字节: <span class="subst">&#123;bytes(token_ids[:<span class="number">20</span>])&#125;</span>"</span>)</span><br><span class="line">print()</span><br><span class="line"></span><br><span class="line"><span class="comment"># 训练文本: low low low low low lower lower newest newest newest newest newest newest widest widest widest </span></span><br><span class="line"><span class="comment"># 初始 token ids 数量: 95</span></span><br><span class="line"><span class="comment"># 前 20 个 token ids: [108, 111, 119, 32, 108, 111, 119, 32, 108, 111, 119, 32, 108, 111, 119, 32, 108, 111, 119, 32]</span></span><br><span class="line"><span class="comment"># 对应字节: b'low low low low low '</span></span><br></pre></td></tr></table></figure>
+<h5 id="2-2、字节级-BPE-训练"><a href="#2-2、字节级-BPE-训练" class="headerlink" title="2.2、字节级 BPE 训练"></a>2.2、字节级 BPE 训练</h5><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> collections <span class="keyword">import</span> Counter</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">train_byte_bpe</span><span class="params">(token_ids, num_merges)</span>:</span></span><br><span class="line">    <span class="comment"># 初始化词表：0-255 是单字节，后面的是合并产生的新符号</span></span><br><span class="line">    <span class="comment"># 我们用列表表示每个 token id 对应的字节序列</span></span><br><span class="line">    vocab = [bytes([i]) <span class="keyword">for</span> i <span class="keyword">in</span> range(<span class="number">256</span>)]  <span class="comment"># 0..255</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 合并规则列表，元素为 (id_a, id_b)，按应用顺序保存</span></span><br><span class="line">    merges = []</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">for</span> step <span class="keyword">in</span> range(num_merges):</span><br><span class="line">        <span class="comment"># 2.1 统计所有相邻 pair 的频率</span></span><br><span class="line">        pairs = Counter()</span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> range(len(token_ids) - <span class="number">1</span>):</span><br><span class="line">            pair = (token_ids[i], token_ids[i + <span class="number">1</span>])</span><br><span class="line">            pairs[pair] += <span class="number">1</span></span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> <span class="keyword">not</span> pairs:</span><br><span class="line">            <span class="keyword">break</span></span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 2.2 取出频率最高的一对（频率相同时取第一个）</span></span><br><span class="line">        best_pair = max(pairs, key=<span class="keyword">lambda</span> p: (pairs[p], p))</span><br><span class="line">        best_count = pairs[best_pair]</span><br><span class="line">        print(<span class="string">f"合并步骤 <span class="subst">&#123;step + <span class="number">1</span>&#125;</span>: <span class="subst">&#123;best_pair&#125;</span> → 新 id <span class="subst">&#123;len(vocab)&#125;</span>  (出现 <span class="subst">&#123;best_count&#125;</span> 次)"</span>)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 2.3 创建新符号</span></span><br><span class="line">        new_id = len(vocab)</span><br><span class="line">        id_a, id_b = best_pair</span><br><span class="line">        <span class="comment"># 新符号对应的字节 = id_a 的字节 + id_b 的字节</span></span><br><span class="line">        new_bytes = vocab[id_a] + vocab[id_b]</span><br><span class="line">        vocab.append(new_bytes)</span><br><span class="line">        merges.append(best_pair)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 2.4 在 token_ids 中把 (id_a, id_b) 全部替换为 new_id</span></span><br><span class="line">        new_token_ids = []</span><br><span class="line">        i = <span class="number">0</span></span><br><span class="line">        <span class="keyword">while</span> i &lt; len(token_ids):</span><br><span class="line">            <span class="keyword">if</span> (i &lt; len(token_ids) - <span class="number">1</span> <span class="keyword">and</span></span><br><span class="line">                    token_ids[i] == id_a <span class="keyword">and</span> token_ids[i + <span class="number">1</span>] == id_b):</span><br><span class="line">                new_token_ids.append(new_id)</span><br><span class="line">                i += <span class="number">2</span></span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                new_token_ids.append(token_ids[i])</span><br><span class="line">                i += <span class="number">1</span></span><br><span class="line">        token_ids = new_token_ids</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> token_ids, vocab, merges</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 训练 BPE</span></span><br><span class="line">final_ids, vocab, merge_rules = train_byte_bpe(token_ids, num_merges=<span class="number">15</span>)</span><br><span class="line"></span><br><span class="line">print(<span class="string">f"\n训练后 token id 序列: <span class="subst">&#123;final_ids&#125;</span>"</span>)</span><br><span class="line">print(<span class="string">f"词表大小: <span class="subst">&#123;len(vocab)&#125;</span>"</span>)</span><br><span class="line">print(<span class="string">f"合并规则列表 (id1, id2): <span class="subst">&#123;merge_rules&#125;</span>"</span>)</span><br><span class="line">print()</span><br><span class="line"><span class="comment"># 合并步骤 1: (116, 32) → 新 id 256  (出现 9 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 2: (115, 256) → 新 id 257  (出现 9 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 3: (101, 257) → 新 id 258  (出现 9 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 4: (111, 119) → 新 id 259  (出现 7 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 5: (108, 259) → 新 id 260  (出现 7 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 6: (119, 258) → 新 id 261  (出现 6 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 7: (110, 101) → 新 id 262  (出现 6 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 8: (262, 261) → 新 id 263  (出现 6 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 9: (32, 260) → 新 id 264  (出现 6 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 10: (263, 263) → 新 id 265  (出现 5 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 11: (264, 264) → 新 id 266  (出现 4 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 12: (119, 105) → 新 id 267  (出现 3 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 13: (267, 100) → 新 id 268  (出现 3 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 14: (268, 258) → 新 id 269  (出现 3 次)</span></span><br><span class="line"><span class="comment"># 合并步骤 15: (269, 269) → 新 id 270  (出现 2 次)</span></span><br><span class="line"><span class="comment"># </span></span><br><span class="line"><span class="comment"># 训练后 token id 序列: [260, 266, 266, 264, 101, 114, 264, 101, 114, 32, 265, 265, 265, 270, 269]</span></span><br><span class="line"><span class="comment"># 词表大小: 271</span></span><br><span class="line"><span class="comment"># 合并规则列表 (id1, id2): [(116, 32), (115, 256), (101, 257), (111, 119), (108, 259), (119, 258), (110, 101), (262, 261), (32, 260), (263, 263), (264, 264), (119, 105), (267, 100), (268, 258), (269, 269)]</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>评述</strong>：BPE 的合并顺序本身就是一个有向无环图的构建过程。训练完成后，合并规则是按优先级排列的，推理时严格按此顺序应用，这保证了无论输入何种文本，切分结果都是确定且唯一的。实际使用中，你会发现词表大小通常在 32k 到 100k 之间，过小会导致切分过碎，过大则浪费参数。选多少取决于你的主要语言和计算预算，没有一个绝对标准，但可以从 50k 开始作为一个合理的起点。</p>
+</blockquote>
+<h5 id="2-3、推理：用训练好的规则切分新词-lowest"><a href="#2-3、推理：用训练好的规则切分新词-lowest" class="headerlink" title="2.3、推理：用训练好的规则切分新词 lowest"></a>2.3、推理：用训练好的规则切分新词 lowest</h5><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">apply_bpe_to_text</span><span class="params">(text, merge_rules, vocab)</span>:</span></span><br><span class="line">    <span class="comment"># 把文本变成字节，再转成 token id 列表</span></span><br><span class="line">    byte_seq = text.encode(<span class="string">"utf-8"</span>)</span><br><span class="line">    ids = list(byte_seq)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 按顺序应用合并规则</span></span><br><span class="line">    <span class="keyword">for</span> (a, b) <span class="keyword">in</span> merge_rules:</span><br><span class="line">        new_ids = []</span><br><span class="line">        i = <span class="number">0</span></span><br><span class="line">        <span class="keyword">while</span> i &lt; len(ids):</span><br><span class="line">            <span class="keyword">if</span> i &lt; len(ids) - <span class="number">1</span> <span class="keyword">and</span> ids[i] == a <span class="keyword">and</span> ids[i + <span class="number">1</span>] == b:</span><br><span class="line">                new_ids.append(pair_to_id[(a, b)])</span><br><span class="line">                i += <span class="number">2</span></span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                new_ids.append(ids[i])</span><br><span class="line">                i += <span class="number">1</span></span><br><span class="line">        ids = new_ids</span><br><span class="line">    <span class="keyword">return</span> ids</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># 建立 (id_a, id_b) -&gt; new_id 的映射</span></span><br><span class="line">pair_to_id = &#123;&#125;</span><br><span class="line"><span class="keyword">for</span> idx, (a, b) <span class="keyword">in</span> enumerate(merge_rules):</span><br><span class="line">    pair_to_id[(a, b)] = <span class="number">256</span> + idx</span><br><span class="line"></span><br><span class="line"><span class="comment"># 切分 "lowest" （训练中没出现过的词）</span></span><br><span class="line">new_word = <span class="string">"lowest"</span></span><br><span class="line"><span class="comment"># 为了和训练时一致，后面也加空格（因为训练文本里词后有空格）</span></span><br><span class="line">token_ids_lowest = apply_bpe_to_text(new_word + <span class="string">" "</span>, merge_rules, vocab)</span><br><span class="line"></span><br><span class="line">print(<span class="string">f"'<span class="subst">&#123;new_word&#125;</span>' 的 BPE 切分结果 (token id 序列): <span class="subst">&#123;token_ids_lowest&#125;</span>"</span>)</span><br><span class="line">print()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">decode_token</span><span class="params">(tok_id, vocab)</span>:</span></span><br><span class="line">    <span class="string">"""递归解码一个 token id 为字节，然后尝试以 UTF-8 字符串显示"""</span></span><br><span class="line">    <span class="keyword">if</span> tok_id &lt; <span class="number">256</span>:</span><br><span class="line">        <span class="keyword">return</span> vocab[tok_id].decode(<span class="string">"utf-8"</span>, errors=<span class="string">"replace"</span>)</span><br><span class="line">    <span class="keyword">else</span>:</span><br><span class="line">        <span class="comment"># 通过 vocab 的字节序列直接解码</span></span><br><span class="line">        <span class="keyword">return</span> vocab[tok_id].decode(<span class="string">"utf-8"</span>, errors=<span class="string">"replace"</span>)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">subwords = [decode_token(tid, vocab) <span class="keyword">for</span> tid <span class="keyword">in</span> token_ids_lowest]</span><br><span class="line">print(<span class="string">f"对应的子词: <span class="subst">&#123;subwords&#125;</span>"</span>)</span><br><span class="line"><span class="comment"># 去掉最后可能的空格子词展示更清晰</span></span><br><span class="line">subwords_clean = [s <span class="keyword">for</span> s <span class="keyword">in</span> subwords <span class="keyword">if</span> s != <span class="string">" "</span>]</span><br><span class="line">print(<span class="string">f"真实切分: <span class="subst">&#123;subwords_clean&#125;</span>"</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 'lowest' 的 BPE 切分结果 (token id 序列): [260, 258]</span></span><br><span class="line"><span class="comment"># </span></span><br><span class="line"><span class="comment"># 对应的子词: ['low', 'est ']</span></span><br><span class="line"><span class="comment"># 真实切分: ['low', 'est ']</span></span><br></pre></td></tr></table></figure>
+<hr>
+<h4 id="三、Byte-level-BPE-分词实战"><a href="#三、Byte-level-BPE-分词实战" class="headerlink" title="三、Byte-level BPE 分词实战"></a>三、Byte-level BPE 分词实战</h4><p>实际分词器训练，一般都使用 Hugging Face 出品的 <code>tokenizers</code> 库。它是一个基于 Rust 的高性能、可定制的子词分词器库。这个库的使用要注意如下几点。</p>
+<h5 id="3-1、tokenizer-config-的配置"><a href="#3-1、tokenizer-config-的配置" class="headerlink" title="3.1、tokenizer_config 的配置"></a>3.1、tokenizer_config 的配置</h5><p>先了解一下 <code>tokenizer_config.json</code> 关于特殊 token 的配置。</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>作用</th>
+<th>是否控制自动添加？</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bos_token / eos_token</td>
+<td>定义哪个 token 是开始/结束标记</td>
+<td>❌ 仅定义</td>
+</tr>
+<tr>
+<td>add_bos_token / add_eos_token</td>
+<td>控制 <code>add_special_tokens=True</code> 时，是否自动在序列首尾插入 BOS/EOS</td>
+<td>✅ <strong>是，核心开关</strong></td>
+</tr>
+<tr>
+<td>pad_token / unk_token</td>
+<td>定义填充/未知词的 token</td>
+<td>❌ 仅定义标记，不控制 encode 自动添加行为</td>
+</tr>
+<tr>
+<td>additional_special_tokens</td>
+<td>声明额外的特殊标记列表，防止被分词器拆分，并可被生成逻辑识别</td>
+<td>❌</td>
+</tr>
+<tr>
+<td>added_tokens_decoder</td>
+<td>所有特殊 token 的完整注册表（角色、是否特殊、前后缀行为等）</td>
+<td>❌</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>想让 <strong>encode(…, add_special_tokens=True)</strong> 自动加上 <strong>BOS/EOS</strong>，<strong>只需保证 add_bos_token=True 和 add_eos_token=True</strong>。</li>
+<li>把 <code>&lt;|im_start|&gt;</code>、<code>&lt;|im_end|&gt;</code> 放进 <code>additional_special_tokens</code> 是好的实践，但不会改变 encode 的自动追加行为。</li>
+</ul>
+<p>另外 Hugging Face 的 transformers 库中，各类 Tokenizer 的 <code>from_pretrained</code> 会丢弃 <code>add_bos_token</code>/<code>add_eos_token</code>，<strong>必须在加载后手动设置</strong>。否则 <code>encode(..., add_special_tokens=True)</code> 不会生效。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># tokenization_utils_base.py:1787-178</span></span><br><span class="line">init_kwargs.pop(<span class="string">"add_bos_token"</span>, <span class="keyword">None</span>)   <span class="comment"># 删掉！</span></span><br><span class="line">init_kwargs.pop(<span class="string">"add_eos_token"</span>, <span class="keyword">None</span>)   <span class="comment"># 删掉！</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>评述</strong>：这里是个经典的坑。很多新人在本地训练完分词器、一切正常，但推到 Hub 上再 <code>from_pretrained</code> 加载后，发现 <code>encode</code> 再也不自动加 <code>BOS/EOS</code> 了。原因就是 <code>transformers</code> 在加载时主动丢弃了这两个开关。最简单的解法：加载后马上执行 <code>tokenizer.add_bos_token = True</code> 和 <code>tokenizer.add_eos_token = True</code>。建议手写 <code>tokenizer_config.json</code> 时保留这两个字段，但别指望自动加载会尊重它们——这是目前官方行为，不是 bug，是设计。</p>
+</blockquote>
+<h5 id="3-2、Control-Tokens-配置"><a href="#3-2、Control-Tokens-配置" class="headerlink" title="3.2、Control Tokens 配置"></a>3.2、Control Tokens 配置</h5><h6 id="3-2-1、特殊词元速查表"><a href="#3-2-1、特殊词元速查表" class="headerlink" title="3.2.1、特殊词元速查表"></a>3.2.1、特殊词元速查表</h6><p>控制词元是插入到序列中的特殊标记，用于传递元信息。例如，在预训练阶段，多个文档可能会被打包进单个序列。对 Qwen 而言，控制词元 <code>&lt;|endoftext|&gt;</code> 会被插入在每个文档之后，以表示该文档已结束、新文档即将开始。常见的控制标记及其在 Qwen 中的状态可参见下表：</p>
+<p><strong>Qwen 控制令牌（Control Tokens）速查表</strong></p>
+<ol>
+<li><strong>eod token（文档结束符）</strong> <code>&lt;|endoftext|&gt;</code>：文档结束标记。在打包的训练序列中，<strong>插入在文档之间</strong>，用于分隔不同文档。</li>
+<li><strong>bot token（回合开始符）</strong> <code>&lt;|im_start|&gt;</code>：回合开始标记。在对话微调时，<strong>添加到每个对话回合的开头</strong>。</li>
+<li><strong>eot token（回合结束符）</strong> <code>&lt;|im_end|&gt;</code>：回合结束标记。在对话微调时，<strong>添加到每个对话回合的末尾</strong>。</li>
+<li><strong>unk token（未知词符）</strong> 无：Qwen 使用的 BBPE 分词算法确保了不会出现未知词符，因此无需此标记。</li>
+<li><strong>pad token（填充符）</strong> 无：Qwen 在训练中不使用填充序列。推理时如需填充，可结合分词器返回的注意力掩码，<strong>将任意特殊标记用作 pad_token，通常设置为与 eod 相同的 <code>&lt;|endoftext|&gt;</code></strong>。</li>
+<li><strong>bos token（序列开始符）</strong> 无：Qwen <strong>不会</strong>在打包的训练序列开头添加固定标记。</li>
+<li><strong>eos token（序列结束符）</strong> 无：Qwen <strong>不会</strong>在打包的训练序列末尾添加固定标记。然而，由于多数框架没有 eot 的概念，在推理时需要使用 eos_token 作为停止条件，因此最终将 eos_token 设置为与 eot_token 相同的 <code>&lt;|im_end|&gt;</code>。</li>
+</ol>
+<blockquote>
+<p><strong>评述</strong>：Qwen 对 pad_token 的处理是一个实用技巧：训练时不填充，推理时随意指定一个已经存在的特殊 token 充当 pad（并用 attention_mask 屏蔽）。这样不会额外占用词表位置，也不干扰其他 token 的语义。类似的设计在 LLaMA 等模型中也常见，背后的哲学是：填充只是工程需要，不值得为它专门训练一个嵌入向量。</p>
+</blockquote>
+<h6 id="3-2-2、预训练阶段的特殊词元"><a href="#3-2-2、预训练阶段的特殊词元" class="headerlink" title="3.2.2、预训练阶段的特殊词元"></a>3.2.2、预训练阶段的特殊词元</h6><p>特殊 token 设置，主要是看训练目标。从千问情况看，千问的设置是：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">"bos_token"</span>: <span class="literal">null</span>,</span><br><span class="line">  <span class="attr">"eos_token"</span>: <span class="string">"&lt;|im_end|&gt;"</span>,</span><br><span class="line">  <span class="attr">"pad_token"</span>: <span class="string">"&lt;|endoftext|&gt;"</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这意味着预训练数据格式，即输入模型的数据大致是这样的结构：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">文档1的文本内容...&lt;|endoftext|&gt;文档2的文本内容...&lt;|endoftext|&gt;...</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>预训练特殊词元重要结论</strong>：通过在无数文档间插入 <code>&lt;|endoftext|&gt;</code> 进行训练，模型学会了用它来划分语义边界，防止把不同文档的知识混淆。也就是说在预训练阶段，模型完全没见过 <code>&lt;|im_start|&gt;</code> 和 <code>&lt;|im_end|&gt;</code>，对“对话”这种形式没有概念。</p>
+</blockquote>
+<blockquote>
+<p><strong>评述</strong>：预训练阶段不用对话标记，是刻意的。这保证了基础模型的通用性——它理解的是“文档”概念，而非特定应用格式。所有对话能力都通过后训练注入，这样的好处是基础模型可以复用给不同下游任务（翻译、摘要、代码生成等），而不会被对话格式束缚。</p>
+</blockquote>
+<h6 id="3-2-3、后训练阶段的特殊词元"><a href="#3-2-3、后训练阶段的特殊词元" class="headerlink" title="3.2.3、后训练阶段的特殊词元"></a>3.2.3、后训练阶段的特殊词元</h6><p>后训练阶段 <code>&lt;|im_start|&gt;</code> 和 <code>&lt;|im_end|&gt;</code> 才作为核心角色登场。Qwen 采用了 ChatML 格式来结构化对话数据。一个典型的训练样本会被组织成这样：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;|im_start|&gt;system</span><br><span class="line">You are a helpful assistant.&lt;|im_end|&gt;</span><br><span class="line">&lt;|im_start|&gt;user</span><br><span class="line">Who won the world series in 2020?&lt;|im_end|&gt;</span><br><span class="line">&lt;|im_start|&gt;assistant</span><br><span class="line">The Los Angeles Dodgers won the World Series in 2020.&lt;|im_end|&gt;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>后训练特殊词元重要结论</strong>：</p>
+<ol>
+<li>角色与认知转变：在这个全新的数据结构中，<code>&lt;|im_end|&gt;</code> 被模型重新学习为对话的结束标记。因为它总出现在每个对话的结尾，模型逐渐认知到，当生成这个标记时，就代表一次对话的结束。</li>
+<li>预训练阶段很重要的 <code>&lt;|endoftext|&gt;</code> 不再出现，其“结束符”的意义被 <code>&lt;|im_end|&gt;</code> 所取代。</li>
+<li>分词器配置的最终形态：训练完成后，为了适配这种新的认知，分词器的配置会被更新。eos_token 被设置为 <code>&lt;|im_end|&gt;</code>，pad_token 被设置为 <code>&lt;|endoftext|&gt;</code> 让它退居二线负责填充（padding）等辅助工作，bos_token 保持为 null，因为 ChatML 模板中的 <code>&lt;|im_start|&gt;</code> 已经承载了“开始”的职责。</li>
+</ol>
+</blockquote>
+<p>所以特殊 token 应该根据你训练目的灵活设置，例如有人就直接这样设置，在预训练中直接使用 <code>&lt;|im_start|&gt;</code> 和 <code>&lt;|im_end|&gt;</code>：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  <span class="attr">"bos_token"</span>: <span class="string">"&lt;|im_start|&gt;"</span>,</span><br><span class="line">  <span class="attr">"eos_token"</span>: <span class="string">"&lt;|im_end|&gt;"</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>评述</strong>：选择在哪个阶段引入对话标记，没有绝对正确。如果在预训练阶段就加入，模型从第一天起就把 <code>&lt;|im_end|&gt;</code> 当作“生成结束”信号，省去后训练的重新认知过程，但代价是预训练数据也要打包成类似对话的格式，成本更高。Qwen 的做法属于“先通用、后专用”的工程折中，是目前的主流路线。</p>
+</blockquote>
+<h5 id="3-3、BBPE-预分词技巧"><a href="#3-3、BBPE-预分词技巧" class="headerlink" title="3.3、BBPE 预分词技巧"></a>3.3、BBPE 预分词技巧</h5><ol>
+<li><p>Unicode 标准有很多规范形式，把所有 Unicode 字符统一规范为 NFC 形式。比如 é 既可以用单个字符 U+00E9 表示，也可以用 e + 组合重音符表示。NFC 会统一成前者，避免同一个文本有两种底层表示，从而避免不必要的 OOV 或子词分裂。</p>
+</li>
+<li><p>正则拆解预分词：</p>
+</li>
+</ol>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">GPT2_SPLIT_PATTERN = (</span><br><span class="line">    <span class="string">r"(?i:'s|'t|'re|'ve|'m|'ll|'d)"</span>  </span><br><span class="line">    <span class="comment"># 英文常用缩写后缀（不区分大小写）把 's、'll 等单独切成一块，不会被 BPE 粘到单词上</span></span><br><span class="line">    <span class="string">r"|[^\r\n\p&#123;L&#125;\p&#123;N&#125;]?\p&#123;L&#125;+"</span>  </span><br><span class="line">    <span class="comment"># 一个可选的“非字母、非数字、非回车”的字符，后面跟一个或多个 Unicode 字母 </span></span><br><span class="line">    <span class="comment"># 切出“一个可能的标点 + 一个完整单词”，比如 "您好"、"Hello"、"（你好"（左括号被当作前面的可选字符）</span></span><br><span class="line">    <span class="string">r"|\p&#123;N&#125;"</span>  <span class="comment"># 单独一个数字字符 每个数字单独成块（123 会被切成 1、2、3）</span></span><br><span class="line">    <span class="string">r"| ?[^\s\p&#123;L&#125;\p&#123;N&#125;]+[\r\n]*"</span>  </span><br><span class="line">    <span class="comment"># 一个可选空格，后面跟一个或多个非空白、非字母、非数字的符号，然后可能跟回车换行 </span></span><br><span class="line">    <span class="comment"># 处理标点符号串，比如 !!!、…，并把它们独立出来</span></span><br><span class="line">    <span class="string">r"|\s*[\r\n]+"</span>  </span><br><span class="line">    <span class="comment"># 空白字符（可零个）后面跟至少一个换行，把换行符作为独立的块（连续换行算一块）</span></span><br><span class="line">    <span class="string">r"|\s+(?!\S)"</span>  </span><br><span class="line">    <span class="comment"># 尾部空白（后面没有可见字符的空格），把末尾多余的空格切出来</span></span><br><span class="line">    <span class="string">r"|\s+"</span>  </span><br><span class="line">    <span class="comment"># 其他空白（比如单词之间的空格），把空格单独成块</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>评述</strong>：预分词正则看起来复杂，但对英文这种空格分隔的语言来说，主要影响标点和缩写的切分粒度。我自己的经验是，对于中文语料，这套正则的前两条依然有用（标点+词），但数字单独切分（<code>\p{N}</code>）有时会过于激进，尤其是遇到日期、小数时会把它们拆散，可以视情况调整。预分词之后，再走字节级映射，就能稳定处理中英混合文本。</p>
+</blockquote>
+<h5 id="3-4、BBPE-核心代码"><a href="#3-4、BBPE-核心代码" class="headerlink" title="3.4、BBPE 核心代码"></a>3.4、BBPE 核心代码</h5><h6 id="3-4-1、训练设定"><a href="#3-4-1、训练设定" class="headerlink" title="3.4.1、训练设定"></a>3.4.1、训练设定</h6><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> tokenizers <span class="keyword">as</span> tk</span><br><span class="line"></span><br><span class="line"><span class="comment"># 设定词表大小</span></span><br><span class="line">vocab_size = <span class="number">6400</span></span><br><span class="line">tokenizer = tk.Tokenizer(tk.models.BPE())</span><br><span class="line"><span class="comment"># add_prefix_space 控制是否在每个单词前加空格，由于处理的是中文，因此将其设置为 False。</span></span><br><span class="line"><span class="comment"># 对于英文，一个以空格开头的英文单词 " the" 和出现在句子中间的 "the" 会被区分开来，拥有不同的 Token ID</span></span><br><span class="line">tokenizer.normalizer = tk.normalizers.NFC()</span><br><span class="line">GPT2_SPLIT_PATTERN = (</span><br><span class="line">    <span class="string">r"(?i:'s|'t|'re|'ve|'m|'ll|'d)"</span>  <span class="comment"># 英文常用缩写后缀（不区分大小写）把 's、'll 等单独切成一块，不会被 BPE 粘到单词上</span></span><br><span class="line">    <span class="string">r"|[^\r\n\p&#123;L&#125;\p&#123;N&#125;]?\p&#123;L&#125;+"</span>  <span class="comment"># 一个可选的“非字母、非数字、非回车”的字符，后面跟一个或多个 Unicode 字母 切出“一个可能的标点 + 一个完整单词”，比如 "您好"、"Hello"、"（你好"（左括号被当作前面的可选字符）</span></span><br><span class="line">    <span class="string">r"|\p&#123;N&#125;"</span>  <span class="comment"># 单独一个数字字符 每个数字单独成块（123 会被切成 1、2、3）</span></span><br><span class="line">    <span class="string">r"| ?[^\s\p&#123;L&#125;\p&#123;N&#125;]+[\r\n]*"</span>  <span class="comment"># 一个可选空格，后面跟一个或多个非空白、非字母、非数字的符号，然后可能跟回车换行 处理标点符号串，比如 !!!、…，并把它们独立出来</span></span><br><span class="line">    <span class="string">r"|\s*[\r\n]+"</span>  <span class="comment"># 空白字符（可零个）后面跟至少一个换行，把换行符作为独立的块（连续换行算一块）</span></span><br><span class="line">    <span class="string">r"|\s+(?!\S)"</span>  <span class="comment"># 尾部空白（后面没有可见字符的空格），把末尾多余的空格切出来</span></span><br><span class="line">    <span class="string">r"|\s+"</span>  <span class="comment"># 其他空白（比如单词之间的空格），把空格单独成块</span></span><br><span class="line">)</span><br><span class="line">tokenizer.pre_tokenizer = tk.pre_tokenizers.Sequence([</span><br><span class="line">    tk.pre_tokenizers.Split(pattern=tk.Regex(GPT2_SPLIT_PATTERN), behavior=<span class="string">"isolated"</span>, invert=<span class="keyword">False</span>),</span><br><span class="line">    tk.pre_tokenizers.ByteLevel(add_prefix_space=<span class="keyword">False</span>),</span><br><span class="line">])</span><br><span class="line"><span class="comment"># 为分词器设置一个 ByteLevel 解码器，让其在将 token ID 序列转换回原始文本时，能够正确还原被分词器按字节切分的内容。</span></span><br><span class="line">tokenizer.decoder = tk.decoders.ByteLevel()</span><br><span class="line"><span class="comment"># 定义特殊 token</span></span><br><span class="line">special_tokens = [<span class="string">"&lt;|endoftext|&gt;"</span>, <span class="string">"&lt;|im_start|&gt;"</span>, <span class="string">"&lt;|im_end|&gt;"</span>]</span><br><span class="line"><span class="comment"># BBPE 的 256 个基础 token</span></span><br><span class="line">alphabet = tk.pre_tokenizers.ByteLevel.alphabet()</span><br><span class="line">trainer = tk.trainers.BpeTrainer(vocab_size=vocab_size, special_tokens=special_tokens, show_progress=<span class="keyword">True</span>, initial_alphabet=alphabet)</span><br></pre></td></tr></table></figure>
+<h6 id="3-4-2、训练"><a href="#3-4-2、训练" class="headerlink" title="3.4.2、训练"></a>3.4.2、训练</h6><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">texts = [<span class="string">"你好"</span>, <span class="string">'你好，我来自地球'</span>]</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">read_texts</span><span class="params">(texts)</span>:</span></span><br><span class="line">    <span class="keyword">for</span> text <span class="keyword">in</span> texts:</span><br><span class="line">        <span class="keyword">yield</span> text</span><br><span class="line"></span><br><span class="line">tokenizer.train_from_iterator(read_texts(texts), trainer=trainer)</span><br><span class="line"><span class="comment"># 设定保存目录</span></span><br><span class="line">tokenizer_dir = <span class="string">r"./model"</span></span><br><span class="line">os.makedirs(tokenizer_dir, exist_ok=<span class="keyword">True</span>)</span><br><span class="line"><span class="comment"># 保存</span></span><br><span class="line">tokenizer.save(os.path.join(tokenizer_dir, <span class="string">"tokenizer.json"</span>))</span><br><span class="line">tokenizer.model.save(tokenizer_dir)</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>评述</strong>：<code>train_from_iterator</code> 是内存友好设计，你可以直接传一个生成器，处理 TB 级数据也不会爆内存。另外注意 <code>initial_alphabet</code> 传入了 <code>ByteLevel.alphabet()</code>，这会在词表中显式保留所有 256 个基础字节映射符，确保哪怕是单字节的罕见二进制数据也能被编码。如果没有这一步，某些模型在遇到非常规字节时会直接退化成 unk，反而违背了字节级 BPE 的初衷。</p>
+</blockquote>
+<h6 id="3-4-3、配置-tokenizer-config-json"><a href="#3-4-3、配置-tokenizer-config-json" class="headerlink" title="3.4.3、配置 tokenizer_config.json"></a>3.4.3、配置 tokenizer_config.json</h6><p>Hugging Face 的 <code>tokenizers</code> 库只保存算法和数据，不能自动生成 <code>tokenizer_config.json</code>，这并非疏漏，而是因为它和 <code>transformers</code> 库有明确的分工。简单来说，<code>tokenizers</code> 库专注于“如何分词”（即核心算法），只保存算法和数据；而 <code>transformers</code> 库需要处理“如何使用分词器”这类更高级的配置，所以这些额外的配置工作就落在了它的肩上。</p>
+<p>如何生成 <code>tokenizer_config.json</code> 文件？一种是自己手动写。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line">config = &#123;</span><br><span class="line">    <span class="string">"add_bos_token"</span>: <span class="keyword">False</span>,</span><br><span class="line">    <span class="string">"add_eos_token"</span>: <span class="keyword">False</span>,</span><br><span class="line">    <span class="string">"add_prefix_space"</span>: <span class="keyword">False</span>,</span><br><span class="line">    <span class="string">"added_tokens_decoder"</span>: &#123;</span><br><span class="line">        <span class="string">"0"</span>: &#123;</span><br><span class="line">            <span class="string">"content"</span>: <span class="string">"&lt;|endoftext|&gt;"</span>,</span><br><span class="line">            <span class="string">"lstrip"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"normalized"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"rstrip"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"single_word"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"special"</span>: <span class="keyword">True</span></span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"1"</span>: &#123;</span><br><span class="line">            <span class="string">"content"</span>: <span class="string">"&lt;|im_start|&gt;"</span>,</span><br><span class="line">            <span class="string">"lstrip"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"normalized"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"rstrip"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"single_word"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"special"</span>: <span class="keyword">True</span></span><br><span class="line">        &#125;,</span><br><span class="line">        <span class="string">"2"</span>: &#123;</span><br><span class="line">            <span class="string">"content"</span>: <span class="string">"&lt;|im_end|&gt;"</span>,</span><br><span class="line">            <span class="string">"lstrip"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"normalized"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"rstrip"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"single_word"</span>: <span class="keyword">False</span>,</span><br><span class="line">            <span class="string">"special"</span>: <span class="keyword">True</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    <span class="string">"additional_special_tokens"</span>: [],</span><br><span class="line">    <span class="string">"bos_token"</span>: <span class="string">"&lt;|im_start|&gt;"</span>,</span><br><span class="line">    <span class="string">"clean_up_tokenization_spaces"</span>: <span class="keyword">False</span>,</span><br><span class="line">    <span class="string">"eos_token"</span>: <span class="string">"&lt;|im_end|&gt;"</span>,</span><br><span class="line">    <span class="string">"legacy"</span>: <span class="keyword">True</span>,</span><br><span class="line">    <span class="string">"model_max_length"</span>: <span class="number">32768</span>,</span><br><span class="line">    <span class="string">"pad_token"</span>: <span class="string">"&lt;|endoftext|&gt;"</span>,</span><br><span class="line">    <span class="string">"sp_model_kwargs"</span>: &#123;&#125;,</span><br><span class="line">    <span class="string">"spaces_between_special_tokens"</span>: <span class="keyword">False</span>,</span><br><span class="line">    <span class="string">"tokenizer_class"</span>: <span class="string">"PreTrainedTokenizerFast"</span>,</span><br><span class="line">    <span class="string">"unk_token"</span>: <span class="string">"&lt;|endoftext|&gt;"</span>,</span><br><span class="line">    <span class="string">"chat_template"</span>: <span class="string">"&#123;% if messages[0]['role'] == 'system' %&#125;&#123;% set system_message = messages[0]['content'] %&#125;&#123;&#123; '&lt;|im_start|&gt;system\\n' + system_message + '&lt;|im_end|&gt;\\n' &#125;&#125;&#123;% else %&#125;&#123;&#123; '&lt;|im_start|&gt;system\\nYou are a helpful assistant&lt;|im_end|&gt;\\n' &#125;&#125;&#123;% endif %&#125;&#123;% for message in messages %&#125;&#123;% set content = message['content'] %&#125;&#123;% if message['role'] == 'user' %&#125;&#123;&#123; '&lt;|im_start|&gt;user\\n' + content + '&lt;|im_end|&gt;\\n&lt;|im_start|&gt;assistant\\n' &#125;&#125;&#123;% elif message['role'] == 'assistant' %&#125;&#123;&#123; content + '&lt;|im_end|&gt;' + '\\n' &#125;&#125;&#123;% endif %&#125;&#123;% endfor %&#125;"</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 保存配置文件</span></span><br><span class="line"><span class="keyword">with</span> open(os.path.join(tokenizer_dir, <span class="string">"tokenizer_config.json"</span>), <span class="string">"w"</span>, encoding=<span class="string">"utf-8"</span>) <span class="keyword">as</span> config_file:</span><br><span class="line">    json.dump(config, config_file, ensure_ascii=<span class="keyword">False</span>, indent=<span class="number">4</span>)</span><br></pre></td></tr></table></figure>
+<p>还有一种最简单、最标准的做法。你只需用 <code>PreTrainedTokenizerFast</code> 包装已训练好的 <code>tokenizers.Tokenizer</code> 对象，再调用它的 <code>save_pretrained()</code> 方法即可自动生成所有文件。但是<strong>这种方法保存的 tokenizer_config.json 格式不如手写</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> tokenizers <span class="keyword">import</span> Tokenizer</span><br><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> PreTrainedTokenizerFast</span><br><span class="line"></span><br><span class="line"><span class="comment"># 1. 准备你已经训练好的 tokenizers.Tokenizer 对象</span></span><br><span class="line">tokenizer = Tokenizer.from_file(<span class="string">"path/to/your/tokenizer.json"</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 用 PreTrainedTokenizerFast 包装它</span></span><br><span class="line">wrapped_tokenizer = PreTrainedTokenizerFast(tokenizer_object=tokenizer)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 保存。它会自动生成 tokenizer_config.json 等文件</span></span><br><span class="line">wrapped_tokenizer.save_pretrained(<span class="string">"your_save_directory"</span>)</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>评述</strong>：两种方法我用得最多的是手写，因为可以精确控制 <code>add_bos_token</code> 这类容易被忽视的字段，以及 <code>chat_template</code> 这个对对话模型至关重要的模板。自动保存虽然方便，但生成的配置往往缺少 <code>chat_template</code>，而缺少它的话，<code>apply_chat_template</code> 会直接报错。所以如果打算公开发布分词器，建议最终还是用手写方式补全 <code>tokenizer_config.json</code>。</p>
+</blockquote>
+<h6 id="3-4-4、测试"><a href="#3-4-4、测试" class="headerlink" title="3.4.4、测试"></a>3.4.4、测试</h6><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 测试对话编码</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">from</span> transformers <span class="keyword">import</span> PreTrainedTokenizerFast</span><br><span class="line"></span><br><span class="line"><span class="comment"># 加载预训练的 tokenizer</span></span><br><span class="line">tokenizer = PreTrainedTokenizerFast.from_pretrained(<span class="string">r"./model"</span>)</span><br><span class="line"></span><br><span class="line">messages = [</span><br><span class="line">    &#123;<span class="string">"role"</span>: <span class="string">"system"</span>, <span class="string">"content"</span>: <span class="string">"你是一个优秀的聊天机器人，总是给我正确的回应！"</span>&#125;,</span><br><span class="line">    &#123;<span class="string">"role"</span>: <span class="string">"user"</span>, <span class="string">"content"</span>: <span class="string">'你来自哪里？'</span>&#125;,</span><br><span class="line">    &#123;<span class="string">"role"</span>: <span class="string">"assistant"</span>, <span class="string">"content"</span>: <span class="string">'我来自地球'</span>&#125;</span><br><span class="line">]</span><br><span class="line">new_prompt = tokenizer.apply_chat_template(messages, tokenize=<span class="keyword">False</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 获取实际词汇表长度（包括特殊符号）</span></span><br><span class="line">actual_vocab_size = len(tokenizer)</span><br><span class="line">print(<span class="string">'tokenizer 实际词表长度：'</span>, actual_vocab_size)</span><br><span class="line"></span><br><span class="line">model_inputs = tokenizer(new_prompt)</span><br><span class="line">print(<span class="string">'model_inputs'</span>, model_inputs)</span><br><span class="line">print(<span class="string">'encoder 长度：'</span>, len(model_inputs[<span class="string">'input_ids'</span>]))</span><br><span class="line"></span><br><span class="line">input_ids = model_inputs[<span class="string">'input_ids'</span>]</span><br><span class="line">a = [tokenizer.decode(item, skip_special_tokens=<span class="keyword">False</span>) <span class="keyword">for</span> item <span class="keyword">in</span> input_ids]</span><br><span class="line">print(a)</span><br><span class="line">response = tokenizer.decode(input_ids, skip_special_tokens=<span class="keyword">False</span>)</span><br><span class="line">print(<span class="string">'decoder 和原始文本是否一致：'</span>, response == new_prompt)</span><br><span class="line"></span><br><span class="line">print(<span class="string">'\n输入文本：\n'</span>, new_prompt, <span class="string">'\n'</span>)</span><br><span class="line">print(<span class="string">'解码文本：\n'</span>, response, <span class="string">'\n'</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 测试预训练编码</span></span><br><span class="line">tokenizer.add_bos_token = <span class="keyword">True</span></span><br><span class="line">tokenizer.add_eos_token = <span class="keyword">True</span></span><br><span class="line">text = <span class="string">"You are a helpful assistant."</span></span><br><span class="line"><span class="comment"># text = "你来自哪里？"</span></span><br><span class="line">input_ids = tokenizer.encode(text, add_special_tokens=<span class="keyword">True</span>)</span><br><span class="line">a = [tokenizer.decode(item, skip_special_tokens=<span class="keyword">False</span>) <span class="keyword">for</span> item <span class="keyword">in</span> input_ids]</span><br><span class="line">print(a)</span><br><span class="line">print(<span class="string">'input_ids'</span>, input_ids)</span><br><span class="line">response = tokenizer.decode(input_ids, skip_special_tokens=<span class="keyword">False</span>)</span><br><span class="line">print(response)</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p><strong>评述</strong>：最后这段测试务必保留。无论你多信任自己的配置，都建议跑一遍 <code>decode(encode(text))</code> 的往返测试，特别是包含特殊 token 和不同语言混合的情况下。历史上因为 <code>add_bos_token</code> 丢失或 <code>chat_template</code> 错误导致的 silent failure 非常常见——编码解码看似正常，实际多了一个空格或少了一个换行，模型表现就完全不同。</p>
+</blockquote>
+<p>参考文献</p>
+<p>[^1]: Sennrich, R., Haddow, B., &amp; Birch, A. (2016). <em>Neural machine translation of rare words with subword units</em>. arXiv. <a href="https://doi.org/10.48550/arXiv.1508.07909" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.1508.07909</a><br>[^2]: Radford, A., Wu, J., Child, R., Luan, D., Amodei, D., &amp; Sutskever, I. (2019, February 14). <em>Language models are unsupervised multitask learners</em>. OpenAI. <a href="https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf" target="_blank" rel="noopener">https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf</a></p>
+<p><hr></p>
+<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%"><a href="https://www.limoncc.com/post/ac9b442b90c51cd5/">https://www.limoncc.com/post/ac9b442b90c51cd5/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (May. 11, 2026). 《大语言模型研究11——分词器从原理到实战》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/ac9b442b90c51cd5">https://www.limoncc.com/post/ac9b442b90c51cd5</a></td></tr><tr><td align="left" width="100%">@online{limoncc-ac9b442b90c51cd5,<br>title={大语言模型研究11——分词器从原理到实战},<br>author={引线小白},<br>year={2026},<br>month={May},<br>date={11},<br>url={\url{<a href="https://www.limoncc.com/post/ac9b442b90c51cd5}}">https://www.limoncc.com/post/ac9b442b90c51cd5}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/大语言模型/" rel="tag">#大语言模型</a>
+          
+            <a href="/tags/AI/" rel="tag">#AI</a>
+          
+            <a href="/tags/分词器/" rel="tag">#分词器</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/2823bb8e386a0878/" rel="next" title="RNN的复兴03:线性注意力并行计算IPLR">
+                <i class="fa fa-chevron-left"></i> RNN的复兴03:线性注意力并行计算IPLR
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/post/9e070b6858f0e490/" rel="prev" title="RNN的复兴04:线性注意力并行计算DPLR">
+                RNN的复兴04:线性注意力并行计算DPLR <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+<!--           </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div> -->
+        <div id="vcomments"></div>
+        <script>new Valine({
+          el: "#vcomments",
+      appId: "BVjuNRCpkVSkz82jFmadIvY8-gzGzoHsz",
+    appKey: "bRjXPp55dop7RTC2xgunGdiP"})
+  </script>'
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="引线小白" />
+          <p class="site-author-name" itemprop="name">引线小白</p>
+          <p class="site-description motion-element" itemprop="description">小湖椰影廊桥,曾记否,谷围晓月,灯影朦胧。</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">62</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">120</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="" target="_blank" title="Design">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  Design
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.behance.net/limoncc" target="_blank" title="Behance">
+                  
+                    <i class="fa fa-fw fa-behance"></i>
+                  
+                  Behance
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.pinterest.com/aegeanfan/" target="_blank" title="Pinterest">
+                  
+                    <i class="fa fa-fw fa-pinterest"></i>
+                  
+                  Pinterest
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://github.com/limoncc" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://weibo.com/3483157951" target="_blank" title="微博">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  微博
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://www.zhihu.com/people/limoncc" target="_blank" title="知乎">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  知乎
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              设计不止，折腾不息。
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://chuangzaoshi.com" title="创造狮" target="_blank">创造狮</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、映射到-Unicode-可见字符"><span class="nav-number">1.</span> <span class="nav-text">一、映射到 Unicode 可见字符</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#二、Byte-level-BPE-分词原理"><span class="nav-number">2.</span> <span class="nav-text">二、Byte-level BPE 分词原理</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#2-1、准备训练语料（模拟词频）"><span class="nav-number">2.1.</span> <span class="nav-text">2.1、准备训练语料（模拟词频）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-2、字节级-BPE-训练"><span class="nav-number">2.2.</span> <span class="nav-text">2.2、字节级 BPE 训练</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#2-3、推理：用训练好的规则切分新词-lowest"><span class="nav-number">2.3.</span> <span class="nav-text">2.3、推理：用训练好的规则切分新词 lowest</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#三、Byte-level-BPE-分词实战"><span class="nav-number">3.</span> <span class="nav-text">三、Byte-level BPE 分词实战</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#3-1、tokenizer-config-的配置"><span class="nav-number">3.1.</span> <span class="nav-text">3.1、tokenizer_config 的配置</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-2、Control-Tokens-配置"><span class="nav-number">3.2.</span> <span class="nav-text">3.2、Control Tokens 配置</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#3-2-1、特殊词元速查表"><span class="nav-number">3.2.1.</span> <span class="nav-text">3.2.1、特殊词元速查表</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-2-2、预训练阶段的特殊词元"><span class="nav-number">3.2.2.</span> <span class="nav-text">3.2.2、预训练阶段的特殊词元</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-2-3、后训练阶段的特殊词元"><span class="nav-number">3.2.3.</span> <span class="nav-text">3.2.3、后训练阶段的特殊词元</span></a></li></ol></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-3、BBPE-预分词技巧"><span class="nav-number">3.3.</span> <span class="nav-text">3.3、BBPE 预分词技巧</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-4、BBPE-核心代码"><span class="nav-number">3.4.</span> <span class="nav-text">3.4、BBPE 核心代码</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#3-4-1、训练设定"><span class="nav-number">3.4.1.</span> <span class="nav-text">3.4.1、训练设定</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-4-2、训练"><span class="nav-number">3.4.2.</span> <span class="nav-text">3.4.2、训练</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-4-3、配置-tokenizer-config-json"><span class="nav-number">3.4.3.</span> <span class="nav-text">3.4.3、配置 tokenizer_config.json</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-4-4、测试"><span class="nav-number">3.4.4.</span> <span class="nav-text">3.4.4、测试</span></a></li></ol></li></ol></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">引线小白&nbsp &nbsp |&nbsp &nbsp  一个理想主义者，再造自我，以期未来。</span>
+</div>
+
+<div class="powered-by">
+  由 <a rel="external nofollow" class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a rel="external nofollow" class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>&nbsp &nbsp| &nbsp &nbsp Hosted by  <a href="https://github.com" style="font-weight: bold">Github Pages</a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+<!--   
+   
+  
+
+  
+
+ -->
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+       search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+    'use strict';
+    $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+            // get the contents from search data
+            isfetched = true;
+            $('.popup').detach().appendTo('.header-inner');
+            var datas = $( "entry", xmlResponse ).map(function() {
+                return {
+                    title: $( "title", this ).text(),
+                    content: $("content",this).text(),
+                    url: $( "url" , this).text()
+                };
+            }).get();
+            var $input = document.getElementById(search_id);
+            var $resultContent = document.getElementById(content_id);
+            $input.addEventListener('input', function(){
+                var matchcounts = 0;
+                var str='<ul class=\"search-result-list\">';                
+                var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                $resultContent.innerHTML = "";
+                if (this.value.trim().length > 1) {
+                // perform local searching
+                datas.forEach(function(data) {
+                    var isMatch = true;
+                    var content_index = [];
+                    var data_title = data.title.trim().toLowerCase();
+                    var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                    var data_url = data.url;
+                    var index_title = -1;
+                    var index_content = -1;
+                    var first_occur = -1;
+                    // only match artiles with not empty titles and contents
+                    if(data_title != '' && data_content != '') {
+                        keywords.forEach(function(keyword, i) {
+                            index_title = data_title.indexOf(keyword);
+                            index_content = data_content.indexOf(keyword);
+                            if( index_title < 0 && index_content < 0 ){
+                                isMatch = false;
+                            } else {
+                                if (index_content < 0) {
+                                    index_content = 0;
+                                }
+                                if (i == 0) {
+                                    first_occur = index_content;
+                                }
+                            }
+                        });
+                    }
+                    // show search results
+                    if (isMatch) {
+                        matchcounts += 1;
+                        str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                        var content = data.content.trim().replace(/<[^>]+>/g,"");
+                        if (first_occur >= 0) {
+                            // cut out 100 characters
+                            var start = first_occur - 20;
+                            var end = first_occur + 80;
+                            if(start < 0){
+                                start = 0;
+                            }
+                            if(start == 0){
+                                end = 50;
+                            }
+                            if(end > content.length){
+                                end = content.length;
+                            }
+                            var match_content = content.substring(start, end);
+                            // highlight all keywords
+                            keywords.forEach(function(keyword){
+                                var regS = new RegExp(keyword, "gi");
+                                match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                            });
+                            
+                            str += "<p class=\"search-result\">" + match_content +"...</p>"
+                        }
+                        str += "</li>";
+                    }
+                })};
+                str += "</ul>";
+                if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+                if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+                $resultContent.innerHTML = str;
+            });
+            proceedsearch();
+        }
+    });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').mousedown(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+  
+<!--   <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+     showMathMenu: false,
+     showMathMenuMSIE: false,
+     tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+          displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+          processEscapes: true
+        },
+        TeX: {
+          equationNumbers: {autoNumber: 'AMS'},
+          Macros: {bm: "\\boldsymbol"}
+        },
+        'HTML-CSS': {
+          imageFont: null
+        }
+    });
+  </script> -->
+<!--     MathJax.Hub.Queue(function() {
+      var all = MathJax.Hub.getAllJax(), i;
+      for (i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+      }
+    }); -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+    processEscapes: true,
+    tags: 'ams',
+    macros: {
+                                            bm: "\\boldsymbol",
+					    T:"\\intercal",
+                                            oiint: "{\\iint\\kern{-20mu}{\\unicode{x2B2D}}}",
+                                            oiiint: "{\\iiint\\kern{-24.5mu}\\large{\\unicode{x2B2D}}}"
+                                },
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};
+</script>
+  <script type="text/x-mathjax-config">
+MathJax.texReset();
+MathJax.typeset();
+  </script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_SVG-full"></script> -->
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("Es7wAnqi0QiGhMLoyl7mkrQo-gzGzoHsz", "BxPXaoPFp3PzWqBTSe6VUuQS");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+</body>
+</html>
