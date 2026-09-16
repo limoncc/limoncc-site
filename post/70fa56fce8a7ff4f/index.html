@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-16T07:47:08.648Z">
+<meta property="og:updated_time" content="2026-09-16T07:48:17.657Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究09-RubricRL理论分析">
 <meta name="twitter:description" content="本文主要总结了RubricRL的若干基本问题，和我自己的一些体会。rubrics(量规)是实践成本二级摊销，它的判分质量上界由世界模型、规范先验、激发工程和多步因果推理共同决定。这使得Rubrics评分成为了一个工程问题：Rubrics-engineering、Rubrics-Agent、Rubrics-Infra都是应有之意。">
@@ -389,6 +389,151 @@
         <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：httpss://<a href="http://www.limoncc.com/post/70fa56fce8a7ff4f/">www.limoncc.com/post/70fa56fce8a7ff4f/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
 <h3 id="一、RubricRL的实质"><a href="#一、RubricRL的实质" class="headerlink" title="一、RubricRL的实质"></a>一、RubricRL的实质</h3><p>随着大模型应用场景扩展到开放式与高风险任务——如何规定、优化与评估模型响应的问题变得愈发重要。LLM-as-a-Judge（Gu et al., 2024）提供了更灵活的替代方案，但不受约束的评判提示可能导致不稳定、不可靠或有偏的评估。这些局限指向一个共同的缺失组件：结构化、显式的评测准则，用以明确响应应当满足的要求[^1]。</p>
 <p>Rubrics 提供了填补这一空缺的自然方式。Rubrics 源自教育测评（Brookhart, 2018; Panadero and Jonsson, 2013），它把质量评估分解为一组显式准则，每条准则对应期望输出的一个具体侧面。由于Rubrics的低成本和开发式，它越来越流行。</p>
+<h4 id="1-1、什么是RubricRL"><a href="#1-1、什么是RubricRL" class="headerlink" title="1.1、什么是RubricRL"></a>1.1、什么是RubricRL</h4><p><strong>RubricRL</strong>(量规强化学习)一类将强化学习的奖励信号从单一标量升级为一组显式、自然语言形式、可逐项打分的评分标准(rubric)的后训练范式。其核心主张是：把「什么是好答案」写成分维度、可验证的检查清单，由 LLM 评审员(judge)或规则评分器逐项判定，再聚合为奖励，驱动 PPO / GRPO / DAPO 等算法优化策略模型。它一边承接了RLVR(可验证奖励强化学习)在可客观验证任务上的成功，一边把适用范围从数学、代码扩展到开放域、主观、多标准的任务（创意写作、医疗咨询、指令遵循、Agent 轨迹等）</p>
+<p>RubricRL本质上来说就是一种评估函数，借助了LLM内在的世界模型对结果做因果判断和分析。Rubric评估函数的准确性依赖下面几个维度：</p>
+<p>$$\begin{align}<br>\small<br>\text{判分质量} \leqslant<br>\underbrace{\text{世界模型保真度}}_{\text{描述：关于真}}<br>\times<br>\underbrace{\text{规范先验对齐度}}_{\text{规范：关于好}}<br>\times<br>\underbrace{\text{激发保真度}}_{\text{知}\neq\text{言}}<br>\times<br>\underbrace{\text{推理时因果运用}}_{\text{多步推断}}<br>\end{align}$$</p>
+<p>大模型实践从”短答案生成器”走向深度研究、医疗诊断、多模态生成、agentic 工具使用——响应质量由事实性、完整性、安全性、推理严谨性、证据支撑、实用价值多个维度共同决定，不再有唯一标准答案。如果评测已经不是一个简单的判断问题，而是成为了一个工程问题：Rubrics-engineering、Rubrics-Agent、Rubrics-Infra。</p>
+<h4 id="1-2、RubricRL依赖大模型的两个先验"><a href="#1-2、RubricRL依赖大模型的两个先验" class="headerlink" title="1.2、RubricRL依赖大模型的两个先验"></a>1.2、RubricRL依赖大模型的两个先验</h4><p>RubricRL依赖大模型关于世界和人类偏好的两个先验，这是RubricRL有效的前提。</p>
+<p><strong>描述层: 世界模型保真度</strong></p>
+<p>大模型把人类文明层面的实践记录(文本)通过训练内化为世界模型用于因果预测，这个先验是“关于什么是<em>真</em>”。模型内化的世界模型是否足够准确，能否预测“这个答案/动作会导致什么”。</p>
+<ul>
+<li>强：知道药物相互作用、代码执行后果、Agent 动作是否可达、法律条款适用条件。</li>
+<li>弱：幻觉、知识过时、缺上下文、不会用工具验证、把相关当因果。</li>
+<li>失效表现：rubric 项本身写得对，但 judge 对事实和后果判断错，导致错误奖励。</li>
+</ul>
+<p><strong>规范层: 规范先验对齐度</strong></p>
+<p>模型学到的人类偏好痕迹（指南、共识、表达过的不满）内化为模型的偏好函数。它不来自因果知识。这个先验是“关于什么是<em>好</em>”。模型的偏好函数是否与 rubric 作者、目标人群、领域共识一致。</p>
+<ul>
+<li>强：知道安全优先于讨好、诚实优先于流畅、长期利益优先于短期满意。</li>
+<li>弱：文化偏差、谄媚、过度保守、价值排序错、权重错。</li>
+</ul>
+<p>关键点：<strong>世界模型完美也可能规范扭曲</strong>。模型知道后果，却把错误优先级排前面。反之：<strong>规范完美也可能世界模型扭曲</strong>。模型知道什么好，却不知道行动会带来什么后果。</p>
+<h4 id="1-3、RubricRL的两个控制项："><a href="#1-3、RubricRL的两个控制项：" class="headerlink" title="1.3、RubricRL的两个控制项："></a>1.3、RubricRL的两个控制项：</h4><p><strong>激发保真度</strong></p>
+<p>模型知道的比它说出的多，知 ≠ 言。模型潜在知道/偏好的东西，能否在判分时被正确调用出来。影响因素包括：提示词、rubric 表述、评分模板、few-shot、推理预算、温度、上下文长度、位置偏差、评分尺度、是否要求先引证据再打分、是否成对比较、是否多轮校准。</p>
+<ul>
+<li>弱激发：模型“其实知道”，但输出时忽略、敷衍、受格式诱导。</li>
+<li>强激发：结构化评分、证据引用、反事实检查、多采样自洽、工具辅助、校准阈值。</li>
+</ul>
+<p>这一项是把潜在世界模型和规范先验转化为可观测判分的 harness。</p>
+<p><strong>推理时因果运用</strong></p>
+<p>它要求 judge 在拿到 rubric 后，不是做关键词匹配或风格判断，而是完成一条隐式推理链：</p>
+<ol>
+<li><strong>解析 rubric</strong>：把自然语言评分项拆成可判定的条件；</li>
+<li><strong>定位证据</strong>：从答案、轨迹、工具输出、对话历史中找出相关片段；</li>
+<li><strong>因果归因</strong>：判断某个行动/表述是否真正导致某结果，而非仅仅相关；</li>
+<li><strong>反事实推演</strong>：问“如果删掉这一步，是否仍满足该 rubric 项”；</li>
+<li><strong>规范权衡</strong>：当多个 rubric 项冲突时，按目标价值排序；</li>
+<li><strong>逐项打分与聚合</strong>：给出分项判定，再按权重、阈值、归一化聚合成奖励。</li>
+</ol>
+<p>若这一环弱，judge 会被流畅度、长度、格式、自信语气、关键词、谄媚表达欺骗，把“看起来好”判成“实际好”。即使知道事实、偏好正确、也被激发出来，judge 仍可能在多步推理中出错。</p>
+<ul>
+<li>把相关当因果；</li>
+<li>忽略延迟后果；</li>
+<li>过度归因于显眼步骤；</li>
+<li>被中间结果误导；</li>
+<li>在冲突 rubric 项前不会权衡；</li>
+<li>聚合时被长度、格式、权威偏差污染。</li>
+</ul>
+<p>提升方式：强制证据链、因果图、反事实询问、工具验证、多 judge 投票、自洽采样、元评审、对抗 rubric、隐藏测试项。</p>
+<h3 id="二、RubricRL工程的实质"><a href="#二、RubricRL工程的实质" class="headerlink" title="二、RubricRL工程的实质"></a>二、RubricRL工程的实质</h3><h4 id="2-1、RubricRL工程关键点"><a href="#2-1、RubricRL工程关键点" class="headerlink" title="2.1、RubricRL工程关键点"></a>2.1、RubricRL工程关键点</h4><p>RubricRL工程通常有两个核心步骤规则生成 $\mathcal{G}$ 和判断评分 $\mathcal{J}$。由规则生成器 $\mathcal{G}$ 生成 C 个规则集 $\mathcal{C}$。输入是任务提示词和其他参考输入(如标准答案，优势答案、劣势答案、领域知识等)</p>
+<p>$$\begin{align}<br>\mathcal{C}=\{rule_{c}\}_{c=1}^C=\mathcal{G}(x,…)<br>\end{align}$$</p>
+<p>判断评分器 $\mathcal{J}$ 生成轨迹评分集 $\varPsi=\{\psi_c\}_{c=1}^C$</p>
+<p>$$\begin{align}<br>\varPsi_i=\{\psi_{i,c}\}_{c=1}^C=\mathcal{J}(\tau_i)<br>\end{align}$$</p>
+<p>对于步骤级评分就是</p>
+<p>$$\begin{align}<br>\varPsi_i=\big\{\{\psi_{i,c,t}\}_{c=1}^C\big\}_{t=1}^{T_i}=\mathcal{J}(\tau_i)<br>\end{align}$$</p>
+<p>其中 $\tau_i=\{x_i,(s_{i}[t],a_{i}[t])_{t=1}^{T_i}\}$是轨迹，输入 $x$ 中间的状态、行动集合 $(s_{i}[t],a_{i}[t])_{t=1}^{T_i}$。轨迹集就是</p>
+<p>$$\begin{align}<br>\mathcal{T}=\big\{\{x_i,(s_{i}[t],a_{i}[t])_{t=1}^{T_i}\}\big\}_{i=1}^G<br>\end{align}$$</p>
+<p>当然这只是形式化表示。我们通常的轨迹其实是  输入+(思考+工具调用+工具结果)+输出，符号化就是 $\tau_i=\{x_i,(\zeta_i[t],a_i[t],o_i[t])_{t=1}^{T_i},y\}$</p>
+<p>RubricRL 的奖励通常写成：</p>
+<p>$$\begin{align}<br>R=\frac{\sum_c w_c\psi_c}{\sum_c w_c}<br>\end{align}$$</p>
+<p>其中 $\psi_c$ 是 judge 对第 $c$ 个 rubric 项的判定。若判分质量低，策略优化就会变成优化 judge 的偏差，而不是优化真实目标。典型奖励黑客包括：</p>
+<ul>
+<li>世界模型弱 → 学会编造看似合理但错误的内容；</li>
+<li>规范错位 → 学会迎合错误价值；</li>
+<li>激发失败 → 学会触发关键词、格式、长度；</li>
+<li>推理失败 → 学会利用表面启发式和评分捷径。</li>
+</ul>
+<p>因此，RubricRL 的实践重点不是“写几个 rubric 条目”，而是同时建设：</p>
+<ol>
+<li><strong>rubric 设计</strong>：原子、可观察、正交、加权、防歧义、覆盖正负例和过程/结果；</li>
+<li><strong>judge 设计</strong>：规则 + LLM 混合、多评审、置信度加权、校准、人类审计；</li>
+<li><strong>harness 设计</strong>：证据先于评分、反事实检查、工具调用、结构化输出；</li>
+<li><strong>RL 训练</strong>：奖励归一化、KL、长度惩罚、防 reward hacking、动态 rubric 课程；</li>
+<li><strong>元评估</strong>：人类一致性、对抗扰动、反事实敏感性、跨模型泛化。</li>
+</ol>
+<p>总的来说，<strong>RubricRL 把奖励从单一标量升级为结构化评估函数，但评估函数不是 oracle (完美裁判)。它的判分质量上界由世界模型、规范先验、激发工程和多步因果推理共同决定</strong>。</p>
+<h4 id="2-2、RubricRL工程实质是实践成本摊销"><a href="#2-2、RubricRL工程实质是实践成本摊销" class="headerlink" title="2.2、RubricRL工程实质是实践成本摊销"></a>2.2、RubricRL工程实质是实践成本摊销</h4><p>RubricRL之所以成立，是因为<strong>它站在人类文明文本内化的大模型之上，做的是实践成本二级摊销降本的事情</strong>。它天然就存在上限，因为摊销只能重新分配已存在的监督，不能创造新的因果证据——它能把模型里已经有的能力激发、对齐、稳定化（类似 RLVR 对推理的作用），但不能让策略在科学上超越教师的世界模型。所以这条路线的真实定位不是“自动造奖励的炼金术”，而是把一次性的昂贵因果知识摊销成推理时可反复调用、可组合、可校准的廉价判分程序——并以少量真实实践为锚，监控摊销损耗。</p>
+<p>说到底是自己不实践，而是借助老师(大模型)判断来校准自己的知识。从认识论实践论的角度看，就是规避昂贵的实践成本，改用权威判断，来完成认识实践循环。任何学习都要交实践税，充分利用检验信息，摊销别人的实践资产降本增效。</p>
+<h3 id="三、量规的贝叶斯视角"><a href="#三、量规的贝叶斯视角" class="headerlink" title="三、量规的贝叶斯视角"></a>三、量规的贝叶斯视角</h3><h4 id="3-1、量规的贝叶斯视角"><a href="#3-1、量规的贝叶斯视角" class="headerlink" title="3.1、量规的贝叶斯视角"></a>3.1、量规的贝叶斯视角</h4><p>论文(arXiv:2608.27505)[^2]使用贝叶斯更新视角综述rubrics说的不严谨，这里笔者重新定义一套符号说明</p>
+<p>1、量规先验 $p(R)$: 对“什么是好的回答”的通用信念,它是全局的、通用的，不随具体输入改变。也可以说是价值观</p>
+<p>2、量规后验 $p(R\mid \tau,\kappa,l)$:  看到输入x后，系统决定“对于这个特定的，我们要用哪几条具体的标准来打分。其中 $\tau$是轨迹、$\kappa$是领域、$l$是语言。语言影响 $R$。原则上应该是语言无关的，实际上不是。由贝叶斯定理有：</p>
+<p>$$\begin{align}<br>p(R\mid \tau,\kappa,l) \propto p(\tau\mid R, k,l)p(R)<br>\end{align}$$</p>
+<p>3、评分函数 $\psi(\tau,R_c)$ 规则 $R_c$下对轨迹 $\tau$的评分。虽然说是评分函数，但实际上它是有随机性的。应该打分还是prompt进模型responsec出，有一点随机性。</p>
+<p>$$\begin{align}<br>\psi_c \sim p(\psi_c\mid \tau,R_c)<br>\end{align}$$</p>
+<p>最终打分是由一个聚合函数 $\mathrm{agg}$计算， $\mathrm{agg}\big(\{\psi(\tau,R_c)\}_{c=1}^C\big)$</p>
+<p>$$\begin{align}<br>r(\tau)=\mathbb{E}_{R\sim p(R\mid \tau,\kappa,l)}\big[\mathrm{agg}\big(\{\psi(\tau,R_c)\}_{c=1}^C\big)\big]<br>\end{align}$$</p>
+<p>论文(arXiv:2608.27505)[^2]框架并没有考虑到评分函数的随机性。分析加入有</p>
+<p>$$\begin{align}<br>r(\tau) = \mathbb{E}_{R\sim p(R\mid \tau,\kappa,l)}\bigg[\mathbb{E}_{\psi_c \sim p(\psi_c\mid \tau,R_c)}\big[\mathrm{agg}\big(\{\psi_c\}_{c=1}^C\big)\big]\bigg]<br>=\sum_{R}p(R\mid \tau,\kappa,l)\bigg(\int \mathrm{agg}\big(\{\psi_c\}p(\psi\mid \tau,R)d\psi\bigg)<br>\end{align}$$</p>
+<p>至于 $p(\psi\mid \tau,R)$，通常并不是分开打分。分开打分就是 $p(\psi\mid \tau,R)=\prod_{c=1}^Cp(\psi_c\mid \tau,R_c)$。</p>
+<h4 id="3-2、量规实践"><a href="#3-2、量规实践" class="headerlink" title="3.2、量规实践"></a>3.2、量规实践</h4><p>1、现在我们来分析一下实际的情况。量规生成器</p>
+<p>$$\begin{align}<br>R \sim \mathcal{G}(R) = p(R\mid \tau,\kappa,l) \propto p(\tau\mid R, k,l)p(R)<br>\end{align}$$</p>
+<p>通常不会为一个输入(也可以说任务、prompt)生成多个量规。因为我们只需最符合任务的量规 $R$。使用一个变量 $\zeta$来度量量规的任务符合度。<br>$$\begin{align}<br>R^*=\mathop{argmax}_{R}\zeta(R,\tau)<br>\end{align}$$</p>
+<p>2、其次在来看看评分函数</p>
+<p>$$\begin{align}<br>\bar{\psi} = \mathcal{J}(\tau,R^<em>)= \mathbb{E}_{\psi_c \sim p(\psi_c\mid \tau,R_c^</em>)}\big[\mathrm{agg}\big(\{\psi_c\}_{c=1}^C\big)\big]<br>\end{align}$$</p>
+<p>在实操中我们通常不会取期望，或者采样求平均。而是随机采样一个点</p>
+<p>$$\begin{align}<br>\hat{r}(\tau_i)=\psi_i=\mathrm{agg}\big(\{\psi_c\}_{c=1}^C<br>=\frac{\sum_c w_c\psi_{i,c}}{\sum_c w_c}<br>\end{align}$$</p>
+<p>其中 $w_c$为每个评分规则的权重, 在最后计算奖励时采用组内归一计算优势：</p>
+<p>$$\begin{align}<br>\hat{A}_i = \frac{\hat{r}_i - \mu}{\sigma + \epsilon}, \quad \mu = \frac{1}{n}\sum_{i=1}^{n} \hat{r}_i, \quad \sigma^2 = \frac{1}{n-1}\sum_{i=1}^{n}(\hat{r}_i - \mu)^2<br>\end{align}$$</p>
+<h4 id="3-3、量规优势的偏差和方差"><a href="#3-3、量规优势的偏差和方差" class="headerlink" title="3.3、量规优势的偏差和方差"></a>3.3、量规优势的偏差和方差</h4><p>下面来分析一下组内归一优势是否有偏和方差情况。</p>
+<p>最好的情况是可以得到真实优势 $A^*$，基于奖励的期望 $\bar{r}(\tau)$；而我们实际计算的是 $\hat{A}$，基于奖励的观测值（单次采样）$\hat{r}(\tau)$。有：<br>$$\begin{align}<br>\hat{r}_i = \bar{r}_i + \epsilon_i<br>\end{align}$$</p>
+<p>其中 $\epsilon_i \sim \mathcal{N}(0, \sigma_{\text{noise}}^2)$ 是评分函数的单次采样噪声。<br>组内真实均值为 $\mu_{\text{true}} = \frac{1}{n}\sum \bar{r}_i$。<br>组内真实标准差为 $\sigma_{\text{true}}$。</p>
+<h5 id="3-3-2、偏差分析"><a href="#3-3-2、偏差分析" class="headerlink" title="3.3.2、偏差分析"></a>3.3.2、偏差分析</h5><p>偏差主要来源于<strong>非线性归一化（除法）引入的系统性偏差</strong>以及<strong>评分噪声带来的梯度抑制</strong>。</p>
+<p><strong>(1) 分子的无偏性</strong></p>
+<p>计算 $\hat{A}$ 的分子部分 $\hat{r}_i - \mu$：</p>
+<p>$$\begin{align}<br>\mathbb{E}[\hat{r}_i - \mu] = \mathbb{E}\left[\hat{r}_i - \frac{1}{n}\sum_{j=1}^n \hat{r}_j\right] = \bar{r}_i - \frac{1}{n}\sum_{j=1}^n \bar{r}_j = \bar{r}_i - \mu_{\text{true}}<br>\end{align}$$</p>
+<p>分子本身是<strong>无偏</strong>的，它正确估计了该样本相对于组内均值的真实差距。</p>
+<p><strong>(2) 分母的有偏性与梯度抑制（核心偏差）</strong></p>
+<p>这是问题的关键。分母 $\sigma$ 是基于观测值 $\hat{r}_i$ 计算的：</p>
+<p>$$\begin{align}<br>\sigma^2 = \frac{1}{n-1}\sum (\hat{r}_i - \mu)^2<br>\end{align}$$</p>
+<p>其期望为：</p>
+<p>$$\begin{align}<br>\mathbb{E}[\sigma^2]<br>&amp;= \frac{1}{n-1}\sum \mathbb{E}[(\bar{r}_i + \epsilon_i - (\mu_{\text{true}} + \bar{\epsilon}))^2]\\<br>&amp;= \frac{1}{n-1}\sum \left[ \underbrace{(\bar{r}_i - \mu_{\text{true}})^2}_{\text{策略方差}} + \underbrace{\text{Var}(\epsilon_i - \bar{\epsilon})}_{\text{评分噪声方差}} \right]\\<br>&amp;= \sigma_{\text{true}}^2 + \left(1 - \frac{1}{n}\right)\sigma_{\text{noise}}^2<br>\end{align}$$</p>
+<p>计算出的 $\sigma$ 混合了<strong>策略的真实差异</strong>和<strong>评分器的随机噪声</strong>。由于 $\sigma$ 出现在分母，且 $\sigma_{\text{noise}}^2 &gt; 0$，分母会变大。这导致：</p>
+<p>$$\begin{align}<br>\mathbb{E}\left[\frac{\hat{r}_i - \mu}{\sigma}\right] \approx \frac{\bar{r}_i - \mu_{\text{true}}}{\sqrt{\sigma_{\text{true}}^2 + \sigma_{\text{noise}}^2}} &lt; \frac{\bar{r}_i - \mu_{\text{true}}}{\sigma_{\text{true}}}<br>\end{align}$$</p>
+<p><strong>偏差效应</strong>：梯度被系统性地<strong>压缩</strong>了。评分器越不稳定（$\sigma_{\text{noise}}$ 大），梯度越小，模型收敛越慢。这是一种“保守”的偏差。</p>
+<p><strong>(3) 比率估计偏差</strong></p>
+<p>根据 Jensen 不等式，$\mathbb{E}[X/Y] \neq \mathbb{E}[X]/\mathbb{E}[Y]$。由于 $\hat{\sigma}$ 服从卡方分布相关的波动，其倒数 $1/\hat{\sigma}$ 的期望是无穷大或被拉偏的（取决于小样本分布特性）。这在小样本（$n$ 很小，如 $n=4$）时尤为明显，会导致梯度方向的微小偏转。</p>
+<h5 id="3-3-2、方差分析"><a href="#3-3-2、方差分析" class="headerlink" title="3.3.2、方差分析"></a>3.3.2、方差分析</h5><p>方差主要来源于<strong>评分噪声</strong>和<strong>小样本估计的不稳定性</strong>。</p>
+<p><strong>(1) 分子的方差</strong></p>
+<p>由于我们使用的是单次采样 $\hat{r}_i$：</p>
+<p>$$\begin{align}<br>\text{Var}(\hat{r}_i - \mu)<br>=\sigma_{\text{true}}^2 + \left(1 - \frac{1}{n}\right)\sigma_{\text{noise}}^2<br>\end{align}$$</p>
+<p>如果不进行多次采样，分子方差直接包含 $\sigma_{\text{noise}}^2$。这是方差的主要来源之一。</p>
+<p><strong>(2) 分母的方差</strong></p>
+<p>当组大小 $n$ 较小时（例如 GRPO 中常用的 $G=4$ 或 $8$），$\hat{\sigma}$ 的估计极不稳定。</p>
+<p>$$\begin{align}<br>\text{Var}\left(\frac{1}{\hat{\sigma}}\right) \gg \text{Var}\left(\frac{1}{\sigma}\right)<br>\end{align}$$</p>
+<p>如果某次采样偶然算出一个很小的 $\hat{\sigma}$（由于评分器噪声导致样本点偶然聚集），优势值 $\hat{A}_i$ 会爆炸，导致梯度爆炸，破坏训练稳定性。</p>
+<h5 id="3-3-3、方差缩减技术"><a href="#3-3-3、方差缩减技术" class="headerlink" title="3.3.3、方差缩减技术"></a>3.3.3、方差缩减技术</h5><p>针对上述问题，结合 $R^*$ 和 $\hat{r}$ 设定，可以使用以下技术来降低方差并修正偏差：</p>
+<h6 id="3-3-3-1、从-Batch-归一化转向-滚动归一化"><a href="#3-3-3-1、从-Batch-归一化转向-滚动归一化" class="headerlink" title="3.3.3.1、从 Batch 归一化转向 滚动归一化"></a>3.3.3.1、从 Batch 归一化转向 滚动归一化</h6><p><strong>针对问题</strong>：分母 $\sigma$ 的高方差。不要使用当前 Batch 计算出的 $\hat{\sigma}$（它受评分噪声影响极大），而使用全局/滚动统计量。</p>
+<p>$$\begin{align}<br>\sigma_{\text{norm}} = \text{EMA}(\sigma_{\text{history}})<br>\end{align}$$</p>
+<p>$$\begin{align}<br>A_i = \frac{\hat{r}_i - \mu}{\sigma_{\text{norm}} + \epsilon}<br>\end{align}$$</p>
+<p>原理：$\sigma_{\text{history}}$ 收敛后趋于稳定，消除了分母的随机波动。<br>效果：显著降低梯度方差，防止训练震荡。</p>
+<h6 id="3-3-3-2、多次采样估计奖励"><a href="#3-3-3-2、多次采样估计奖励" class="headerlink" title="3.3.3.2、多次采样估计奖励"></a>3.3.3.2、多次采样估计奖励</h6><p><strong>针对问题</strong>：分子的方差 $\sigma_{\text{noise}}^2$ 和梯度压缩。实操中只采样一个点 $\psi$。这是引入方差的根源。改进方法：</p>
+<p>$$\begin{align}<br>\hat{r}(\tau_i) = \frac{1}{M} \sum_{m=1}^M \psi^{(m)}(\tau_i, R^*)<br>\end{align}$$</p>
+<p>原理：根据中心极限定理，均值的方差为 $\sigma_{\text{noise}}^2 / M$。<br>效果：如果 $M=3$ 或 $M=5$，评分噪声方差直接降低 3-5 倍，且分母中的噪声成分 $\sigma_{\text{noise}}$ 也会减小，从而缓解梯度压缩问题。虽然增加了 API 调用成本，但对收敛性提升巨大。</p>
+<h6 id="3-3-3-3、引入-Value-Function-Baseline-Critic"><a href="#3-3-3-3、引入-Value-Function-Baseline-Critic" class="headerlink" title="3.3.3.3、引入 Value Function Baseline (Critic)"></a>3.3.3.3、引入 Value Function Baseline (Critic)</h6><p><strong>针对问题</strong>：组内基准 $\mu$ 的高方差。组内基准 $\mu = \frac{1}{n}\sum \hat{r}_j$ 本质上是一个简单的控制变量。更高级的做法是训练一个 Value Network $V_\phi(x)$。<br>$$ A_i = \hat{r}_i - V_\phi(x) $$</p>
+<ul>
+<li><strong>原理</strong>：$V_\phi(x)$ 学习的是 $\mathbb{E}_{\pi}[\hat{r}]$ 的期望。相比于仅依赖 $n$ 个样本的均值，$V_\phi$ 利用所有历史数据拟合，方差更小。</li>
+<li><strong>结合归一化</strong>：可以使用 $A_i = \frac{\hat{r}_i - V_\phi(x)}{\sigma_{\text{norm}}}$，这是 PPO 的标准做法，比单纯的组内归一更鲁棒。</li>
+</ul>
+<h6 id="3-3-3-4、评分器去噪"><a href="#3-3-3-4、评分器去噪" class="headerlink" title="3.3.3.4、评分器去噪"></a>3.3.3.4、评分器去噪</h6><p>针对问题：$\sigma_{\text{noise}}$ 本身过大。这是从源头解决。在 Prompt 设计上，要求评分器不仅给分，还要给出置信度或CoT 推理。技术上：可以训练一个专门的 Reward Model (RM) 来拟合 LLM-as-a-Judge 的输出。RM 的输出是确定性的，消除了单次采样的随机性。公式转换：将 $\psi \sim p(\psi|\dots)$ 变为 $r_{\text{RM}} = \mathbb{E}[\psi|\dots]$。RM 一旦训练好，推理时方差为 0。</p>
+<h6 id="3-3-3-5、截断"><a href="#3-3-3-5、截断" class="headerlink" title="3.3.3.5、截断"></a>3.3.3.5、截断</h6><p>针对问题：比率分布的离群值。为了防止 $\hat{\sigma}$ 过小时导致的梯度爆炸，可以对优势函数进行硬截断：</p>
+<p>$$\begin{align}<br>A_i = \text{clip}\left(\frac{\hat{r}_i - \mu}{\sigma + \epsilon}, -c, c\right)<br>\end{align}$$</p>
+<p>这在 GRPO 论文中也是常见的手段，直接限制极端梯度的产生。</p>
+<h6 id="3-3-3-6、解析期望替代蒙特卡洛采样"><a href="#3-3-3-6、解析期望替代蒙特卡洛采样" class="headerlink" title="3.3.3.6、解析期望替代蒙特卡洛采样"></a>3.3.3.6、解析期望替代蒙特卡洛采样</h6><p>不对评分器多次采样，而对评分器的评分做如下限制，仅输出字母评估（例如有三档评分1，2，3就输出字母A,B,C）然后看这个最后一个token的概率，也就是（A,B,C,获取其他token）token的概率，然后取期望。而这正是论文 LLM-as-a-Verifier[^3]的做法</p>
+<h4 id="四、评述"><a href="#四、评述" class="headerlink" title="四、评述"></a>四、评述</h4><p>1、在认识实践循环中，正确认识本来来源是实践。由于实践过于昂贵，rubrics(量规)是实践成本二级摊销这显著降低了成本，它的判分质量上界由世界模型、规范先验、激发工程和多步因果推理共同决定。这使得Rubrics评分成为了一个工程问题：Rubrics-engineering、Rubrics-Agent、Rubrics-Infra都是针对具体任务的应有之意。</p>
+<p>2、从贝叶斯视角出发，系统分析了Rubrics与真实实践的区别与误差。并分析了如何尽可能减少这个误差。但是值得提醒的是二手实践终究是不是真实的。<strong>环境即数据</strong>这句话实际上是在说真实才是根本。</p>
+<p>3、下一篇我们将讨论Rubrics中的典型做法</p>
+<p>参考文献</p>
+<p>[^1]: Liu,  W.; Jin,  J.; Huang,  Z.; Wen,  T.; Dong,  G.; Zhao,  Z.; Zhu,  Y.; Dou,  Z.; Wen,  J.-R. The Rules of the Game: A Survey of Rubrics for Large Language Models. Preprints 2026, 2026080565. <a href="https://doi.org/10.20944/preprints202608.0565.v1" target="_blank" rel="noopener">https://doi.org/10.20944/preprints202608.0565.v1</a><br>[^2]: Shan, Z., &amp; Shao, F. (2026, August 31). A survey on rubric-guided reinforcement learning for language models. arXiv. <a href="https://doi.org/10.48550/arXiv.2608.27505" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2608.27505</a><br>[^3]: Kwok, J., Li, S., Atreya, P., Liu, Y., Jiang, Y., Finn, C., et al. (2026, July 8). LLM-as-a-verifier: a general-purpose verification framework. arXiv. <a href="https://doi.org/10.48550/ARXIV.2607.05391" target="_blank" rel="noopener">https://doi.org/10.48550/ARXIV.2607.05391</a></p>
 <p><hr></p>
 <p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%">httpss://<a href="http://www.limoncc.com/post/70fa56fce8a7ff4f/">www.limoncc.com/post/70fa56fce8a7ff4f/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (Mar. 27, 2024). 《大语言模型研究09-RubricRL理论分析》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/70fa56fce8a7ff4f">https://www.limoncc.com/post/70fa56fce8a7ff4f</a></td></tr><tr><td align="left" width="100%">@online{limoncc-70fa56fce8a7ff4f,<br>title={大语言模型研究09-RubricRL理论分析},<br>author={引线小白},<br>year={2024},<br>month={Mar},<br>date={27},<br>url={\url{<a href="https://www.limoncc.com/post/70fa56fce8a7ff4f}}">https://www.limoncc.com/post/70fa56fce8a7ff4f}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
 <script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
@@ -630,7 +775,7 @@
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#一、RubricRL的实质"><span class="nav-number">1.</span> <span class="nav-text">一、RubricRL的实质</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#一、RubricRL的实质"><span class="nav-number">1.</span> <span class="nav-text">一、RubricRL的实质</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-1、什么是RubricRL"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、什么是RubricRL</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-2、RubricRL依赖大模型的两个先验"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、RubricRL依赖大模型的两个先验</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-3、RubricRL的两个控制项："><span class="nav-number">1.3.</span> <span class="nav-text">1.3、RubricRL的两个控制项：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#二、RubricRL工程的实质"><span class="nav-number">2.</span> <span class="nav-text">二、RubricRL工程的实质</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-1、RubricRL工程关键点"><span class="nav-number">2.1.</span> <span class="nav-text">2.1、RubricRL工程关键点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-2、RubricRL工程实质是实践成本摊销"><span class="nav-number">2.2.</span> <span class="nav-text">2.2、RubricRL工程实质是实践成本摊销</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#三、量规的贝叶斯视角"><span class="nav-number">3.</span> <span class="nav-text">三、量规的贝叶斯视角</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1、量规的贝叶斯视角"><span class="nav-number">3.1.</span> <span class="nav-text">3.1、量规的贝叶斯视角</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-2、量规实践"><span class="nav-number">3.2.</span> <span class="nav-text">3.2、量规实践</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-3、量规优势的偏差和方差"><span class="nav-number">3.3.</span> <span class="nav-text">3.3、量规优势的偏差和方差</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#3-3-2、偏差分析"><span class="nav-number">3.3.1.</span> <span class="nav-text">3.3.2、偏差分析</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-3-2、方差分析"><span class="nav-number">3.3.2.</span> <span class="nav-text">3.3.2、方差分析</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-3-3、方差缩减技术"><span class="nav-number">3.3.3.</span> <span class="nav-text">3.3.3、方差缩减技术</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#3-3-3-1、从-Batch-归一化转向-滚动归一化"><span class="nav-number">3.3.3.1.</span> <span class="nav-text">3.3.3.1、从 Batch 归一化转向 滚动归一化</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-3-3-2、多次采样估计奖励"><span class="nav-number">3.3.3.2.</span> <span class="nav-text">3.3.3.2、多次采样估计奖励</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-3-3-3、引入-Value-Function-Baseline-Critic"><span class="nav-number">3.3.3.3.</span> <span class="nav-text">3.3.3.3、引入 Value Function Baseline (Critic)</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-3-3-4、评分器去噪"><span class="nav-number">3.3.3.4.</span> <span class="nav-text">3.3.3.4、评分器去噪</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-3-3-5、截断"><span class="nav-number">3.3.3.5.</span> <span class="nav-text">3.3.3.5、截断</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#3-3-3-6、解析期望替代蒙特卡洛采样"><span class="nav-number">3.3.3.6.</span> <span class="nav-text">3.3.3.6、解析期望替代蒙特卡洛采样</span></a></li></ol></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#四、评述"><span class="nav-number">3.4.</span> <span class="nav-text">四、评述</span></a></li></ol></li></ol></div>
             
           </div>
         </section>
