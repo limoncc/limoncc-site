@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-16T08:26:57.246Z">
+<meta property="og:updated_time" content="2026-09-16T08:29:09.475Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究10——RubricRL实践">
 <meta name="twitter:description" content="本文主要总结了RubricRL的若干基本问题，和我自己的一些体会。rubrics(量规)是实践成本二级摊销，它的判分质量上界由世界模型、规范先验、激发工程和多步因果推理共同决定。这使得Rubrics评分成为了一个工程问题：Rubrics-engineering、Rubrics-Agent、Rubrics-Infra都是应有之意。">
@@ -388,7 +388,7 @@
       
         <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：<a href="https://www.limoncc.com/post/793a20286198dbac/">https://www.limoncc.com/post/793a20286198dbac/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
 <p>随着应用场景扩展到开放式与高风险任务——包括深度研究（deep research）、医疗诊断、多模态生成与 agentic 工具使用——如何规定、优化与评估模型响应的问题变得愈发重要。简单的正确性信号、整体性偏好分数以及不受约束的基于 LLM 的评判，在这些场景下往往并不足够，质量取决于事实性、完整性、安全性、推理严谨性、证据支撑与实用价值等多重准则。rubrics(量规)把宽泛的质量期望分解为结构化、可解释的准则，为训练监督与模型评测提供了统一接口。这种让评测标准显式化、可操作化的机制越来越流行。接下来笔者将选择几个典型案例来分析。</p>
-<h3 id="一、rubrics-量规-怎么来"><a href="#一、rubrics-量规-怎么来" class="headerlink" title="一、rubrics(量规)怎么来"></a>一、rubrics(量规)怎么来</h3><p>当前实践已经从”<strong>如何离线构造高质量 rubrics</strong>“ → “<strong>如何持续发现当前集合未覆盖的质量维度与失败模式</strong>“，也就是从静态rubrics转为动态<strong>rubrics</strong>。 rubric构造方法可分为如下四类：</p>
+<h3 id="一、rubrics-量规-怎么来"><a href="#一、rubrics-量规-怎么来" class="headerlink" title="一、rubrics(量规)怎么来"></a>一、rubrics(量规)怎么来</h3><p>当前实践已经从”<strong>如何离线构造高质量 rubrics</strong>“ → “<strong>如何持续发现当前集合未覆盖的质量维度与失败模式</strong>“，也就是从静态rubrics转为动态<strong>rubrics</strong>[^1]。 rubric构造方法可分为如下四类：</p>
 <ul>
 <li>直接生成（direct generation）</li>
 <li>对比生成（contrastive generation）</li>
