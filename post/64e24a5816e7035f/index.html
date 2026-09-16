@@ -1,0 +1,1163 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="大模型,KV缓存,注意力机制" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="本文主要总结了注意力机制优化之KV缓存的若干基本问题，和我自己的一些体会。">
+<meta name="keywords" content="大模型,KV缓存,注意力机制">
+<meta property="og:type" content="article">
+<meta property="og:title" content="大语言模型研究15——注意力机制优化之KV缓存">
+<meta property="og:url" content="https://www.limoncc.com/post/64e24a5816e7035f/index.html">
+<meta property="og:site_name" content="柠檬CC">
+<meta property="og:description" content="本文主要总结了注意力机制优化之KV缓存的若干基本问题，和我自己的一些体会。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://www.limoncc.com/images/cc.png">
+<meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
+<meta property="og:updated_time" content="2026-09-16T13:59:50.191Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="大语言模型研究15——注意力机制优化之KV缓存">
+<meta name="twitter:description" content="本文主要总结了注意力机制优化之KV缓存的若干基本问题，和我自己的一些体会。">
+<meta name="twitter:image" content="https://www.limoncc.com/images/cc.png">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: '博主'
+    }
+  };
+</script>
+
+  <script src='//unpkg.com/valine/dist/Valine.min.js'></script>
+  <title> 大语言模型研究15——注意力机制优化之KV缓存 | 柠檬CC </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-73837972-3', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?d225b8f8559eb2eb6a8bd8792e01ebb9";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//tajs.qq.com/stats?sId=60130136";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">柠檬CC</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">小白爱吃柠檬O(∩_∩)O</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-poetry">
+          <a href="/poetry" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-leaf"></i> <br />
+            
+            诗集
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="#" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                大语言模型研究15——注意力机制优化之KV缓存
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2026-05-19T15:29:49+08:00" content="2026-05-19">
+              2026-05-19
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/机器学习/" itemprop="url" rel="index">
+                    <span itemprop="name">机器学习</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/机器学习/大语言模型研究/" itemprop="url" rel="index">
+                    <span itemprop="name">大语言模型研究</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+             <span id="/post/64e24a5816e7035f/" class="leancloud_visitors" data-flag-title="大语言模型研究15——注意力机制优化之KV缓存">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">阅读次数 </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：<a href="https://www.limoncc.com/post/64e24a5816e7035f/">https://www.limoncc.com/post/64e24a5816e7035f/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
+<h4 id="一、基础概念"><a href="#一、基础概念" class="headerlink" title="一、基础概念"></a>一、基础概念</h4><p>什么是 BMM (Batch Matrix Multiplication)。BMM 是批矩阵乘法，指的是对同一批次中的多个矩阵同时执行矩阵乘法。在 PyTorch 中，torch.matmul 或 @ 运算符在处理三维及以上张量时，遵循以下规则：把前 N−2 个维度当作“批次维度”，把最后 2 个维度当作“矩阵维度”进行乘法。它并不是一个独有的数学定义，而是深度学习框架为了高效处理“多组独立矩阵乘法”而提供的一种运算，通常对应 API 名称 bmm 或 matmul 的批处理能力。它并不是一个独有的数学定义，而是深度学习框架为了高效处理“多组独立矩阵乘法”而提供的一种运算，通常对应 API 名称 <em>bmm</em> 或 <em>matmul</em> 的批处理能力。下面重点讲它的形状约定和在不同场景下的行为。</p>
+<h5 id="1-1、严格-BMM-约定"><a href="#1-1、严格-BMM-约定" class="headerlink" title="1.1、严格 BMM 约定"></a>1.1、严格 BMM 约定</h5><p>PyTorch 中的 <em>torch.bmm(input, mat2)</em> 是最经典的 BMM 约定，规则非常严格：</p>
+<ul>
+<li>输入必须是两个 3 维张量</li>
+<li>两个张量的第一维（batch 维）必须相等。</li>
+<li>不支持广播，如果 batch 大小不同会直接报错。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># PyTorch 示例</span></span><br><span class="line"><span class="keyword">import</span> torch</span><br><span class="line">a = torch.randn(<span class="number">10</span>, <span class="number">3</span>, <span class="number">4</span>)   <span class="comment"># (B=10, M=3, K=4)</span></span><br><span class="line">b = torch.randn(<span class="number">10</span>, <span class="number">4</span>, <span class="number">5</span>)   <span class="comment"># (B=10, K=4, N=5)</span></span><br><span class="line">c = torch.bmm(a, b)         <span class="comment"># 输出形状 (10, 3, 5)</span></span><br></pre></td></tr></table></figure>
+<h5 id="1-2、广义批量矩阵乘法（如-torch-matmul-tf-matmul-numpy-matmul）"><a href="#1-2、广义批量矩阵乘法（如-torch-matmul-tf-matmul-numpy-matmul）" class="headerlink" title="1.2、广义批量矩阵乘法（如 torch.matmul / tf.matmul / numpy.matmul）"></a>1.2、广义批量矩阵乘法（如 <em>torch.matmul</em> / <em>tf.matmul</em> / <em>numpy.matmul</em>）</h5><p>现代框架中的 <em>matmul</em> 或 <em>@</em> 运算符支持任意多维张量，把最后两个维度作为矩阵，前面的所有维度都视为批维度，并遵循广播（broadcasting）规则。约定：</p>
+<ul>
+<li>如果张量维度 <em>&gt;2</em>，则前导维度（除去最后两维以外的部分）会进行广播。</li>
+<li>矩阵维度遵循：<em>(…, M, K) × (…, K, N) → (…, M, N)</em></li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 示例：PyTorch 中的 matmul</span></span><br><span class="line">a = torch.randn(<span class="number">2</span>, <span class="number">1</span>, <span class="number">3</span>, <span class="number">4</span>)   <span class="comment"># 前导形状 (2,1) 矩阵 (3,4)</span></span><br><span class="line">b = torch.randn(<span class="number">1</span>, <span class="number">5</span>, <span class="number">4</span>, <span class="number">2</span>)   <span class="comment"># 前导形状 (1,5) 矩阵 (4,2)</span></span><br><span class="line">c = a @ b                      <span class="comment"># 广播后前导 (2,5)，输出形状 (2,5,3,2)</span></span><br></pre></td></tr></table></figure>
+<p>这里 batch 维不必相等，只要可广播即可。这正是 Transformer 多头注意力中同时处理多个 head 和 batch 的基础。</p>
+<h5 id="1-3、应用场景"><a href="#1-3、应用场景" class="headerlink" title="1.3、应用场景"></a>1.3、应用场景</h5><ul>
+<li><p>全连接层的批量计算<br>输入 <em>(B, features)</em> 可以看作 <em>(B, 1, K)</em>，权重 <em>(K, N)</em> 拓展为 <em>(1, K, N)</em>，用 BMM 得到 <em>(B, 1, N)</em>，等价于 <em>linear</em> 的批处理。</p>
+</li>
+<li><p>注意力机制中的批量点积<br>Query: <em>(B, num_heads, seq_len, d_k)</em><br>Key 转置: <em>(B, num_heads, d_k, seq_len)</em><br>两者使用 <em>matmul</em> 直接得到注意力分数 <em>(B, num_heads, seq_len, seq_len)</em>，同时利用了 head 和 batch 的双重批量。</p>
+</li>
+<li><p>图神经网络中的边特征聚合<br>邻接矩阵的批次运算，多个图样本同时进行消息传递。</p>
+</li>
+</ul>
+<h5 id="1-4、与爱因斯坦求和（einsum）的关系"><a href="#1-4、与爱因斯坦求和（einsum）的关系" class="headerlink" title="1.4、与爱因斯坦求和（einsum）的关系"></a>1.4、与爱因斯坦求和（einsum）的关系</h5><p>BMM 用 einsum 可以表示为：</p>
+<ul>
+<li><em>torch.bmm(a, b)</em> 对应 <em>torch.einsum(‘bmk,bkn-&gt;bmn’, a, b)</em></li>
+<li>广义批量乘法则是 <em>‘…mk,…kn-&gt;…mn’</em>，省略号代表广播的前导维度。</li>
+</ul>
+<p>理解 einsum 后，BMM 的约定其实就浓缩为：<strong>共享 batch 下标，矩阵内积求和</strong>。</p>
+<h5 id="1-5、总结"><a href="#1-5、总结" class="headerlink" title="1.5、总结"></a>1.5、总结</h5><p>BMM 的核心约定就是：把独立的一批矩阵乘法打包，用统一的操作并行计算，要求（或通过广播使）除最后两个矩阵维度以外的所有前导维度对齐，内部仍遵守二维矩阵乘法规则。如果你在代码中遇到 <em>bmm</em> 或 <em>matmul</em>，根据是否需要广播和输入维度数来选择即可。</p>
+<h4 id="二、KV-Cache-原理"><a href="#二、KV-Cache-原理" class="headerlink" title="二、KV Cache 原理"></a>二、KV Cache 原理</h4><p>在大型语言模型（LLM）的自回归生成过程中，推理速度面临极大的挑战。核心瓶颈在于：每生成一个新 Token，都需要对所有历史 Token 进行 Attention 计算。如果不加优化，生成长度为 $N$ 的序列，总计算量将是 $O(N^2)$。KV Cache 和 GQA (Grouped-Query Attention)是解决这一瓶颈的两大利器：前者通过空间换时间避免重复计算，后者通过结构优化大幅缩减缓存体积。</p>
+<p>根据 Attention 机制，当前 Token 的 Query 会和所有历史 Token 的 Key 计算相似度，再和历史 Token 的 Value 加权求和。</p>
+<ul>
+<li><strong>无 Cache 的痛点</strong>：生成第 $t$ 个 Token 时，我们需要把 $1$ 到 $t-1$ 的 Token 重新送入模型算出 $K_{1..t-1}$ 和 $V_{1..t-1}$。这导致历史 Token 被反复计算了 $N$ 次。</li>
+<li><strong>KV Cache 的核心思想</strong>：既然 Attention 计算只需要 $K$ 和 $V$，我们可以在生成第 $t-1$ 个 Token 时，把对应的 $K_{t-1}$ 和 $V_{t-1}$ 缓存下来。生成第 $t$ 个 Token 时，只需计算当前 Token 的 $Q_t, K_t, V_t$，然后将 $K_t, V_t$ 拼接到历史的 Cache 中即可。</li>
+</ul>
+<p>推理的两个阶段</p>
+<ol>
+<li><strong>Prefill 阶段（预填充）</strong>：输入 Prompt，并行计算所有 Token 的 KV 并缓存。此阶段属于<strong>计算密集型</strong>。</li>
+<li><strong>Decode 阶段（解码）</strong>：逐个生成 Token，每步读取历史 KV Cache，并追加当前步的 KV。此阶段属于<strong>显存访问密集型</strong>。</li>
+</ol>
+<p>KV Cache 并非没有代价，它消耗巨大的显存。对于模型层数 $L$，隐藏层维度 $d_{model}$，序列长度 $N$，精度为 $b$ 字节（如 FP16 为 2 字节）：</p>
+<p>$$\begin{align}<br>\text{KV Cache Size} = 2 \times L \times N \times d_{model} \times b<br>\end{align}$$</p>
+<p><em>以 LLaMA-2 70B 为例：$L=80, d_{model}=8192, N=4096, b=2$，单条序列的 KV Cache 约需 10GB 显存</em>！为了减少 KV Cache 体积，<strong>GQA</strong> 应运而生。</p>
+<h4 id="三、从-MHA-到-GQA"><a href="#三、从-MHA-到-GQA" class="headerlink" title="三、从 MHA 到 GQA"></a>三、从 MHA 到 GQA</h4><h5 id="3-1、标准-Multi-Head-Attention-MHA"><a href="#3-1、标准-Multi-Head-Attention-MHA" class="headerlink" title="3.1、标准 Multi-Head Attention (MHA)"></a>3.1、标准 Multi-Head Attention (MHA)</h5><p>在 MHA 中，有 $h$ 个 Query 头，$h$ 个 Key 头，$h$ 个 Value 头。对于输入 $\bm{X} \in \mathbb{R}^{N \times d}$：</p>
+<p>$$\begin{align}<br>\bm{Q} = \bm{X}\bm{W}_Q, \quad \bm{K} = \bm{X}\bm{W}_K, \quad \bm{V} = \bm{X}\bm{W}_V<br>\end{align}$$</p>
+<p>其中 $\bm{W}_Q \in \mathbb{R}^{d \times (h \cdot d_k)}$, $\bm{W}_K \in \mathbb{R}^{d \times (h \cdot d_k)}$, $\bm{W}_V \in \mathbb{R}^{d \times (h \cdot d_v)}$。</p>
+<p>Attention 计算公式为：</p>
+<p>$$ \text{Attention}(\bm{Q}_i, \bm{K}_i, \bm{V}_i) = \mathrm{softmax}\left(\frac{\bm{Q}_i \bm{K}_i^T}{\sqrt{d_k}}\right) \bm{V}_i $$<br><strong>KV Cache 体积</strong>：与头数 $h$ 成正比。</p>
+<h5 id="3-2、Multi-Query-Attention-MQA"><a href="#3-2、Multi-Query-Attention-MQA" class="headerlink" title="3.2、Multi-Query Attention (MQA)"></a>3.2、Multi-Query Attention (MQA)</h5><p>MQA 极端地让所有 Query 头共享<strong>1个</strong> Key 和 Value 头。</p>
+<p>$$\begin{align}<br>h_K = h_V = 1<br>\end{align}$$</p>
+<p>这极大地节省了 Cache，但由于参数量骤减，可能导致模型质量下降。</p>
+<h5 id="3-3、Grouped-Query-Attention-GQA-——-完美的折中"><a href="#3-3、Grouped-Query-Attention-GQA-——-完美的折中" class="headerlink" title="3.3、Grouped-Query Attention (GQA) —— 完美的折中"></a>3.3、Grouped-Query Attention (GQA) —— 完美的折中</h5><p>GQA 将 $h$ 个 Query 头分为 $g$ 个组，每个组共享<strong>1个</strong> Key 头和<strong>1个</strong> Value 头。定义每组包含 $m = h/g$ 个连续的 Query 头。则，对于索引为 $i\in [0, h-1]$ 的 Query 头，它属于第 $ \lfloor i/m \rfloor $ 组，因此使用的 KV 头索引也是这个组号：</p>
+<p>$$\begin{align}<br>j = \left\lfloor \frac{i}{m} \right\rfloor = \left\lfloor \frac{i \cdot g}{h} \right\rfloor<br>\end{align}$$</p>
+<p>即 Query 头 0 到 $m-1$ 共享 KV 头 0，Query 头 $m$ 到 $2m-1$ 共享 KV 头 1，依此类推。</p>
+<p>$$\begin{align}<br> \text{Attention}(\bm{Q}_i, \bm{K}_j, \bm{V}_j) = \mathrm{softmax}\left(\frac{\bm{Q}_i \bm{K}_j^T}{\sqrt{d_k}}\right) \bm{V}_j<br>\end{align}$$</p>
+<p><strong>KV Cache 体积</strong>：缩小为 MHA 的 $\frac{g}{h}$ 倍！<br><em>例如 LLaMA-2 70B：$h=64, g=8$，KV Cache 体积缩小为原来的 1/8！</em></p>
+<h4 id="四、代码实现：带-KV-Cache-的-GQA"><a href="#四、代码实现：带-KV-Cache-的-GQA" class="headerlink" title="四、代码实现：带 KV Cache 的 GQA"></a>四、代码实现：带 KV Cache 的 GQA</h4><h5 id="4-1、层内处理"><a href="#4-1、层内处理" class="headerlink" title="4.1、层内处理"></a>4.1、层内处理</h5><p>下面使用 PyTorch 从零实现一个带有 KV Cache 的 GQA 模块。核心逻辑拆解</p>
+<ul>
+<li>1、<strong>投影输出</strong>：计算当前输入的 $Q, K, V$。注意 $K, V$ 的形状是 <em>[batch, seq_len, num_kv_heads, head_dim]</em>。</li>
+<li>2、<strong>Cache 拼接</strong>：将算出的 $K, V$ 与历史 Cache 拼接。</li>
+<li>3、<strong>GQA 扩展</strong>：将 $K, V$ 的 <em>num_kv_heads</em> 维度扩展为 <em>num_q_heads</em>，以便与 $Q$ 进行标准的 Batch Matrix Multiplication (BMM)。</li>
+<li>4、<strong>计算 Attention</strong>：标准的缩放点积注意力。</li>
+</ul>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn</span><br><span class="line"><span class="keyword">import</span> math</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">GQAttentionWithCache</span><span class="params">(nn.Module)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, d_model, num_q_heads, num_kv_heads)</span>:</span></span><br><span class="line">        super().__init__()</span><br><span class="line">        <span class="keyword">assert</span> num_q_heads % num_kv_heads == <span class="number">0</span>, <span class="string">"num_q_heads must be divisible by num_kv_heads"</span></span><br><span class="line">        </span><br><span class="line">        self.num_q_heads = num_q_heads</span><br><span class="line">        self.num_kv_heads = num_kv_heads</span><br><span class="line">        self.head_dim = d_model // num_q_heads</span><br><span class="line">        self.n_rep = num_q_heads // num_kv_heads <span class="comment"># 每个 KV 头被复用的次数</span></span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 线性投影层</span></span><br><span class="line">        self.W_Q = nn.Linear(d_model, num_q_heads * self.head_dim, bias=<span class="keyword">False</span>)</span><br><span class="line">        self.W_K = nn.Linear(d_model, num_kv_heads * self.head_dim, bias=<span class="keyword">False</span>)</span><br><span class="line">        self.W_V = nn.Linear(d_model, num_kv_heads * self.head_dim, bias=<span class="keyword">False</span>)</span><br><span class="line">        self.W_O = nn.Linear(num_q_heads * self.head_dim, d_model, bias=<span class="keyword">False</span>)</span><br><span class="line">        </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">repeat_kv</span><span class="params">(self, x)</span>:</span></span><br><span class="line">        <span class="string">"""将 KV 头扩展到与 Q 相同的头数以进行注意力计算</span></span><br><span class="line"><span class="string">        x shape: [batch, seq_len, num_kv_heads, head_dim]</span></span><br><span class="line"><span class="string">        return shape: [batch, seq_len, num_q_heads, head_dim]</span></span><br><span class="line"><span class="string">        """</span></span><br><span class="line">        <span class="keyword">if</span> self.n_rep == <span class="number">1</span>:</span><br><span class="line">            <span class="keyword">return</span> x</span><br><span class="line">        batch, seq_len, num_kv_heads, head_dim = x.shape</span><br><span class="line">        <span class="comment"># unsqueeze: 可以理解为升维——在张量的指定位置插入一个大小为 1 的新维度。</span></span><br><span class="line">        <span class="comment"># squeeze: 删除张量中所有（或指定位置）大小为 1 的维度，从而降低维数。</span></span><br><span class="line">        <span class="comment"># expand: 主要用于将形状中大小为 1 的维度扩展为更大的值，不分配新内存, 不占显存复制数据</span></span><br><span class="line">        x = x.unsqueeze(<span class="number">3</span>).expand(batch, seq_len, num_kv_heads, self.n_rep, head_dim)</span><br><span class="line">        <span class="keyword">return</span> x.reshape(batch, seq_len, num_kv_heads * self.n_rep, head_dim)</span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">forward</span><span class="params">(self, x, kv_cache=None, start_pos=<span class="number">0</span>)</span>:</span></span><br><span class="line">        <span class="string">"""</span></span><br><span class="line"><span class="string">        x: 当前输入 Token 的 Embedding [batch_size, seq_len, d_model]</span></span><br><span class="line"><span class="string">           - Prefill 阶段: seq_len = prompt_length</span></span><br><span class="line"><span class="string">           - Decode 阶段: seq_len = 1</span></span><br><span class="line"><span class="string">        kv_cache: 元组</span></span><br><span class="line"><span class="string">        start_pos: 当前 Token 在序列中的起始位置</span></span><br><span class="line"><span class="string">        """</span></span><br><span class="line">        batch_size, seq_len, _ = x.shape</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 1. 计算 Q, K, V</span></span><br><span class="line">        Q = self.W_Q(x) <span class="comment"># [B, S, num_q_heads * head_dim]</span></span><br><span class="line">        K = self.W_K(x) <span class="comment"># [B, S, num_kv_heads * head_dim]</span></span><br><span class="line">        V = self.W_V(x) <span class="comment"># [B, S, num_kv_heads * head_dim]</span></span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 重塑形状以便按头处理: [B, S, H, D] -&gt; [B, H, S, D]</span></span><br><span class="line">        Q = Q.view(batch_size, seq_len, self.num_q_heads, self.head_dim).transpose(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line">        K = K.view(batch_size, seq_len, self.num_kv_heads, self.head_dim).transpose(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line">        V = V.view(batch_size, seq_len, self.num_kv_heads, self.head_dim).transpose(<span class="number">1</span>, <span class="number">2</span>)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 这里为简单记，省略位置编码</span></span><br><span class="line">        <span class="comment"># cos, sin = position_embeddings</span></span><br><span class="line">        <span class="comment"># Q, K = apply_rotary_pos_emb(Q, K, cos[:seq_len], sin[:seq_len])</span></span><br><span class="line"></span><br><span class="line">        <span class="comment"># 2. 处理 KV Cache</span></span><br><span class="line">        <span class="keyword">if</span> kv_cache <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span>:</span><br><span class="line">            past_K, past_V = kv_cache</span><br><span class="line">            <span class="comment"># past_K/V shape: [B, num_kv_heads, past_seq_len, head_dim]</span></span><br><span class="line">            <span class="comment"># 将新的 K, V 拼接到历史 Cache 后面</span></span><br><span class="line">            K = torch.cat([past_K, K], dim=<span class="number">2</span>)</span><br><span class="line">            V = torch.cat([past_V, V], dim=<span class="number">2</span>)</span><br><span class="line">            </span><br><span class="line">        <span class="comment"># 更新 Cache 供下一步使用 (注意：实际框架中会使用就地操作或预分配张量优化)</span></span><br><span class="line">        new_kv_cache = (K, V)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 3. GQA 的 K, V 扩展</span></span><br><span class="line">        <span class="comment"># 此时 K, V shape: [B, num_kv_heads, full_seq_len, head_dim]</span></span><br><span class="line">        K_expanded = self.repeat_kv(K.transpose(<span class="number">1</span>, <span class="number">2</span>)).transpose(<span class="number">1</span>, <span class="number">2</span>) <span class="comment"># -&gt; [B, num_q_heads, full_seq_len, head_dim]</span></span><br><span class="line">        V_expanded = self.repeat_kv(V.transpose(<span class="number">1</span>, <span class="number">2</span>)).transpose(<span class="number">1</span>, <span class="number">2</span>) <span class="comment"># -&gt; [B, num_q_heads, full_seq_len, head_dim]</span></span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 4. 计算缩放点积注意力</span></span><br><span class="line">        <span class="comment"># Q shape: [B, num_q_heads, seq_len, head_dim]</span></span><br><span class="line">        <span class="comment"># K_expanded shape: [B, num_q_heads, full_seq_len, head_dim]</span></span><br><span class="line">        scores = torch.matmul(Q, K_expanded.transpose(<span class="number">2</span>, <span class="number">3</span>)) / math.sqrt(self.head_dim)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 生成因果掩码，防止看到未来的 Token (仅 Prefill 需要，Decode 阶段 seq_len=1 自动满足)</span></span><br><span class="line">        <span class="keyword">if</span> seq_len &gt; <span class="number">1</span>:</span><br><span class="line">            mask = torch.tril(torch.ones(seq_len, K_expanded.size(<span class="number">2</span>), device=x.device)).view(<span class="number">1</span>, <span class="number">1</span>, seq_len, K_expanded.size(<span class="number">2</span>))</span><br><span class="line">            scores = scores.masked_fill(mask == <span class="number">0</span>, float(<span class="string">'-inf'</span>))</span><br><span class="line">            </span><br><span class="line">        attn_weights = torch.softmax(scores, dim=<span class="number">-1</span>)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># context shape: [B, num_q_heads, seq_len, head_dim]</span></span><br><span class="line">        context = torch.matmul(attn_weights, V_expanded)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 5. 合并多头并输出投影</span></span><br><span class="line">        context = context.transpose(<span class="number">1</span>, <span class="number">2</span>).contiguous().view(batch_size, seq_len, <span class="number">-1</span>)</span><br><span class="line">        output = self.W_O(context)</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">return</span> output, new_kv_cache</span><br><span class="line"><span class="comment"># ================= 测试代码 =================</span></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span><br><span class="line">    d_model = <span class="number">512</span></span><br><span class="line">    num_q_heads = <span class="number">8</span></span><br><span class="line">    num_kv_heads = <span class="number">2</span>  <span class="comment"># GQA: 8个Q头共享2个KV头</span></span><br><span class="line">    </span><br><span class="line">    layer = GQAttentionWithCache(d_model, num_q_heads, num_kv_heads)</span><br><span class="line">    </span><br><span class="line"><span class="comment"># ================= 长序列对比 =================</span></span><br><span class="line">    print(<span class="string">"\n"</span> + <span class="string">"-"</span> * <span class="number">60</span>)</span><br><span class="line">    print(<span class="string">"长序列对比测试 (prompt_len=200, decode=50):"</span>)</span><br><span class="line">    print(<span class="string">"-"</span> * <span class="number">60</span>)</span><br><span class="line">    batch_size = <span class="number">2</span></span><br><span class="line">    x_long = torch.randn(batch_size, <span class="number">200</span>, d_model)</span><br><span class="line">    x_long_decode = torch.randn(batch_size, <span class="number">50</span>, d_model)</span><br><span class="line">    full_long = torch.cat([x_long, x_long_decode], dim=<span class="number">1</span>)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 无缓存</span></span><br><span class="line">    torch.cpu.synchronize() <span class="keyword">if</span> torch.cpu.is_available() <span class="keyword">else</span> <span class="keyword">None</span></span><br><span class="line">    t0 = time.perf_counter()</span><br><span class="line">    <span class="keyword">for</span> step <span class="keyword">in</span> range(<span class="number">50</span>):</span><br><span class="line">        cur_len = <span class="number">200</span> + step + <span class="number">1</span></span><br><span class="line">        out, _ = layer(full_long[:, :cur_len, :], kv_cache=<span class="keyword">None</span>)</span><br><span class="line">    t1 = time.perf_counter()</span><br><span class="line">    long_no_cache = t1 - t0</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 有缓存</span></span><br><span class="line">    torch.cpu.synchronize() <span class="keyword">if</span> torch.cpu.is_available() <span class="keyword">else</span> <span class="keyword">None</span></span><br><span class="line">    t2 = time.perf_counter()</span><br><span class="line">    _, cache_long = layer(x_long, kv_cache=<span class="keyword">None</span>)</span><br><span class="line">    <span class="keyword">for</span> step <span class="keyword">in</span> range(<span class="number">50</span>):</span><br><span class="line">        x_step = full_long[:, <span class="number">200</span> + step: <span class="number">200</span> + step + <span class="number">1</span>, :]</span><br><span class="line">        out, cache_long = layer(x_step, kv_cache=cache_long)</span><br><span class="line">    t3 = time.perf_counter()</span><br><span class="line">    long_with_cache = t3 - t2</span><br><span class="line">    </span><br><span class="line">    print(<span class="string">f"  无缓存: <span class="subst">&#123;long_no_cache:<span class="number">.4</span>f&#125;</span>s | 有缓存: <span class="subst">&#123;long_with_cache:<span class="number">.4</span>f&#125;</span>s | 加速比: <span class="subst">&#123;long_no_cache / long_with_cache:<span class="number">.2</span>f&#125;</span>x"</span>)</span><br></pre></td></tr></table></figure>
+<h5 id="4-2、层外处理"><a href="#4-2、层外处理" class="headerlink" title="4.2、层外处理"></a>4.2、层外处理</h5><p>堆叠后就是这样了。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">self.layers = nn.ModuleList([LLMBlock(l, config) <span class="keyword">for</span> l <span class="keyword">in</span> range(self.num_hidden_layers)])</span><br></pre></td></tr></table></figure>
+<p>在外层需要处理位置编码，我们使用past_key_values 存储所有层的KV缓存。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 不存在，就先预留位置</span></span><br><span class="line">past_key_values = past_key_values <span class="keyword">or</span> [<span class="keyword">None</span>] * len(self.layers)</span><br><span class="line"><span class="comment"># 计算已经 Prefill + Decode的token数</span></span><br><span class="line"><span class="comment"># past_key_values[0] 是第一层的 KV 缓存元组 (K, V)，其中 K.shape = [batch_size, cached_seq_len, num_kv_heads, head_dim]</span></span><br><span class="line"><span class="comment"># K.shape[1] 就是已经缓存的 token 数量</span></span><br><span class="line">start_pos = past_key_values[<span class="number">0</span>][<span class="number">0</span>].shape[<span class="number">1</span>] <span class="keyword">if</span> past_key_values[<span class="number">0</span>] <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span> <span class="keyword">else</span> <span class="number">0</span></span><br><span class="line"><span class="comment"># 计算位置编码后的向量需要cos和sin</span></span><br><span class="line"><span class="comment"># RoPE(x) = x * cos(θ) + rotate_half(x) * sin(θ)</span></span><br><span class="line"><span class="comment"># 预先计算出来</span></span><br><span class="line">position_embeddings = (</span><br><span class="line">    self.freqs_cos[start_pos:start_pos + seq_length], </span><br><span class="line">    self.freqs_sin[start_pos:start_pos + seq_length])</span><br></pre></td></tr></table></figure>
+<p>然后向每层传递</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">kv_caches = []</span><br><span class="line"><span class="keyword">for</span> layer_idx, (layer, past_key_value) <span class="keyword">in</span> enumerate(zip(self.layers, past_key_values)):</span><br><span class="line">    hidden_states, kv_cache = layer(</span><br><span class="line">        hidden_states,</span><br><span class="line">        position_embeddings,</span><br><span class="line">        past_key_value=past_key_value,</span><br><span class="line">        use_cache=use_cache,</span><br><span class="line">        attention_mask=attention_mask</span><br><span class="line">    )</span><br><span class="line">    kv_caches.append(kv_cache)</span><br></pre></td></tr></table></figure>
+<p>当然这里是极简实现，transformers库的实现要复杂的多，考虑到了更多工程问题。但是核心也就这些。在真实的生产环境中，除了 GQA，我们还需要解决 Cache 显存碎片问题。vLLM 提出的 PagedAttention 借鉴了操作系统的虚拟内存分页机制，将不连续的 KV Cache 显存块管理起来，结合 GQA，实现了极高的吞吐量。</p>
+<h4 id="五、前缀缓存-Prefix-Caching"><a href="#五、前缀缓存-Prefix-Caching" class="headerlink" title="五、前缀缓存(Prefix Caching)"></a>五、前缀缓存(Prefix Caching)</h4><p>KV Cache 如何通过空间换时间避免自回归生成时的重复计算。然而，在实际的大模型应用场景（如 RAG 检索增强生成、多轮对话、Agent 系统提示词）中，我们常常面临一个新的痛点：不同请求之间，往往包含大量完全相同的文本前缀。<br>如果每个请求都独立计算这部分相同前缀的 KV Cache，不仅浪费海量算力，更极大地增加了系统的首字响应时间（TTFT）。Prefix Caching（前缀缓存）正是为解决这一痛点而生。</p>
+<h5 id="5-1、Prefix-Caching-核心思想"><a href="#5-1、Prefix-Caching-核心思想" class="headerlink" title="5.1、Prefix Caching 核心思想"></a>5.1、Prefix Caching 核心思想</h5><p>既然相同输入 Token 必然生成相同的 KV Cache，何不将其缓存起来供所有请求共享？<br>Prefix Caching 将 KV Cache 的生命周期从“单个请求的生存期”提升到了“全局跨请求的生存期”。当新请求到达时，系统首先检查其前缀是否已经被缓存：</p>
+<ul>
+<li><strong>命中</strong>：直接从显存/内存中加载对应的 KV Cache，只需对新接入的 Token 计算 Prefill。</li>
+<li><strong>未命中</strong>：正常计算，并将计算出的 KV Cache 写入缓存池。</li>
+</ul>
+<p>物理实现的关键：PagedAttention（分页注意力）</p>
+<p>在传统的连续 KV Cache 存储中，不同请求的 Cache 在显存中是分散且大小不一的，无法直接共享。Prefix Caching 的工业级实现（如 vLLM）必须依赖 <em>PagedAttention</em>：</p>
+<ul>
+<li>将 KV Cache 切分为固定大小的 *Block（页），类似操作系统的虚拟内存分页。</li>
+<li>相同前缀的 KV Cache 指向同一组物理 Block。</li>
+<li>采用 Copy-on-Write（写时复制）机制：当请求 B 在前缀后生成新 Token 时，新 Token 的 KV Cache 会被写入新分配的 Block，而不会覆盖共享的前缀 Block。</li>
+</ul>
+<p>代码实现：带 Prefix Caching 的 GQA<br>为了直观展示原理，以下代码不涉及复杂的底层显存分页管理，而是用 PyTorch 和字典模拟 Prefix Cache 的<strong>逻辑匹配与复用过程</strong>。<br>我们复用上一讲的 <code>GQAttentionWithCache</code>，并在此基础上构建一个 <code>PrefixCacheManager</code>。</p>
+<h5 id="5-2、PyTorch-模拟代码"><a href="#5-2、PyTorch-模拟代码" class="headerlink" title="5.2、PyTorch 模拟代码"></a>5.2、PyTorch 模拟代码</h5><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> torch</span><br><span class="line"><span class="keyword">import</span> torch.nn <span class="keyword">as</span> nn</span><br><span class="line"><span class="keyword">import</span> hashlib</span><br><span class="line"><span class="comment"># 复用上一讲的 GQA 模块 (此处省略详细定义，假设已导入)</span></span><br><span class="line"><span class="comment"># from previous_lecture import GQAttentionWithCache </span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">GQAttentionWithCache</span><span class="params">(nn.Module)</span>:</span></span><br><span class="line">    <span class="comment"># ... (此处为节省篇幅，包含上一讲的完整实现) ...</span></span><br><span class="line">    <span class="keyword">pass</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">PrefixCacheManager</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self)</span>:</span></span><br><span class="line">        <span class="comment"># 使用字典存储: &#123;prefix_hash: (K_cache, V_cache)&#125;</span></span><br><span class="line">        self.cache_pool = &#123;&#125;</span><br><span class="line">        </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">_hash_prefix</span><span class="params">(self, token_ids)</span>:</span></span><br><span class="line">        <span class="string">"""将 Token ID 序列哈希，作为前缀的唯一指纹"""</span></span><br><span class="line">        hasher = hashlib.sha256()</span><br><span class="line">        hasher.update(token_ids.cpu().numpy().tobytes())</span><br><span class="line">        <span class="keyword">return</span> hasher.hexdigest()</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">get_cache</span><span class="params">(self, token_ids)</span>:</span></span><br><span class="line">        <span class="string">"""查询前缀缓存"""</span></span><br><span class="line">        prefix_hash = self._hash_prefix(token_ids)</span><br><span class="line">        <span class="keyword">return</span> self.cache_pool.get(prefix_hash, <span class="keyword">None</span>)</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">set_cache</span><span class="params">(self, token_ids, kv_cache)</span>:</span></span><br><span class="line">        <span class="string">"""写入前缀缓存"""</span></span><br><span class="line">        prefix_hash = self._hash_prefix(token_ids)</span><br><span class="line">        <span class="comment"># 注意：实际工程中需要深度复制或引用计数，这里简化为直接存储</span></span><br><span class="line">        self.cache_pool[prefix_hash] = kv_cache</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">LLMWithPrefixCaching</span><span class="params">(nn.Module)</span>:</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span><span class="params">(self, d_model, num_q_heads, num_kv_heads, num_layers=<span class="number">2</span>)</span>:</span></span><br><span class="line">        super().__init__()</span><br><span class="line">        self.num_layers = num_layers</span><br><span class="line">        self.embedding = nn.Embedding(<span class="number">1000</span>, d_model) <span class="comment"># 假设词表1000</span></span><br><span class="line">        <span class="comment"># 每一层都有一个独立的 Attention 和 独立的 Prefix Cache Manager</span></span><br><span class="line">        self.attn_layers = nn.ModuleList([</span><br><span class="line">            GQAttentionWithCache(d_model, num_q_heads, num_kv_heads) </span><br><span class="line">            <span class="keyword">for</span> _ <span class="keyword">in</span> range(num_layers)</span><br><span class="line">        ])</span><br><span class="line">        self.cache_managers = [PrefixCacheManager() <span class="keyword">for</span> _ <span class="keyword">in</span> range(num_layers)]</span><br><span class="line">        </span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">forward</span><span class="params">(self, input_ids, prefix_len=None)</span>:</span></span><br><span class="line">        <span class="string">"""</span></span><br><span class="line"><span class="string">        input_ids: [batch_size, seq_len] Token ID 序列</span></span><br><span class="line"><span class="string">        prefix_len: 标明前多少个 Token 属于可共享的前缀</span></span><br><span class="line"><span class="string">        """</span></span><br><span class="line">        batch_size, seq_len = input_ids.shape</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 1. 切分前缀和新增部分</span></span><br><span class="line">        <span class="keyword">if</span> prefix_len <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span> <span class="keyword">and</span> prefix_len &gt; <span class="number">0</span>:</span><br><span class="line">            prefix_ids = input_ids[:, :prefix_len]</span><br><span class="line">            new_ids = input_ids[:, prefix_len:]</span><br><span class="line">        <span class="keyword">else</span>:</span><br><span class="line">            prefix_ids = <span class="keyword">None</span></span><br><span class="line">            new_ids = input_ids</span><br><span class="line">            </span><br><span class="line">        x = self.embedding(input_ids)</span><br><span class="line">        x_new = self.embedding(new_ids) <span class="keyword">if</span> prefix_len <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span> <span class="keyword">else</span> x</span><br><span class="line">        </span><br><span class="line">        layer_kv_caches = [] <span class="comment"># 用于保存当前请求的完整 KV Cache (包含前缀+新增)</span></span><br><span class="line">        <span class="comment"># 2. 逐层计算</span></span><br><span class="line">        <span class="keyword">for</span> layer_idx, attn_layer <span class="keyword">in</span> enumerate(self.attn_layers):</span><br><span class="line">            manager = self.cache_managers[layer_idx]</span><br><span class="line">            </span><br><span class="line">            <span class="comment"># --- 前缀缓存逻辑 ---</span></span><br><span class="line">            <span class="keyword">if</span> prefix_len <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span> <span class="keyword">and</span> prefix_len &gt; <span class="number">0</span>:</span><br><span class="line">                <span class="comment"># 查询缓存</span></span><br><span class="line">                cached_kv = manager.get_cache(prefix_ids[<span class="number">0</span>]) <span class="comment"># 假设 Batch 内前缀一致</span></span><br><span class="line">                </span><br><span class="line">                <span class="keyword">if</span> cached_kv <span class="keyword">is</span> <span class="keyword">not</span> <span class="keyword">None</span>:</span><br><span class="line">                    <span class="comment"># 缓存命中！</span></span><br><span class="line">                    print(<span class="string">f"Layer <span class="subst">&#123;layer_idx&#125;</span>: Prefix Cache HIT! Skipping <span class="subst">&#123;prefix_len&#125;</span> tokens prefill."</span>)</span><br><span class="line">                    past_kv = cached_kv</span><br><span class="line">                <span class="keyword">else</span>:</span><br><span class="line">                    <span class="comment"># 缓存未命中，计算前缀并存入缓存</span></span><br><span class="line">                    print(<span class="string">f"Layer <span class="subst">&#123;layer_idx&#125;</span>: Prefix Cache MISS! Calculating prefix prefill."</span>)</span><br><span class="line">                    x_prefix = self.embedding(prefix_ids)</span><br><span class="line">                    _, past_kv = attn_layer(x_prefix, kv_cache=<span class="keyword">None</span>)</span><br><span class="line">                    manager.set_cache(prefix_ids[<span class="number">0</span>], past_kv)</span><br><span class="line">                </span><br><span class="line">                <span class="comment"># --- 新增部分计算 ---</span></span><br><span class="line">                <span class="comment"># 将前缀的 KV 作为历史 Cache 传入，仅对 new_ids 计算 Prefill</span></span><br><span class="line">                x_new_out, updated_kv = attn_layer(x_new, kv_cache=past_kv)</span><br><span class="line">                </span><br><span class="line">                <span class="comment"># 更新当前请求的完整 KV (前缀 + 新增)</span></span><br><span class="line">                layer_kv_caches.append(updated_kv)</span><br><span class="line">                </span><br><span class="line">                <span class="comment"># 为下一层准备输入 (实际需要残差连接和 FFN，此处简化)</span></span><br><span class="line">                x_new = x_new_out </span><br><span class="line">            <span class="keyword">else</span>:</span><br><span class="line">                <span class="comment"># 无前缀，正常计算</span></span><br><span class="line">                x_out, kv = attn_layer(x, kv_cache=<span class="keyword">None</span>)</span><br><span class="line">                layer_kv_caches.append(kv)</span><br><span class="line">                x_new = x_out</span><br><span class="line">                </span><br><span class="line">        <span class="keyword">return</span> x_new, layer_kv_caches</span><br><span class="line"><span class="comment"># ================= 测试代码 =================</span></span><br><span class="line"><span class="keyword">if</span> __name__ == <span class="string">"__main__"</span>:</span><br><span class="line">    d_model = <span class="number">512</span></span><br><span class="line">    num_q_heads = <span class="number">8</span></span><br><span class="line">    num_kv_heads = <span class="number">2</span></span><br><span class="line">    </span><br><span class="line">    model = LLMWithPrefixCaching(d_model, num_q_heads, num_kv_heads, num_layers=<span class="number">2</span>)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 场景：RAG 应用，System Prompt 有 10 个 Token</span></span><br><span class="line">    prefix_tokens = torch.randint(<span class="number">0</span>, <span class="number">1000</span>, (<span class="number">1</span>, <span class="number">10</span>))</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 用户 A 的提问：3 个 Token</span></span><br><span class="line">    query_A = torch.randint(<span class="number">0</span>, <span class="number">1000</span>, (<span class="number">1</span>, <span class="number">3</span>))</span><br><span class="line">    input_A = torch.cat([prefix_tokens, query_A], dim=<span class="number">1</span>)</span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 用户 B 的提问：4 个 Token</span></span><br><span class="line">    query_B = torch.randint(<span class="number">0</span>, <span class="number">1000</span>, (<span class="number">1</span>, <span class="number">4</span>))</span><br><span class="line">    input_B = torch.cat([prefix_tokens, query_B], dim=<span class="number">1</span>)</span><br><span class="line">    </span><br><span class="line">    print(<span class="string">"=== 处理请求 A ==="</span>)</span><br><span class="line">    out_A, _ = model(input_A, prefix_len=<span class="number">10</span>)</span><br><span class="line">    </span><br><span class="line">    print(<span class="string">"\n=== 处理请求 B (共享相同前缀) ==="</span>)</span><br><span class="line">    out_B, _ = model(input_B, prefix_len=<span class="number">10</span>)</span><br></pre></td></tr></table></figure>
+<p>核心逻辑拆解：</p>
+<ol>
+<li><strong>哈希匹配</strong>：PrefixCacheManager 对 Token ID 序列求 SHA-256 哈希。只要用户的 Token 完全相同，哈希值就一致。</li>
+<li><strong>MISS 分支</strong>：请求 A 首次到达，缓存为空。模型被迫对前 10 个 Token 做 Prefill，然后将计算出的 past_kv 存入 Manager。</li>
+<li><strong>HIT 分支</strong>：请求 B 到达，发现前缀哈希命中。直接取出 past_kv，将其作为 kv_cache 参数传入 Attention，<strong>仅对后面的 3~4 个新 Token 执行 Prefill</strong>。</li>
+</ol>
+<h5 id="5-3、工程实践：从逻辑到物理的跨越"><a href="#5-3、工程实践：从逻辑到物理的跨越" class="headerlink" title="5.3、工程实践：从逻辑到物理的跨越"></a>5.3、工程实践：从逻辑到物理的跨越</h5><p>上述代码演示了逻辑原理，但在真实的生产环境（如高并发服务）中，存在极大的工程挑战：</p>
+<p><strong>显存碎片与 PagedAttention</strong></p>
+<p>真实场景中，前缀长度千变万化。如果为每个前缀分配连续的 Tensor 显存，显存会迅速被碎片化，导致 OOM。<br><strong>解法</strong>：vLLM 引入了 PagedAttention。将 KV Cache 分割为固定大小的 Block（如 16 个 Token 一个 Block）。前缀缓存以 Block 为单位存储。请求 B 命中前缀时，只需在页表中映射指向这些物理 Block，无需拷贝数据。</p>
+<p><strong>写时复制</strong></p>
+<p>请求 B 在前缀之后生成了新 Token，其 KV Cache 需要追加。由于前缀 Block 是共享的，绝对不能直接修改。<br><strong>解法</strong>：新增的 KV 写入新分配的 Block 中，逻辑上通过链表/页表将其与共享的前缀 Block 串联起来，形成完整的 KV Cache 逻辑视图。</p>
+<p><strong>驱逐策略</strong></p>
+<p>显存有限，不可能缓存所有历史前缀。当显存不足时，需要淘汰旧缓存。<br><strong>解法</strong>：类似操作系统的 LRU（最近最少使用）策略。vLLM 的 PrefixCaching 调度器会监控 Block 的引用计数和时间戳，优先淘汰没有请求在使用且最久未访问的前缀 Block。</p>
+<p><strong>RadixAttention (SGLang)</strong></p>
+<p>相比于单纯的前缀匹配，SGLang 提出了更激进的 <strong>RadixAttention（基数树注意力）</strong>。它将所有请求的 Token 序列在一棵 Radix Tree 上进行前缀匹配。不仅系统提示词可以共享，多轮对话的历史记录、Agent 中间步骤的公共子序列，都能在树形结构中找到最长公共前缀并复用 KV Cache。</p>
+<p><hr></p>
+<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%"><a href="https://www.limoncc.com/post/64e24a5816e7035f/">https://www.limoncc.com/post/64e24a5816e7035f/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (May. 19, 2026). 《大语言模型研究15——注意力机制优化之KV缓存》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/64e24a5816e7035f">https://www.limoncc.com/post/64e24a5816e7035f</a></td></tr><tr><td align="left" width="100%">@online{limoncc-64e24a5816e7035f,<br>title={大语言模型研究15——注意力机制优化之KV缓存},<br>author={引线小白},<br>year={2026},<br>month={May},<br>date={19},<br>url={\url{<a href="https://www.limoncc.com/post/64e24a5816e7035f}}">https://www.limoncc.com/post/64e24a5816e7035f}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/大语言模型/" rel="tag">#大语言模型</a>
+          
+            <a href="/tags/AI/" rel="tag">#AI</a>
+          
+            <a href="/tags/注意力机制/" rel="tag">#注意力机制</a>
+          
+            <a href="/tags/KV缓存/" rel="tag">#KV缓存</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/459cffa89d9d94ff/" rel="next" title="大语言模型研究12——均方根层归一化(RMSNorm)">
+                <i class="fa fa-chevron-left"></i> 大语言模型研究12——均方根层归一化(RMSNorm)
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/post/f8b4cf8901e0b294/" rel="prev" title="大语言模型研究14——注意力机制优化之FlashAttention">
+                大语言模型研究14——注意力机制优化之FlashAttention <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+<!--           </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div> -->
+        <div id="vcomments"></div>
+        <script>new Valine({
+          el: "#vcomments",
+      appId: "BVjuNRCpkVSkz82jFmadIvY8-gzGzoHsz",
+    appKey: "bRjXPp55dop7RTC2xgunGdiP"})
+  </script>'
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="引线小白" />
+          <p class="site-author-name" itemprop="name">引线小白</p>
+          <p class="site-description motion-element" itemprop="description">小湖椰影廊桥,曾记否,谷围晓月,灯影朦胧。</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">66</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">15</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">131</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="" target="_blank" title="Design">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  Design
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.behance.net/limoncc" target="_blank" title="Behance">
+                  
+                    <i class="fa fa-fw fa-behance"></i>
+                  
+                  Behance
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.pinterest.com/aegeanfan/" target="_blank" title="Pinterest">
+                  
+                    <i class="fa fa-fw fa-pinterest"></i>
+                  
+                  Pinterest
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://github.com/limoncc" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://weibo.com/3483157951" target="_blank" title="微博">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  微博
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://www.zhihu.com/people/limoncc" target="_blank" title="知乎">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  知乎
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              设计不止，折腾不息。
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://chuangzaoshi.com" title="创造狮" target="_blank">创造狮</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、基础概念"><span class="nav-number">1.</span> <span class="nav-text">一、基础概念</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-1、严格-BMM-约定"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、严格 BMM 约定</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-2、广义批量矩阵乘法（如-torch-matmul-tf-matmul-numpy-matmul）"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、广义批量矩阵乘法（如 torch.matmul / tf.matmul / numpy.matmul）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-3、应用场景"><span class="nav-number">1.3.</span> <span class="nav-text">1.3、应用场景</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-4、与爱因斯坦求和（einsum）的关系"><span class="nav-number">1.4.</span> <span class="nav-text">1.4、与爱因斯坦求和（einsum）的关系</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-5、总结"><span class="nav-number">1.5.</span> <span class="nav-text">1.5、总结</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#二、KV-Cache-原理"><span class="nav-number">2.</span> <span class="nav-text">二、KV Cache 原理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#三、从-MHA-到-GQA"><span class="nav-number">3.</span> <span class="nav-text">三、从 MHA 到 GQA</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#3-1、标准-Multi-Head-Attention-MHA"><span class="nav-number">3.1.</span> <span class="nav-text">3.1、标准 Multi-Head Attention (MHA)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-2、Multi-Query-Attention-MQA"><span class="nav-number">3.2.</span> <span class="nav-text">3.2、Multi-Query Attention (MQA)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-3、Grouped-Query-Attention-GQA-——-完美的折中"><span class="nav-number">3.3.</span> <span class="nav-text">3.3、Grouped-Query Attention (GQA) —— 完美的折中</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#四、代码实现：带-KV-Cache-的-GQA"><span class="nav-number">4.</span> <span class="nav-text">四、代码实现：带 KV Cache 的 GQA</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#4-1、层内处理"><span class="nav-number">4.1.</span> <span class="nav-text">4.1、层内处理</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#4-2、层外处理"><span class="nav-number">4.2.</span> <span class="nav-text">4.2、层外处理</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#五、前缀缓存-Prefix-Caching"><span class="nav-number">5.</span> <span class="nav-text">五、前缀缓存(Prefix Caching)</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#5-1、Prefix-Caching-核心思想"><span class="nav-number">5.1.</span> <span class="nav-text">5.1、Prefix Caching 核心思想</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#5-2、PyTorch-模拟代码"><span class="nav-number">5.2.</span> <span class="nav-text">5.2、PyTorch 模拟代码</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#5-3、工程实践：从逻辑到物理的跨越"><span class="nav-number">5.3.</span> <span class="nav-text">5.3、工程实践：从逻辑到物理的跨越</span></a></li></ol></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">引线小白&nbsp &nbsp |&nbsp &nbsp  一个理想主义者，再造自我，以期未来。</span>
+</div>
+
+<div class="powered-by">
+  由 <a rel="external nofollow" class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a rel="external nofollow" class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>&nbsp &nbsp| &nbsp &nbsp Hosted by  <a href="https://github.com" style="font-weight: bold">Github Pages</a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+<!--   
+   
+  
+
+  
+
+ -->
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+       search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+    'use strict';
+    $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+            // get the contents from search data
+            isfetched = true;
+            $('.popup').detach().appendTo('.header-inner');
+            var datas = $( "entry", xmlResponse ).map(function() {
+                return {
+                    title: $( "title", this ).text(),
+                    content: $("content",this).text(),
+                    url: $( "url" , this).text()
+                };
+            }).get();
+            var $input = document.getElementById(search_id);
+            var $resultContent = document.getElementById(content_id);
+            $input.addEventListener('input', function(){
+                var matchcounts = 0;
+                var str='<ul class=\"search-result-list\">';                
+                var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                $resultContent.innerHTML = "";
+                if (this.value.trim().length > 1) {
+                // perform local searching
+                datas.forEach(function(data) {
+                    var isMatch = true;
+                    var content_index = [];
+                    var data_title = data.title.trim().toLowerCase();
+                    var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                    var data_url = data.url;
+                    var index_title = -1;
+                    var index_content = -1;
+                    var first_occur = -1;
+                    // only match artiles with not empty titles and contents
+                    if(data_title != '' && data_content != '') {
+                        keywords.forEach(function(keyword, i) {
+                            index_title = data_title.indexOf(keyword);
+                            index_content = data_content.indexOf(keyword);
+                            if( index_title < 0 && index_content < 0 ){
+                                isMatch = false;
+                            } else {
+                                if (index_content < 0) {
+                                    index_content = 0;
+                                }
+                                if (i == 0) {
+                                    first_occur = index_content;
+                                }
+                            }
+                        });
+                    }
+                    // show search results
+                    if (isMatch) {
+                        matchcounts += 1;
+                        str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                        var content = data.content.trim().replace(/<[^>]+>/g,"");
+                        if (first_occur >= 0) {
+                            // cut out 100 characters
+                            var start = first_occur - 20;
+                            var end = first_occur + 80;
+                            if(start < 0){
+                                start = 0;
+                            }
+                            if(start == 0){
+                                end = 50;
+                            }
+                            if(end > content.length){
+                                end = content.length;
+                            }
+                            var match_content = content.substring(start, end);
+                            // highlight all keywords
+                            keywords.forEach(function(keyword){
+                                var regS = new RegExp(keyword, "gi");
+                                match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                            });
+                            
+                            str += "<p class=\"search-result\">" + match_content +"...</p>"
+                        }
+                        str += "</li>";
+                    }
+                })};
+                str += "</ul>";
+                if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+                if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+                $resultContent.innerHTML = str;
+            });
+            proceedsearch();
+        }
+    });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').mousedown(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+  
+<!--   <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+     showMathMenu: false,
+     showMathMenuMSIE: false,
+     tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+          displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+          processEscapes: true
+        },
+        TeX: {
+          equationNumbers: {autoNumber: 'AMS'},
+          Macros: {bm: "\\boldsymbol"}
+        },
+        'HTML-CSS': {
+          imageFont: null
+        }
+    });
+  </script> -->
+<!--     MathJax.Hub.Queue(function() {
+      var all = MathJax.Hub.getAllJax(), i;
+      for (i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+      }
+    }); -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+    processEscapes: true,
+    tags: 'ams',
+    macros: {
+                                            bm: "\\boldsymbol",
+					    T:"\\intercal",
+                                            oiint: "{\\iint\\kern{-20mu}{\\unicode{x2B2D}}}",
+                                            oiiint: "{\\iiint\\kern{-24.5mu}\\large{\\unicode{x2B2D}}}"
+                                },
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};
+</script>
+  <script type="text/x-mathjax-config">
+MathJax.texReset();
+MathJax.typeset();
+  </script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_SVG-full"></script> -->
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("Es7wAnqi0QiGhMLoyl7mkrQo-gzGzoHsz", "BxPXaoPFp3PzWqBTSe6VUuQS");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+</body>
+</html>
