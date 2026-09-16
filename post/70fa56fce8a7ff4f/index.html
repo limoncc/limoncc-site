@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-16T07:48:17.657Z">
+<meta property="og:updated_time" content="2026-09-16T08:06:48.834Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究09-RubricRL理论分析">
 <meta name="twitter:description" content="本文主要总结了RubricRL的若干基本问题，和我自己的一些体会。rubrics(量规)是实践成本二级摊销，它的判分质量上界由世界模型、规范先验、激发工程和多步因果推理共同决定。这使得Rubrics评分成为了一个工程问题：Rubrics-engineering、Rubrics-Agent、Rubrics-Infra都是应有之意。">
@@ -386,7 +386,7 @@
       
 
       
-        <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：httpss://<a href="http://www.limoncc.com/post/70fa56fce8a7ff4f/">www.limoncc.com/post/70fa56fce8a7ff4f/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
+        <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：<a href="https://www.limoncc.com/post/70fa56fce8a7ff4f/">https://www.limoncc.com/post/70fa56fce8a7ff4f/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
 <h3 id="一、RubricRL的实质"><a href="#一、RubricRL的实质" class="headerlink" title="一、RubricRL的实质"></a>一、RubricRL的实质</h3><p>随着大模型应用场景扩展到开放式与高风险任务——如何规定、优化与评估模型响应的问题变得愈发重要。LLM-as-a-Judge（Gu et al., 2024）提供了更灵活的替代方案，但不受约束的评判提示可能导致不稳定、不可靠或有偏的评估。这些局限指向一个共同的缺失组件：结构化、显式的评测准则，用以明确响应应当满足的要求[^1]。</p>
 <p>Rubrics 提供了填补这一空缺的自然方式。Rubrics 源自教育测评（Brookhart, 2018; Panadero and Jonsson, 2013），它把质量评估分解为一组显式准则，每条准则对应期望输出的一个具体侧面。由于Rubrics的低成本和开发式，它越来越流行。</p>
 <h4 id="1-1、什么是RubricRL"><a href="#1-1、什么是RubricRL" class="headerlink" title="1.1、什么是RubricRL"></a>1.1、什么是RubricRL</h4><p><strong>RubricRL</strong>(量规强化学习)一类将强化学习的奖励信号从单一标量升级为一组显式、自然语言形式、可逐项打分的评分标准(rubric)的后训练范式。其核心主张是：把「什么是好答案」写成分维度、可验证的检查清单，由 LLM 评审员(judge)或规则评分器逐项判定，再聚合为奖励，驱动 PPO / GRPO / DAPO 等算法优化策略模型。它一边承接了RLVR(可验证奖励强化学习)在可客观验证任务上的成功，一边把适用范围从数学、代码扩展到开放域、主观、多标准的任务（创意写作、医疗咨询、指令遵循、Agent 轨迹等）</p>
@@ -479,7 +479,7 @@
 <p>$$\begin{align}<br>R \sim \mathcal{G}(R) = p(R\mid \tau,\kappa,l) \propto p(\tau\mid R, k,l)p(R)<br>\end{align}$$</p>
 <p>通常不会为一个输入(也可以说任务、prompt)生成多个量规。因为我们只需最符合任务的量规 $R$。使用一个变量 $\zeta$来度量量规的任务符合度。<br>$$\begin{align}<br>R^*=\mathop{argmax}_{R}\zeta(R,\tau)<br>\end{align}$$</p>
 <p>2、其次在来看看评分函数</p>
-<p>$$\begin{align}<br>\bar{\psi} = \mathcal{J}(\tau,R^<em>)= \mathbb{E}_{\psi_c \sim p(\psi_c\mid \tau,R_c^</em>)}\big[\mathrm{agg}\big(\{\psi_c\}_{c=1}^C\big)\big]<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\bar{\psi}=\mathcal{J}(\tau,R^<em>)=\mathbb{E}_{\psi_c\sim p(\psi_c\mid\tau,R_c^</em>)}\big[\mathrm{agg}\big(\{\psi_c\}_{c=1}^C\big)\big]<br>\end{align}$$</p>
 <p>在实操中我们通常不会取期望，或者采样求平均。而是随机采样一个点</p>
 <p>$$\begin{align}<br>\hat{r}(\tau_i)=\psi_i=\mathrm{agg}\big(\{\psi_c\}_{c=1}^C<br>=\frac{\sum_c w_c\psi_{i,c}}{\sum_c w_c}<br>\end{align}$$</p>
 <p>其中 $w_c$为每个评分规则的权重, 在最后计算奖励时采用组内归一计算优势：</p>
