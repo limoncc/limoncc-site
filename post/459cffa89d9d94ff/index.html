@@ -1,0 +1,1164 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="大模型,.RubricRL,均方根层归一化,RMSNorm,缩放不变性,层归一化,隐式学习率适应,高维几何" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="本文意在理清RMSNorm的基础问题。均方根层归一化（Root Mean Square Layer Normalization，RMSNorm）已成为 LLaMA、Qwen、Grok 等主流大语言模型的标配归一化方案。它以极简的设计——仅用均方根做重缩放，省略传统层归一化的均值减法——在保持甚至超越模型性能的同时，显著降低了计算开销与显存占用，并提升了深层网络的训练稳定性。本文从数学定义、梯度推导">
+<meta name="keywords" content="大模型,.RubricRL,均方根层归一化,RMSNorm,缩放不变性,层归一化,隐式学习率适应,高维几何">
+<meta property="og:type" content="article">
+<meta property="og:title" content="大语言模型研究12——均方根层归一化(RMSNorm)">
+<meta property="og:url" content="https://www.limoncc.com/post/459cffa89d9d94ff/index.html">
+<meta property="og:site_name" content="柠檬CC">
+<meta property="og:description" content="本文意在理清RMSNorm的基础问题。均方根层归一化（Root Mean Square Layer Normalization，RMSNorm）已成为 LLaMA、Qwen、Grok 等主流大语言模型的标配归一化方案。它以极简的设计——仅用均方根做重缩放，省略传统层归一化的均值减法——在保持甚至超越模型性能的同时，显著降低了计算开销与显存占用，并提升了深层网络的训练稳定性。本文从数学定义、梯度推导">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://www.limoncc.com/images/cc.png">
+<meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
+<meta property="og:updated_time" content="2026-09-16T09:07:15.389Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="大语言模型研究12——均方根层归一化(RMSNorm)">
+<meta name="twitter:description" content="本文意在理清RMSNorm的基础问题。均方根层归一化（Root Mean Square Layer Normalization，RMSNorm）已成为 LLaMA、Qwen、Grok 等主流大语言模型的标配归一化方案。它以极简的设计——仅用均方根做重缩放，省略传统层归一化的均值减法——在保持甚至超越模型性能的同时，显著降低了计算开销与显存占用，并提升了深层网络的训练稳定性。本文从数学定义、梯度推导">
+<meta name="twitter:image" content="https://www.limoncc.com/images/cc.png">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: '博主'
+    }
+  };
+</script>
+
+  <script src='//unpkg.com/valine/dist/Valine.min.js'></script>
+  <title> 大语言模型研究12——均方根层归一化(RMSNorm) | 柠檬CC </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-73837972-3', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?d225b8f8559eb2eb6a8bd8792e01ebb9";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//tajs.qq.com/stats?sId=60130136";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">柠檬CC</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">小白爱吃柠檬O(∩_∩)O</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-poetry">
+          <a href="/poetry" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-leaf"></i> <br />
+            
+            诗集
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="#" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                大语言模型研究12——均方根层归一化(RMSNorm)
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2026-05-18T08:56:09+08:00" content="2026-05-18">
+              2026-05-18
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/大语言模型研究/" itemprop="url" rel="index">
+                    <span itemprop="name">大语言模型研究</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+             <span id="/post/459cffa89d9d94ff/" class="leancloud_visitors" data-flag-title="大语言模型研究12——均方根层归一化(RMSNorm)">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">阅读次数 </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：<a href="https://www.limoncc.com/post/459cffa89d9d94ff/">https://www.limoncc.com/post/459cffa89d9d94ff/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
+<h4 id="1-引言"><a href="#1-引言" class="headerlink" title="1. 引言"></a>1. 引言</h4><p>在大模型架构设计中，归一化层看似不起眼，却直接影响训练的稳定性、收敛速度与最终模型质量。自 Transformer 诞生起，<strong>层归一化（LayerNorm）</strong> 一直是标准配置。然而，从 LLaMA 开始，<strong>RMSNorm</strong> 逐步取代 LayerNorm 成为事实上的行业标准。其核心理念来自张量与 Sennrich 的开创性工作《Root Mean Square Layer Normalization》，系统论证了“减均值”步骤的冗余性，并提出仅依赖重缩放便能实现同等甚至更优的性能。</p>
+<p><strong>核心思想</strong>：$\displaystyle y = \frac{x}{RMS(x)} * γ$，舍弃 $\displaystyle x - \mu$，只用均方根做归一化。</p>
+<p>为什么这样“偷工减料”反而更好？下面我们从定义开始，逐层深入其背后的数学与工程智慧。</p>
+<h4 id="2-数学定义对比"><a href="#2-数学定义对比" class="headerlink" title="2. 数学定义对比"></a>2. 数学定义对比</h4><p>对于一个特征维度为 $d$ 的输入向量 $\displaystyle  \bm{x}=[x_1,\cdots,x_d]^\T$，LayerNorm 与 RMSNorm 的前向计算对比如下。</p>
+<p>$\displaystyle  \bm{y}=\frac{\bm{x}-\mu}{\sqrt{\sigma^2+\varepsilon}}*\gamma+\beta$</p>
+<p>$$\begin{array}{|c|c|c|c|}<br>\hline<br>\textbf{归一化方法} &amp; \textbf{公式} &amp; \textbf{所需统计量} &amp; \textbf{可学习参数} \\<br>\hline<br>LayerNorm &amp;\displaystyle \bm{y} = \frac{\bm{x} - \mu}{\sqrt{\sigma^2 + \epsilon}} <em> \gamma + \beta &amp; 均值 \mu，方差 \sigma^2 &amp; \gamma，\beta \\<br>\hline<br>RMSNorm &amp;\displaystyle \bm{y}= \frac{\bm{x}}{\mathrm{RMS}(x)} </em> \gamma，\mathrm{RMS}(\bm{x}) = \sqrt{\frac{1}{d} \sum x_i^2 + \epsilon} &amp; 均方根 \mathrm{RMS}(x) &amp; \gamma（通常无 \beta） \\<br>\hline<br>\end{array}$$</p>
+<p>其中 $\gamma$ 和 $\beta$ 为可学习的缩放与平移参数， $\varepsilon$ 为小常数（如 1e-5）用于数值稳定。</p>
+<p>可以看到，RMSNorm[^1] 在数学上删减了三个操作：计算均值 $\mu$、广播减法 $\bm{x}-\mu$、以及可选的偏移参数 $\beta$。这些删减看似微小，但在大模型层层堆叠时，累积收益极为可观。</p>
+<h4 id="3-主要优势"><a href="#3-主要优势" class="headerlink" title="3. 主要优势"></a>3. 主要优势</h4><h5 id="3-1-计算效率：训练时间可缩短-7-64"><a href="#3-1-计算效率：训练时间可缩短-7-64" class="headerlink" title="3.1 计算效率：训练时间可缩短 7%~64%"></a>3.1 计算效率：训练时间可缩短 7%~64%</h5><p>减少一次跨维度求和与广播减法，在 GPU 上减少了一次归约（reduce）操作。对于较深的网络，这个开销被逐层放大，实测在多种模型上训练时间可减少 7% 至 64%。<strong>注意</strong>，在现代 GPU 上，全局均值的计算往往成为内存带宽瓶颈，RMSNorm 省去该步骤后，并行效率更高。</p>
+<h5 id="3-2-显存与训练稳定性"><a href="#3-2-显存与训练稳定性" class="headerlink" title="3.2 显存与训练稳定性"></a>3.2 显存与训练稳定性</h5><p>LayerNorm 在反向传播时需要保存均值 $\mu$ 作为中间变量，RMSNorm 仅需保存均方根 $\mathrm{RMS}(\bm{x})$ 或平方和，显存占用更小。同时，简化的操作避免了因均值漂移引起的数值不稳定，深层网络训练中梯度范数更平稳。</p>
+<h5 id="3-3-“减均值”被证明冗余"><a href="#3-3-“减均值”被证明冗余" class="headerlink" title="3.3 “减均值”被证明冗余"></a>3.3 “减均值”被证明冗余</h5><p>理论分析与大量实验表明：在训练过程中，大模型的隐藏表示会自然变得与全 1 向量 $\bm{1}$几乎正交。这等价于均值 $\mu=0$，因此减去均值这一步近乎在减去零，纯属多余。下一节将从几何和梯度视角给出严格解释。</p>
+<h5 id="3-4-性能不减反增"><a href="#3-4-性能不减反增" class="headerlink" title="3.4 性能不减反增"></a>3.4 性能不减反增</h5><p>虽然删减了一个操作，RMSNorm 学到的隐藏表示分布与 LayerNorm 高度相似，在多项语言建模、翻译等任务中性能持平或略有提升。这也是它能被大模型团队放心采纳的关键。</p>
+<blockquote>
+<p><strong>个人评述</strong>：工程上，“快而不差”的组件总能迅速铺开。RMSNorm 不仅更快，而且数学上更干净——这一特性使其成为新一代架构的默认选择。</p>
+</blockquote>
+<h4 id="4-重缩放不变性与隐式学习率适应"><a href="#4-重缩放不变性与隐式学习率适应" class="headerlink" title="4. 重缩放不变性与隐式学习率适应"></a>4. 重缩放不变性与隐式学习率适应</h4><p>RMSNorm 的深层优势在于它赋予了网络两种优雅的性质：<strong>重缩放不变性</strong>与<strong>隐式学习率适应</strong>，二者共同保证了训练过程的鲁棒性。</p>
+<h5 id="4-1-重缩放不变性的证明"><a href="#4-1-重缩放不变性的证明" class="headerlink" title="4.1 重缩放不变性的证明"></a>4.1 重缩放不变性的证明</h5><p><strong>重缩放不变性</strong>是指：若对输入 $\bm{x}$ 或权重矩阵 $\bm{W}$ 乘以一个正常数 $\alpha$，RMSNorm 的归一化输出保持不变。</p>
+<p><strong>定理 1（输入缩放不变性）</strong> 对于任意 $\alpha &gt; 0$，令 $\bm{x}’ = \alpha \bm{x}$，则</p>
+<p>$$\begin{align}<br>\frac{x’_i}{\text{RMS}(x’)} = \frac{x_i}{\text{RMS}(x)}<br>\end{align}$$</p>
+<p><strong>证明</strong>：</p>
+<p>$$\begin{align}<br>\mathrm{RMS}(\alpha\bm{x}) = \sqrt{\frac{1}{d}\sum_i (\alpha x_i)^2} = |\alpha| \,\mathrm{RMS}(x)<br>\end{align}$$</p>
+<p>代入得</p>
+<p>$$\begin{align}<br>\frac{\alpha x_i}{\alpha\,\text{RMS}(x)} = \frac{x_i}{\text{RMS}(x)}<br>\end{align}$$</p>
+<p>同理，对权重矩阵整体缩放 $\bm{W}’=\alpha \bm{W}$ 由于 $\bm{h}’=\alpha \bm{W}\bm{x}$，均方根变为 $\alpha \mathrm{RMS}(\bm{W}\bm{x})$，归一化输出也不变。这一性质使前向传播在参数幅度变化时保持稳定，防止输出范数异常波动。</p>
+<h5 id="4-2-隐式学习率适应机制"><a href="#4-2-隐式学习率适应机制" class="headerlink" title="4.2 隐式学习率适应机制"></a>4.2 隐式学习率适应机制</h5><p>缩放不变性不仅影响前向，更通过反向传播实现了<strong>隐式的学习率自适应</strong>。考虑线性层 + RMSNorm 的简单组合：</p>
+<p>$$\begin{align}<br>\bm{h} = \bm{W}\bm{x},\quad \bm{\hat{h}} = \frac{\bm{h}}{\mathrm{RMS}(\bm{h})},\quad \ell = L(\bm{\hat{h}})<br>\end{align}$$<br>当权重缩放 $\bm{W}\to \alpha\bm{W}$时，梯度 $\displaystyle \frac{\partial \ell}{\partial \bm{W}}$ 会相应地缩放 $\displaystyle \frac{1}{\alpha}$。具体来说：</p>
+<p>$$\begin{align}<br>\frac{\partial \ell}{\partial (\alpha \bm{W})} = \frac{1}{\alpha}\frac{\partial \ell}{\partial \bm{W}}<br>\end{align}$$</p>
+<p>定义参数的<strong>相对更新幅度</strong>为 $\frac{|\Delta \bm{W}|}{|\bm{W}|}$，它决定了参数在空间中实际移动的相对距离，这等价于“有效学习率”的作用。<br><strong>1. SGD 优化器下的分析</strong><br>在 SGD 更新中，参数更新量为 $\Delta \bm{W} = -\eta \frac{\partial \ell}{\partial \bm{W}}$。若权重缩放 $\alpha$ 倍，更新量变为 $\Delta (\alpha\bm{W}) = -\eta \frac{1}{\alpha}\frac{\partial \ell}{\partial \bm{W}}$。此时相对更新幅度为：<br>$$<br>\frac{|\Delta (\alpha\bm{W})|}{|\alpha\bm{W}|} = \frac{1}{\alpha^2} \frac{|\Delta \bm{W}|}{|\bm{W}|}<br>$$<br>即有效学习率等比于 $\frac{\eta}{\alpha^2}$。这意味着权重范数的变动会引起有效学习率的<strong>平方级</strong>变化。</p>
+<ul>
+<li>权重范数变大 → 有效学习率自动变小，抑制梯度爆炸；</li>
+<li>权重范数变小 → 有效学习率自动变大，加速逃离平坦区。</li>
+</ul>
+<p><strong>2. Adam 优化器下的分析</strong></p>
+<p>大模型通常采用 Adam 优化器。Adam 的核心在于引入了梯度的二阶矩（历史梯度平方的指数移动平均）进行逐元素归一化。简记梯度 $\displaystyle \bm{g} = \frac{\partial \ell}{\partial \bm{W}}$，其更新规则为：</p>
+<p>$$\begin{align}<br>\bm{m}_t = \beta_1 \bm{m}_{t-1} + (1-\beta_1)\bm{g}, \quad \bm{v}_t = \beta_2 \bm{v}_{t-1} + (1-\beta_2)\bm{g}^2, \quad \Delta \bm{W} = -\eta \frac{\bm{m}_t}{\sqrt{\bm{v}_t} + \epsilon}<br>\end{align}$$</p>
+<p>当权重缩放 $\bm{W}\to \alpha\bm{W}$ 时，梯度缩放 $\bm{g}\to \frac{1}{\alpha}\bm{g}$。由于一阶矩 $\bm{m}$ 和二阶矩 $\bm{v}$ 均为梯度的线性组合，它们也会相应缩放：$\bm{m}\to \frac{1}{\alpha}\bm{m}$，$\bm{v}\to \frac{1}{\alpha^2}\bm{v}$。<br>代入 Adam 的更新公式，在 $\sqrt{\bm{v}} \gg \epsilon$ 的正常训练阶段，更新量变为：<br>$$<br>\Delta (\alpha\bm{W}) = -\eta \frac{\frac{1}{\alpha}\bm{m}}{\sqrt{\frac{1}{\alpha^2}\bm{v}} + \epsilon} \approx -\eta \frac{\frac{1}{\alpha}\bm{m}}{\frac{1}{\alpha}\sqrt{\bm{v}}} = -\eta \frac{\bm{m}}{\sqrt{\bm{v}}} = \Delta \bm{W}<br>$$<br><strong>这意味着 Adam 的更新量 $\Delta \bm{W}$ 对权重的缩放是不变的！</strong> 然而，由于分母（参数本身）变大了，其相对更新幅度变为：<br>$$<br>\frac{|\Delta (\alpha\bm{W})|}{|\alpha\bm{W}|} = \frac{1}{\alpha} \frac{|\Delta \bm{W}|}{|\bm{W}|}<br>$$<br>即 Adam 下的有效学习率等比于 $\displaystyle \frac{\eta}{\alpha}$。</p>
+<p><strong>SGD 与 Adam 的对比与意义</strong>：</p>
+<ul>
+<li><strong>SGD</strong>：有效学习率 $\propto \frac{1}{\alpha^2}$（平方反比），适应过于激进，权重稍大就可能陷入梯度停滞，权重稍小则易引发爆炸。</li>
+<li><strong>Adam</strong>：有效学习率 $\propto \frac{1}{\alpha}$（线性反比），Adam 的逐元素梯度归一化（SignSGD 效应）抵消了梯度幅度 $1/\alpha$ 的变化，仅保留了参数尺度 $\alpha$ 带来的相对变化，使得隐式适应更加温和精准。</li>
+</ul>
+<p>无论哪种优化器，RMSNorm 都赋予了网络天然的鲁棒性：</p>
+<ul>
+<li>权重范数变大 → 有效学习率自动变小，抑制梯度爆炸；</li>
+<li>权重范数变小 → 有效学习率自动变大，加速逃离平坦区。</li>
+</ul>
+<p>无需手动调整学习率，训练过程对参数尺度天然鲁棒。这就是 <strong>“隐式学习率适应”</strong> 的实质。而 Adam 优化器的引入，将这种适应从“剧烈的平方级”平滑到了“温和的线性级”，这是深度神经网络结合 RMSNorm 与 Adam 能够极其稳定训练的底层数学原因。</p>
+<blockquote>
+<p><strong>个人评述</strong>：重缩放不变性与隐式学习率适应是一体两面：前向保证输出稳定，反向则动态调整更新幅度。在 Adam 的加持下，这种自适应变得更为平滑，避免了 SGD 下平方级波动带来的训练不稳定。这是 RMSNorm + Adam 组合能够稳定训练超大模型的关键数学支撑。</p>
+</blockquote>
+<h4 id="5-梯度反向传播的严谨推导"><a href="#5-梯度反向传播的严谨推导" class="headerlink" title="5. 梯度反向传播的严谨推导"></a>5. 梯度反向传播的严谨推导</h4><p>为了看清 RMSNorm 在反向传播中的数值行为，我们给出完整的梯度推导。定义：<br>$$\begin{align}<br>r = \text{RMS}(\bm{x}) = \sqrt{\frac{1}{d}\sum_{k=1}^d x_k^2 + \epsilon}<br>\end{align}$$</p>
+<p>另外定义</p>
+<p>$$\begin{align}<br>\hat{x}_i = \frac{x_i}{r},\quad y_i = \hat{x}_i \cdot \gamma_i<br>\end{align}$$</p>
+<p>损失 $\ell$ 对输入 $x_i$ 的梯度由两条路径贡献：直接路径与通过 r 的全局路径。</p>
+<p>经过链式法则与合并，最终梯度为：</p>
+<p>$$\begin{align}<br>\frac{\partial \ell}{\partial x_i} = \frac{\gamma_i}{r}\frac{\partial \ell}{\partial y_i} - \frac{x_i}{d \cdot r^2}\sum_{k=1}^d \left(\frac{\partial \ell}{\partial y_k} \cdot \frac{x_k \gamma_k}{r}\right)<br>\end{align}$$</p>
+<p>若记 $\displaystyle \delta_k = \frac{\partial \ell}{\partial y_k}$ 可简写为：</p>
+<p>$$\begin{align}<br>\frac{\partial \ell}{\partial x_i} = \frac{1}{r}\left( \gamma_i \delta_i - \frac{x_i}{d \cdot r}\sum_{k=1}^d \gamma_k x_k \delta_k \right)<br>\end{align}$$</p>
+<p>该公式对称、简洁，且数值稳定。第一项是各维度的直接缩放梯度，第二项则通过均方根 r 引入全局耦合，实现自然的梯度均衡。</p>
+<blockquote>
+<p><strong>个人评述</strong>：实现时可以直接复用前向计算中得到的 r 与 x/r，减少重复计算，这也是 RMSNorm 在框架中易于高效实现的原因。</p>
+</blockquote>
+<h4 id="6-与-LayerNorm-的几何统一性"><a href="#6-与-LayerNorm-的几何统一性" class="headerlink" title="6. 与 LayerNorm 的几何统一性"></a>6. 与 LayerNorm 的几何统一性</h4><p>尽管 RMSNorm 省略了减均值，但近期几何分析（Gupta et al., 2024）揭示了两者之间深刻的统一性。</p>
+<p>LayerNorm 的标准化步骤可被几何分解为三步：</p>
+<ol>
+<li><strong>移除全 $\bm{1}$ 向量方向的分量</strong>：计算 $\displaystyle \mu = \frac{1}{d}\bm{1}^\T \bm{x}$，得到 $\bm{x}_\perp = \bm{x}-\mu \bm{1}$ ，即投影到 $\bm{1}$ 的正交补空间。</li>
+<li><strong>在子空间中归一化至单位球面</strong>： $\displaystyle \bm{y}=\frac{\bm{x}_\perp}{\sigma} $，其中 $\displaystyle \sigma^2 = \frac{1}{d}|\bm{x}_\perp|^2$。</li>
+<li>**缩放至半径 $\displaystyle \sqrt{d}:z = \sqrt{d} \bm{y}$ ，使得最终范数保持为 $ \sqrt{d}$。</li>
+</ol>
+<p>而 RMSNorm 则是<strong>直接</strong>将原始向量 $\bm{x}$ 沿径向缩放到半径为 $ \sqrt{d}$ 的超球面上：</p>
+<p>$$\begin{align}<br>\hat{x} = \sqrt{d} \cdot \frac{x}{|x|}<br>\end{align}$$</p>
+<p>两者之差仅在于是否先执行“沿 \bm{1} 方向的正交投影”这一步。数学上可以写为：</p>
+<p>$$\begin{align}<br>\mathrm{LayerNorm}(\bm{x}) = \mathrm{RMSNorm}(\bm{x} - \mu \bm{1})<br>\end{align}$$</p>
+<p>因此，RMSNorm 可以看作 LayerNorm 的“无投影”版本。</p>
+<h4 id="7-高维空间中向量天然与-1-正交"><a href="#7-高维空间中向量天然与-1-正交" class="headerlink" title="7. 高维空间中向量天然与 1 正交"></a>7. 高维空间中向量天然与 1 正交</h4><p>为什么去掉投影步骤是安全的？答案隐藏在高维空间的统计与几何特性中。</p>
+<h5 id="7-1-统计视角：余弦相似度-1-sqrt-d"><a href="#7-1-统计视角：余弦相似度-1-sqrt-d" class="headerlink" title="7.1 统计视角：余弦相似度 ~ $1/\sqrt{d}$"></a>7.1 统计视角：余弦相似度 ~ $1/\sqrt{d}$</h5><p>假设隐藏向量各维度独立且均值为零，则 $\bm{x}$ 与 $\bm{1}$ 的点积为 $\displaystyle \sum x_i$，其标准差为 $\sqrt{d}$，而 $|x|$ 的数量级也是 $\sqrt{d}$ 。二者余弦相似度为：</p>
+<p>$$\begin{align}<br>\cos(\theta) = \frac{\sum x_i}{|x| \cdot |1|} \propto \frac{1}{\sqrt{d}}<br>\end{align}$$</p>
+<p>当 $d=4096 $时，波动范围仅约 $ \pm1/64$，即向量与 $1$ 的夹角死死锁定在 $90°\pm 1°$附近；即使 d=768，波动也不过 $\pm1/28$。<strong>维度越高，正交锁定越强。</strong></p>
+<h5 id="7-2-几何视角：测度集中"><a href="#7-2-几何视角：测度集中" class="headerlink" title="7.2 几何视角：测度集中"></a>7.2 几何视角：测度集中</h5><p>在高维单位球面上，绝大部分面积集中在“赤道”区域。对于任何给定向量如 $\bm{1}$，随机向量几乎必然落在其正交补空间附近。换句话说，<strong>正交是高维空间的常态而非特例</strong>。</p>
+<h5 id="7-3-网络动态视角"><a href="#7-3-网络动态视角" class="headerlink" title="7.3 网络动态视角"></a>7.3 网络动态视角</h5><ul>
+<li><strong>初始化</strong>：权重通常从零均值分布采样，初始隐藏状态天然满足 $\mu \approx 0$。</li>
+<li><strong>信息最大化</strong>：若隐藏向量的均值显著偏离零，意味着各维度共涨共跌，浪费了表达能力。网络在训练中会自发去相关，促使均值趋于零。</li>
+<li><strong>归一化层本身的强制</strong>：即使使用 LayerNorm，每次前向都会强制减均值，阻止了均值分量的累积。换成 RMSNorm 后，残差连接与权重衰减同样能约束幅度漂移。</li>
+</ul>
+<p>实证测量发现，无论是在 LayerNorm 还是 RMSNorm 的 LLM 中，每一层隐藏向量与 $\bm{1}$的夹角始终保持在 87°~93° 之间，均值减法的实际效果微乎其微。</p>
+<blockquote>
+<p><strong>个人评述</strong>：在高维表示空间中，减均值如同打扫一间没有灰尘的房间，RMSNorm 果断砍掉了这个无用的步骤。</p>
+</blockquote>
+<h4 id="8-小模型维度同样适用吗？"><a href="#8-小模型维度同样适用吗？" class="headerlink" title="8. 小模型维度同样适用吗？"></a>8. 小模型维度同样适用吗？</h4><p>一个常见疑问是：当隐藏维度较小（如 $d=768$）时，“天然正交”的约束力是否会减弱到影响性能？</p>
+<ul>
+<li><strong>数学上</strong>，d=768 时余弦相似度波动约是 d=4096 的 2.5 倍，但仍处于很小的量级，均值依然大概率在零附近。</li>
+<li><strong>实证上</strong>，当前开源社区的大量小模型（TinyLlama、Qwen-0.5B、Phi-1.5 等）均已采用 RMSNorm，性能与 LayerNorm 基本无差。</li>
+<li><strong>性价比权衡</strong>：在小模型上，显存与计算资源更为紧张，RMSNorm 省下的归约操作和中间缓存的收益更为显著。减均值那一点微弱理论增益，远不及算力节省来得实在。</li>
+</ul>
+<p>唯一的潜在风险在于<strong>极浅网络</strong>（如 2~4 层）中，若输入先验分布极不均匀，可能会产生暂时的均值漂移。此时需要更精细的初始化或适当增大 ε 来保证训练平稳，但这种情况较为罕见。</p>
+<h4 id="9-总结与实践建议"><a href="#9-总结与实践建议" class="headerlink" title="9. 总结与实践建议"></a>9. 总结与实践建议</h4><p>RMSNorm 的流行并非偶然，它用“约分”般的简洁设计，实现了对 LayerNorm 的高效超越：</p>
+<ul>
+<li><strong>数学上</strong>：具备重缩放不变性和隐式学习率适应，训练更鲁棒；</li>
+<li><strong>几何上</strong>：与 LayerNorm 仅差一个沿 1 的投影，而该投影在高维空间中天然冗余；</li>
+<li><strong>工程上</strong>：省时、省显存、实现简单，加速效果随模型深度和规模递增。</li>
+</ul>
+<p><strong>实践建议</strong>：</p>
+<ol>
+<li>新模型设计时直接选用 RMSNorm，无需保留 β 参数。</li>
+<li>ε 可设为 1e-5 或 1e-6，与 LayerNorm 实践一致。</li>
+<li>如果模型极浅且出现训练初期 loss 震荡，可适当增大 ε 或微调学习率。</li>
+<li>高效实现应复用前向计算中的 r 与归一化结果，避免重复求平方和。</li>
+</ol>
+<blockquote>
+<p><strong>最终评述</strong>：RMSNorm 是大模型时代“奥卡姆剃刀”精神的典范——删除多余的操作，反而释放出更强的训练效率与稳定性。理解其背后的数学，不仅能更好地使用它，也能启发我们以更本质的视角审视深度学习中的每一个组件。</p>
+</blockquote>
+<p>参考文献<br>[^1]: Zhang, B., &amp; Sennrich, R. (2019). Root mean square layer normalization. In <em>Advances in Neural Information Processing Systems</em> (Vol. 32). Curran Associates, Inc. <a href="https://doi.org/10.48550/arXiv.1910.07467" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.1910.07467</a><br>[^2]: Gupta, A., Ozdemir, A., Gong, C., &amp; Anumanchipalli, G. (2024, September 19). <em>Geometric interpretation of layer normalization and a comparative analysis with RMSNorm</em>. arXiv. <a href="https://doi.org/10.48550/arXiv.2409.12951" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2409.12951</a><hr></p>
+<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%"><a href="https://www.limoncc.com/post/459cffa89d9d94ff/">https://www.limoncc.com/post/459cffa89d9d94ff/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (May. 18, 2026). 《大语言模型研究12——均方根层归一化(RMSNorm)》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/459cffa89d9d94ff">https://www.limoncc.com/post/459cffa89d9d94ff</a></td></tr><tr><td align="left" width="100%">@online{limoncc-459cffa89d9d94ff,<br>title={大语言模型研究12——均方根层归一化(RMSNorm)},<br>author={引线小白},<br>year={2026},<br>month={May},<br>date={18},<br>url={\url{<a href="https://www.limoncc.com/post/459cffa89d9d94ff}}">https://www.limoncc.com/post/459cffa89d9d94ff}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/大语言模型/" rel="tag">#大语言模型</a>
+          
+            <a href="/tags/AI/" rel="tag">#AI</a>
+          
+            <a href="/tags/分词器/" rel="tag">#分词器</a>
+          
+            <a href="/tags/层归一化/" rel="tag">#层归一化</a>
+          
+            <a href="/tags/均方根层归一化/" rel="tag">#均方根层归一化</a>
+          
+            <a href="/tags/RMSNorm/" rel="tag">#RMSNorm</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/ac9b442b90c51cd5/" rel="next" title="大语言模型研究11——分词器从原理到实战">
+                <i class="fa fa-chevron-left"></i> 大语言模型研究11——分词器从原理到实战
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/post/9e070b6858f0e490/" rel="prev" title="RNN的复兴04:线性注意力并行计算DPLR">
+                RNN的复兴04:线性注意力并行计算DPLR <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+<!--           </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div> -->
+        <div id="vcomments"></div>
+        <script>new Valine({
+          el: "#vcomments",
+      appId: "BVjuNRCpkVSkz82jFmadIvY8-gzGzoHsz",
+    appKey: "bRjXPp55dop7RTC2xgunGdiP"})
+  </script>'
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="引线小白" />
+          <p class="site-author-name" itemprop="name">引线小白</p>
+          <p class="site-description motion-element" itemprop="description">小湖椰影廊桥,曾记否,谷围晓月,灯影朦胧。</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">63</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">125</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="" target="_blank" title="Design">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  Design
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.behance.net/limoncc" target="_blank" title="Behance">
+                  
+                    <i class="fa fa-fw fa-behance"></i>
+                  
+                  Behance
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.pinterest.com/aegeanfan/" target="_blank" title="Pinterest">
+                  
+                    <i class="fa fa-fw fa-pinterest"></i>
+                  
+                  Pinterest
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://github.com/limoncc" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://weibo.com/3483157951" target="_blank" title="微博">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  微博
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://www.zhihu.com/people/limoncc" target="_blank" title="知乎">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  知乎
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              设计不止，折腾不息。
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://chuangzaoshi.com" title="创造狮" target="_blank">创造狮</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-引言"><span class="nav-number">1.</span> <span class="nav-text">1. 引言</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-数学定义对比"><span class="nav-number">2.</span> <span class="nav-text">2. 数学定义对比</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-主要优势"><span class="nav-number">3.</span> <span class="nav-text">3. 主要优势</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#3-1-计算效率：训练时间可缩短-7-64"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 计算效率：训练时间可缩短 7%~64%</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-2-显存与训练稳定性"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 显存与训练稳定性</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-3-“减均值”被证明冗余"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 “减均值”被证明冗余</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#3-4-性能不减反增"><span class="nav-number">3.4.</span> <span class="nav-text">3.4 性能不减反增</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#4-重缩放不变性与隐式学习率适应"><span class="nav-number">4.</span> <span class="nav-text">4. 重缩放不变性与隐式学习率适应</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#4-1-重缩放不变性的证明"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 重缩放不变性的证明</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#4-2-隐式学习率适应机制"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 隐式学习率适应机制</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#5-梯度反向传播的严谨推导"><span class="nav-number">5.</span> <span class="nav-text">5. 梯度反向传播的严谨推导</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#6-与-LayerNorm-的几何统一性"><span class="nav-number">6.</span> <span class="nav-text">6. 与 LayerNorm 的几何统一性</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#7-高维空间中向量天然与-1-正交"><span class="nav-number">7.</span> <span class="nav-text">7. 高维空间中向量天然与 1 正交</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#7-1-统计视角：余弦相似度-1-sqrt-d"><span class="nav-number">7.1.</span> <span class="nav-text">7.1 统计视角：余弦相似度 ~ $1/\sqrt{d}$</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#7-2-几何视角：测度集中"><span class="nav-number">7.2.</span> <span class="nav-text">7.2 几何视角：测度集中</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#7-3-网络动态视角"><span class="nav-number">7.3.</span> <span class="nav-text">7.3 网络动态视角</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#8-小模型维度同样适用吗？"><span class="nav-number">8.</span> <span class="nav-text">8. 小模型维度同样适用吗？</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#9-总结与实践建议"><span class="nav-number">9.</span> <span class="nav-text">9. 总结与实践建议</span></a></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">引线小白&nbsp &nbsp |&nbsp &nbsp  一个理想主义者，再造自我，以期未来。</span>
+</div>
+
+<div class="powered-by">
+  由 <a rel="external nofollow" class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a rel="external nofollow" class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>&nbsp &nbsp| &nbsp &nbsp Hosted by  <a href="https://github.com" style="font-weight: bold">Github Pages</a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+<!--   
+   
+  
+
+  
+
+ -->
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+       search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+    'use strict';
+    $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+            // get the contents from search data
+            isfetched = true;
+            $('.popup').detach().appendTo('.header-inner');
+            var datas = $( "entry", xmlResponse ).map(function() {
+                return {
+                    title: $( "title", this ).text(),
+                    content: $("content",this).text(),
+                    url: $( "url" , this).text()
+                };
+            }).get();
+            var $input = document.getElementById(search_id);
+            var $resultContent = document.getElementById(content_id);
+            $input.addEventListener('input', function(){
+                var matchcounts = 0;
+                var str='<ul class=\"search-result-list\">';                
+                var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                $resultContent.innerHTML = "";
+                if (this.value.trim().length > 1) {
+                // perform local searching
+                datas.forEach(function(data) {
+                    var isMatch = true;
+                    var content_index = [];
+                    var data_title = data.title.trim().toLowerCase();
+                    var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                    var data_url = data.url;
+                    var index_title = -1;
+                    var index_content = -1;
+                    var first_occur = -1;
+                    // only match artiles with not empty titles and contents
+                    if(data_title != '' && data_content != '') {
+                        keywords.forEach(function(keyword, i) {
+                            index_title = data_title.indexOf(keyword);
+                            index_content = data_content.indexOf(keyword);
+                            if( index_title < 0 && index_content < 0 ){
+                                isMatch = false;
+                            } else {
+                                if (index_content < 0) {
+                                    index_content = 0;
+                                }
+                                if (i == 0) {
+                                    first_occur = index_content;
+                                }
+                            }
+                        });
+                    }
+                    // show search results
+                    if (isMatch) {
+                        matchcounts += 1;
+                        str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                        var content = data.content.trim().replace(/<[^>]+>/g,"");
+                        if (first_occur >= 0) {
+                            // cut out 100 characters
+                            var start = first_occur - 20;
+                            var end = first_occur + 80;
+                            if(start < 0){
+                                start = 0;
+                            }
+                            if(start == 0){
+                                end = 50;
+                            }
+                            if(end > content.length){
+                                end = content.length;
+                            }
+                            var match_content = content.substring(start, end);
+                            // highlight all keywords
+                            keywords.forEach(function(keyword){
+                                var regS = new RegExp(keyword, "gi");
+                                match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                            });
+                            
+                            str += "<p class=\"search-result\">" + match_content +"...</p>"
+                        }
+                        str += "</li>";
+                    }
+                })};
+                str += "</ul>";
+                if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+                if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+                $resultContent.innerHTML = str;
+            });
+            proceedsearch();
+        }
+    });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').mousedown(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+  
+<!--   <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+     showMathMenu: false,
+     showMathMenuMSIE: false,
+     tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+          displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+          processEscapes: true
+        },
+        TeX: {
+          equationNumbers: {autoNumber: 'AMS'},
+          Macros: {bm: "\\boldsymbol"}
+        },
+        'HTML-CSS': {
+          imageFont: null
+        }
+    });
+  </script> -->
+<!--     MathJax.Hub.Queue(function() {
+      var all = MathJax.Hub.getAllJax(), i;
+      for (i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+      }
+    }); -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+    processEscapes: true,
+    tags: 'ams',
+    macros: {
+                                            bm: "\\boldsymbol",
+					    T:"\\intercal",
+                                            oiint: "{\\iint\\kern{-20mu}{\\unicode{x2B2D}}}",
+                                            oiiint: "{\\iiint\\kern{-24.5mu}\\large{\\unicode{x2B2D}}}"
+                                },
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};
+</script>
+  <script type="text/x-mathjax-config">
+MathJax.texReset();
+MathJax.typeset();
+  </script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_SVG-full"></script> -->
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("Es7wAnqi0QiGhMLoyl7mkrQo-gzGzoHsz", "BxPXaoPFp3PzWqBTSe6VUuQS");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+</body>
+</html>
