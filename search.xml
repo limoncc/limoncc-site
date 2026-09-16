@@ -123,13 +123,13 @@
         <tag>向量微分</tag>
         <tag>矩阵导数</tag>
         <tag>向量导数</tag>
+        <tag>Householder变换</tag>
+        <tag>DPLR</tag>
+        <tag>对角加秩一矩阵</tag>
         <tag>记忆</tag>
         <tag>Titans</tag>
         <tag>线性注意力</tag>
-        <tag>Householder变换</tag>
-        <tag>DPLR</tag>
         <tag>DeltaNet</tag>
-        <tag>对角加秩一矩阵</tag>
       </tags>
   </entry>
   <entry>
