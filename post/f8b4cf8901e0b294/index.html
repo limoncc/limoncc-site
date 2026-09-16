@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-16T13:00:29.639Z">
+<meta property="og:updated_time" content="2026-09-16T13:02:18.088Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究14——注意力机制优化之FlashAttention">
 <meta name="twitter:description" content="本文主要总结了注意力机制优化之FlashAttention的若干基本问题，和我自己的一些体会。">
@@ -411,121 +411,10 @@
 <p>假设我们将 $\bm{x}$ 分成 K 个块，定义到第 k 块为止的局部最大值为 $m_k$ ，局部指数和为 $s_k$ ,当我们从第k-1块推进到第k块时，局部最大值发生了更新</p>
 <p>$$\begin{align}<br>\displaystyle m_k=\max(m_{k-1},m^*_k)<br>\end{align}$$</p>
 <p>其中 $\displaystyle  m^*_k=\max[\bm{x}_k]$ 是当前块的局部最大值。由于减去的最大值变大了 $\displaystyle m_k\geqslant m_{k-1}$ ,之前累加的 $s_k$ 整体缩小了。缩小的倍数正是 $\displaystyle \mathrm{e}^{m_{k-1} - m_k}$ 。于是我们可以得到如下的递推公式：</p>
-<p>$$\begin{align}<br>s_k&amp;=\sum_{i \in [1,k-1]}\sum_{j\in \bm{x}_i}\mathrm{e}^{x_j - m_k}+\underbrace{\sum_{j \in \bm{x}_k} \mathrm{e}^{x_j-m_k}}_{b_k} \\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k} \underbrace{\sum_{i \in [1, k-1]} \sum_{j \in \bm{x}_i} \mathrm{e}^{x_j-m_{k-1}}}_{s_{k-1}}+\mathrm{e}^{m^<em>_k - m_k} \underbrace{\sum_{j \in \bm{x}_k} \mathrm{e}^{x_j-m^</em>_k}}_{\hat{b}_k}\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k}s_{k-1}+\mathrm{e}^{m^*_k - m_k} \hat{b}_k\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k}s_{k-1}+b_k<br>\end{align}$$</p>
+<p>$$\begin{align}<br>s_k&amp;=\sum_{i\in [1,k-1]}\sum_{j\in \bm{x}_i}\mathrm{e}^{x_j - m_k}+\underbrace{\sum_{j \in \bm{x}_k} \mathrm{e}^{x_j-m_k}}_{b_k} \\\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k} \underbrace{\sum_{i \in [1, k-1]} \sum_{j \in \bm{x}_i} \mathrm{e}^{x_j-m_{k-1}}}_{s_{k-1}}+\mathrm{e}^{m^<em>_k - m_k}<br>\underbrace{\sum_{j \in \bm{x}_k} \mathrm{e}^{x_j-m^</em>_k}}_{\hat{b}_k}\\\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k}s_{k-1}+\mathrm{e}^{m^*_k - m_k} \hat{b}_k\\\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k}s_{k-1}+b_k<br>\end{align}$$</p>
 <p>也就是有</p>
 <p>$$\begin{align}<br>s_k=\mathrm{e}^{m_{k-1}-m_k}s_{k-1}+b_k<br>\end{align}$$</p>
 <p>其中，$m_k=\max_{i\in [1, k]} (\max[\bm{x}_i])$, $b_k = \sum_{j \in \bm{x}_k} \mathrm{e}^{x_j - m_k}$ 是<strong>完全基于历史最大值和当前块内部最大值</strong>算出来的局部和，这可以在SRAM中直接防溢出计算。</p>
-<h5 id="1-2、硬件层面意义"><a href="#1-2、硬件层面意义" class="headerlink" title="1.2、硬件层面意义"></a>1.2、硬件层面意义</h5><p>这个递推公式 $s_k =  \mathrm{e}^{m_{k-1} - m_k} s_{k-1} + b_k$ 完美契合了SRAM的限制：</p>
-<ol>
-<li><p><strong>分母的计算可以在单遍扫描内完成</strong>：我们不再需要先遍历一次HBM求全局最大值。只要从HBM按块加载 $\bm{x}_k$ 到SRAM，计算局部的 $m^*_k$ 和 $b_k$，然后与SRAM中寄存的标量 $m_{k-1}$ 和 $s_{k-1}$ 做一次O(1)的代数运算，即可更新为 $m_k$ 和 $s_k$。</p>
-</li>
-<li><p><strong>无需回写HBM</strong>：中间过程的指数结果不需要写回HBM。SRAM中只需要常驻两个标量（累积最大值 $m_k$ 和累积和 $s_k$），极大幅度降低了显存占用（即 $O(N)$ 的中间向量 $\mathrm{e}^{x_i - m}$ 被消灭了，变成了 $O(1)$ 的标量存储开销）。</p>
-</li>
-</ol>
-<h5 id="1-3、最后输出"><a href="#1-3、最后输出" class="headerlink" title="1.3、最后输出"></a>1.3、最后输出</h5><p>对于<strong>纯向量 softmax</strong>, 必须两遍扫描，不存在单遍计算输出的捷径。这是输入输出维度决定的。</p>
-<ol>
-<li><p><strong>第一遍：</strong> 分块加载 $\bm{x}_k$，只为了更新两个标量 $m_k$ 和 $s_k$。处理完 $K$个块后，SRAM 里只留下了最终的全局 $m$ 和 $s$。</p>
-</li>
-<li><p><strong>第二遍：</strong> 再次分块加载 $\bm{x}_k$，此时 $m$ 和 $s$ 已知，直接计算 $\frac{\mathrm{e}^{\bm{x}_k - m}}{s}$，算完一块就直接写回 HBM。SRAM 里根本不需要保留之前算过的 $o$。</p>
-</li>
-</ol>
-<p>在稍后的Attention块计算中，$\bm{O} = \mathrm{softmax}(\bm{Q}\bm{K}^T/\sqrt{d})\bm{V}$ 由于有了 $@\bm{V}$ 改变了输出维度，优化将更加友好。在纯向量softmax中，必须两遍扫描是因为第二遍要用全局的 $m$ 和 $s$ 重新算一遍归一化；但在Attention中，输出是 $\bm{o}_i = \sum_j \frac{\mathrm{e}^{S_{ij} - m_i}}{s_i} \bm{v}_j$ ，我们可以在SRAM内，一边更新 $s_i$，一边利用旧的 $s_{i}^{old}$ 修正之前累加的 $\bm{o}_i^{old}$ ，并加上新块的贡献。</p>
-<h4 id="二、递推公式的矩阵版本"><a href="#二、递推公式的矩阵版本" class="headerlink" title="二、递推公式的矩阵版本"></a>二、递推公式的矩阵版本</h4><p>上述引理我们仅讨论的对向量求softmax，但在Attention块，其实是对矩阵按行求softmax。所以现在我们来讨论矩阵版本的递推公式。定义第 $i$个查询块 $\bm{Q}_i\in \mathbb{R}^{r\times d}$, 同样定义第 $k$块键值：</p>
-<p>$$\begin{align}<br>\bm{K}_k \in \mathbb{R}^{c\times d},\quad \bm{V}_k \in \mathbb{R}^{c\times d}<br>\end{align}$$</p>
-<p>那么未放缩注意力分数矩阵</p>
-<p>$$\begin{align}<br>\bm{H}_{ik} = \bm{Q}_i \bm{K}_k^\T \in \mathbb{R}^{r\times c}<br>\end{align}$$</p>
-<p>需要的最终输出是</p>
-<p>$$\begin{align}<br>\bm{O}_{i} = \mathrm{softmax}\bigg(\frac{\bm{Q}_i\bm{K}^\T}{\sqrt{d}}\bigg)\bm{V} \in \mathbb{R}^{r \times d}<br>\end{align}$$</p>
-<p>为了在 SRAM 中分块完成，我们维护三组行级统计量（每行一个标量，整体是一个长度为 $r$的向量）</p>
-<p>$\bm{m}_{ik}\in \mathbb{R}^{r}$: 到第 $k$块为止的行最大值<br>$\bm{s}_{ik}\in \mathbb{R}^{r}$: 到第 $k$块为止的行指数和<br>$\bm{\tilde{O}}_{ik}\in \mathbb{R}^{r\times d}$: 到第 $k$块为止的未归一化输出</p>
-<p>初始化 $\bm{m}_i = -\bm{\infty}$, $\bm{s}_i = \bm{0}$, $\bm{O}_i = \bm{0}$，处理第 $k$个键值块时的向量化递推。这有：</p>
-<p>1、当前块的行最大值: $\bm{m}^<em>_{ik}=\mathrm{rowmax}(\bm{S}_{ik})\in \mathbb{R}^{r}$<br>2、更新全局行最大值：$\bm{m}_{ik}=\max(\bm{m}_{i,k-1},\bm{m}^</em>_{ik} )\in \mathbb{R}^{r}$<br>3、修正因子（旧最大值到新最大值的缩放）: $\bm{\delta}_{ik}=\mathrm{e}^{\bm{m}_{i,k-1}-\bm{m}_{ik} } \in \mathbb{R}^{r}$<br>4、分子项: $\bm{P}_{ik}=\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}}$<br>5、当前块局部指数和: $\bm{b}_{ik}=\mathrm{rowsum}(\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}})\in \mathbb{R}^r$<br>6、全局指数和: $\bm{s}_{i,k-1}=\sum_{j\in[1,k-1]}\mathrm{rowsum}(\mathrm{e}^{\bm{H}_{ij}-\bm{m}_{ij}})\in \mathbb{R}^r$</p>
-<p><strong>更新全局指数和</strong>: </p>
-<p>$$\begin{align}<br>\bm{s}_{ik}<br>=\mathrm{e}^{\bm{m}_{i,k-1}-\bm{m}_{ik} }\odot \bm{s}_{i,k-1} + \bm{b}_{ik}<br>= \bm{\delta}_{ik}\odot \bm{s}_{i,k-1} + \bm{b}_{ik} \in \mathbb{R}^{r}<br>\end{align}$$</p>
-<p>当前块未归一化输出: $\bm{\tilde{O}}_{ik}=\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}}\bm{V}_k \in \mathbb{R}^{r\times d}$<br><strong>全局未归一化输出</strong>: </p>
-<p>$$\begin{align}<br>\bm{O}_{ik}=\mathrm{diag}(\bm{\delta}_{ik})\bm{O}_{i,k-1}+\bm{\tilde{O}}_{ik} \in \mathbb{R}^{r\times d}<br>\end{align}$$</p>
-<p><strong>最终输出只需一次行归一化</strong>: </p>
-<p>$$\begin{align}<br>\bm{O}_i = \bm{O}_{iK} =\mathrm{diag}^{-1}(\bm{s}_{iK}) \bm{\tilde{O}}_{iK}<br>\end{align}$$</p>
-<h4 id="三、FlashAttention的内外循环"><a href="#三、FlashAttention的内外循环" class="headerlink" title="三、FlashAttention的内外循环"></a>三、FlashAttention的内外循环</h4><p>上面讨论的是：在固定第 $i$个查询块 $\bm{Q}_i\in \mathbb{R}^{r\times d}$，如何求 $\bm{O}_i$, 实际上要求的是 $\bm{O}$, 这样有内外循环, 伪代码如下：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 初始化 HBM 中的最终输出矩阵 O，维度 N x d</span></span><br><span class="line">O_hbm = zeros(N, d) </span><br><span class="line"></span><br><span class="line"><span class="comment"># 外层循环：遍历 Query 块 (决定输出行数)</span></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="number">1</span> to T_r:</span><br><span class="line">    <span class="comment"># 从 HBM 加载当前要处理的 Query 块到 SRAM</span></span><br><span class="line">    Q_i = load_Q(i)   <span class="comment"># 维度 B_r x d</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 在 SRAM 中初始化当前 Query 块的统计量和输出</span></span><br><span class="line">    m_i = full(-inf, B_r)    <span class="comment"># 维度 B_r</span></span><br><span class="line">    s_i = zeros(B_r)         <span class="comment"># 维度 B_r</span></span><br><span class="line">    O_i = zeros(B_r, d)      <span class="comment"># 维度 B_r x d  &lt;--- 注意这里，行数固定为 B_r</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 内层循环：遍历 Key/Value 块 (递推更新统计量和输出)</span></span><br><span class="line">    <span class="keyword">for</span> k <span class="keyword">in</span> <span class="number">1</span> to T_c:</span><br><span class="line">        K_k = load_K(k)   <span class="comment"># 维度 B_c x d</span></span><br><span class="line">        V_k = load_V(k)   <span class="comment"># 维度 B_c x d</span></span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 1. 计算注意力分数</span></span><br><span class="line">        H_ik = Q_i @ K_k.T  <span class="comment"># 维度 B_r x B_c</span></span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 2. 更新行最大值 m_i</span></span><br><span class="line">        m_i_new = max(m_i, rowmax(H_ik))</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 3. 计算修正因子</span></span><br><span class="line">        delta = exp(m_i - m_i_new) </span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 4. 修正并更新分母 l_i</span></span><br><span class="line">        P_ik = exp(H_ik - m_i_new) <span class="comment"># 维度 B_r x B_c</span></span><br><span class="line">        s_i_new = delta * s_i + rowsum(P_ik)</span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 5. 修正并更新分子 O_i (行数依然是 B_r，只有数值在变)</span></span><br><span class="line">        O_i = diag(delta) @ O_i + P_ik @ V_k </span><br><span class="line">        </span><br><span class="line">        <span class="comment"># 6. 更新统计量</span></span><br><span class="line">        m_i = m_i_new</span><br><span class="line">        l_i = l_i_new</span><br><span class="line">        </span><br><span class="line">    <span class="comment"># 内层循环结束，对当前 O_i 做最终归一化</span></span><br><span class="line">    O_i = diag(<span class="number">1.0</span> / s_i) @ O_i  </span><br><span class="line">    </span><br><span class="line">    <span class="comment"># 将计算好的 B_r x d 结果写回 HBM 对应的位置</span></span><br><span class="line">    O_hbm[i*B_r : (i+<span class="number">1</span>)*B_r, :] = O_i</span><br><span class="line"></span><br><span class="line"><span class="comment"># 外层循环结束，得到完整的 N x d 输出</span></span><br><span class="line"><span class="keyword">return</span> O_hbm</span><br></pre></td></tr></table></figure>
-<ul>
-<li><strong>上标 $(k)$ 代表的是时间步（内层循环的进度），而不是空间上的行扩展</strong>。</li>
-<li>在递推过程中，$\bm{O}_{ik}$ 始终对应同一个 Query 块 $\bm{Q}_i$，所以它的维度锁死在 $B_r \times d$。</li>
-<li>完整的 $N \times d$ 输出，是靠<strong>外层循环</strong>不断将不同 Query 块算出的 $B_r \times d$ 拼接（写回 HBM 不同位置）而成的。</li>
-<li>这种“外层按 $\bm{Q}$分块并行，内层按 $\bm{KV}$ 分块递推”的设计，正好完美匹配了 GPU 的架构：外层循环的不同 $i$ 可以分配给不同的 SM（流多处理器）完全并行计算，而内层循环则在 SRAM 中串行/流式处理，避免了对 HBM 的反复读写。</li>
-</ul>
-<h4 id="四、如何控制-Q和-KV的分块大小"><a href="#四、如何控制-Q和-KV的分块大小" class="headerlink" title="四、如何控制 Q和 KV的分块大小"></a>四、如何控制 Q和 KV的分块大小</h4><p>分块大小不是由算法偏好决定的，而是被每个 SM（流式多处理器）SRAM 大小决定的。我们要确保一件事：在计算内循环 $\bm{Q}_i\bm{K}_k$时，所有需要的中间变量，必须完全塞进 SRAM 里，绝不能溢出到 HBM。我们以 A100 上常见的 <strong>FP16/BF16 (2 bytes/element)</strong> 精度，<strong>Head维度 $d = 128$</strong> 为例，来算这笔账。</p>
-<h5 id="4-1、基础变量设定"><a href="#4-1、基础变量设定" class="headerlink" title="4.1、基础变量设定"></a>4.1、基础变量设定</h5><ul>
-<li>$B_r$: Q 的分块行数（块大小）</li>
-<li>$B_c$: KV 的分块行数（块大小）</li>
-<li>$d$: 注意力头维度 (128)</li>
-<li>单个元素大小: 2 Bytes</li>
-</ul>
-<h5 id="4-2、盘点-SRAM占用时间线"><a href="#4-2、盘点-SRAM占用时间线" class="headerlink" title="4.2、盘点 SRAM占用时间线"></a>4.2、盘点 SRAM占用时间线</h5><p>在内循环的一次迭代中，SRAM 里必须有可能驻留以下数据：</p>
-<ol>
-<li>$\bm{Q}_{block}$：大小 $B_r \times d$ $\rightarrow$ 占用 $2 B_r d$ Bytes</li>
-<li>$\bm{K}_{block}$：大小 $B_c \times d$ $\rightarrow$ 占用 $2 B_c d$ Bytes</li>
-<li>$\bm{V}_{block}$：大小 $B_c \times d$ $\rightarrow$ 占用 $2 B_c d$ Bytes</li>
-<li>$\bm{H}_{block}$ (中间得分矩阵)：<strong>这是罪魁祸首！</strong> $\bm{Q}_{block} \times \bm{K}_{block}^\T$ 会产生一个 $B_r \times B_c$ 的矩阵 $\rightarrow$ 占用 $2 B_r B_c$ Bytes</li>
-<li>$\bm{P}_{block}$ (分子项目): 大小 $B_r \times B_c$ $\rightarrow$ 占用 $2 B_r B_c$ Bytes</li>
-<li>$\bm{O}_{block}$ (累积输出)：大小 $B_r \times d$ $\rightarrow$ 占用 $2 B_r d$ Bytes</li>
-<li>$\bm{m}_{old},\bm{m}_{new}$ (统计量需要用FP32)：大小 $2*times B_r$ $\rightarrow$ 占用 $8B_r $ Bytes</li>
-<li>$\bm{s}_{old},\bm{s}_{new}$ (统计量需要用FP32)：大小 $2*times B_r$ $\rightarrow$ 占用 $8B_r $ Bytes</li>
-<li>$\bm{\delta}$ (统计量需要用FP32)：大小 $B_r$ $\rightarrow$ 占用 $4B_r $ Bytes</li>
-</ol>
-<p><strong>总 SRAM 占用估算：</strong></p>
-<p>实际SRAM占用是随着时间线动态变化的，来看看FlashAttention-1的显存分析</p>
-<p>1、加载Q_block $\rightarrow$ $2B_rd$ Bytes<br>2、初始化m_old、s_old 、O_old $\rightarrow$ $\underbrace{2B_rd}_{\small \text{加载Q_block}} +<br>\underbrace{4B_r+ 4B_r + 2B_rd}_{\small \text{初始化m,s,O}}$ Bytes<br>3、加载KV_block $\rightarrow$ $\underbrace{2B_rd}_{\small \text{加载Q_block}}+<br>\underbrace{4B_r+ 4B_r + 2B_rd}_{\small \text{初始化m,s,O}} +<br>\underbrace{2B_cd}_{\small \text{加载K_block}} +<br>\underbrace{2B_cd}_{\small \text{加载V_block}}$ Bytes<br>3、计算未放缩注意力分数S_block $\rightarrow$ $\underbrace{2B_rd}_{\small \text{加载Q_block}}+<br>\underbrace{4B_r+ 4B_r + 2B_rd}_{\small \text{初始化m,s,O}} +<br>\underbrace{2B_cd}_{\small \text{加载K_block}} +<br>\underbrace{2B_cd}_{\small \text{加载V_block}} +<br>\underbrace{2B_rB_c}_{\small \text{未放缩注意力分数S_block}}$ Bytes<br>4、更新行最大值m_new $\rightarrow$ $\underbrace{4B_r+ 4B_r + 2B_rd}_{\small \text{初始化m,s,O}} +<br>\underbrace{2B_cd}_{\small \text{加载V_block}} +<br>\underbrace{2B_rB_c}_{\small \text{未放缩注意力分数S_block}} +<br>\underbrace{4B_r}_{\small \text{更新m_new}}$ Bytes<br>5、计算修正因子delta $\rightarrow$ $\underbrace{4B_r+ 4B_r + 2B_rd}_{\small \text{初始化m,s,O}} +<br>\underbrace{2B_cd}_{\small \text{加载V_block}} +<br>\underbrace{2B_rB_c}_{\small \text{未放缩注意力分数S_block}} +<br>\underbrace{4B_r}_{\small \text{更新m_new}} +<br>\underbrace{4B_r}_{\small \text{修正因子delta}}$ Bytes<br>6、更新统计量m $\rightarrow$ $\underbrace{4B_r+ 4B_r + 2B_rd}_{\small \text{初始化m,s,O}} +<br>\underbrace{2B_cd}_{\small \text{加载V_block}} +<br>\underbrace{2B_rB_c}_{\small \text{未放缩注意力分数S_block}} +<br>\underbrace{4B_r}_{\small \text{修正因子delta}}$ Bytes<br>6、分子项目P_block $\rightarrow$ $\underbrace{4B_r+ 4B_r + 2B_rd}_{\small \text{初始化m,s,O}} +<br>\underbrace{2B_cd}_{\small \text{加载V_block}} +<br>\underbrace{2B_rB_c}_{\small \text{未放缩注意力分数S_block}} +<br>\underbrace{4B_r}_{\small \text{修正因子delta}} +<br>\underbrace{2 B_rB_c}_{\small \text{分子项目P_block}}$ Bytes<br>7、更新分母s_new $\rightarrow$ $\underbrace{4B_r+ 4B_r + 2B_rd}_{\small \text{初始化m,s,O}} +<br>\underbrace{2B_cd}_{\small \text{加载V_block}} +<br>\underbrace{4B_r}_{\small \text{修正因子delta}} +<br>\underbrace{2B_rB_c}_{\small \text{分子项P_block}} +<br>\underbrace{8B_r}_{\small \text{更新分母s_new}}$ Bytes<br>8、更新统计量s $\rightarrow$ $\underbrace{4B_r+ 4B_r + 2B_rd}_{\small \text{初始化m,s,O}} +<br>\underbrace{2B_cd}_{\small \text{加载V_block}} +<br>\underbrace{4B_r}_{\small \text{修正因子delta}} +<br>\underbrace{2B_rB_c}_{\small \text{分子项P_block}}$ Bytes<br>8、更新未归一O_back $\rightarrow$ $\underbrace{4B_r+ 4B_r + 2B_rd}_{\small \text{初始化m,s,O}} +<br>\underbrace{2B_cd}_{\small \text{加载V_block}} +<br>\underbrace{4B_r}_{\small \text{修正因子delta}} +<br>\underbrace{2B_rB_c}_{\small \text{分子项P_block}} +<br>\underbrace{2B_rd}_{\small \text{更新未归一O_back}}$ Bytes<br>10、计算最终O $\rightarrow$ $\underbrace{4B_r+ 4B_r+2B_rd}_{\small\text{初始化m,s,O}}<br>+\underbrace{2B_rd}_{\small\text{更新未归一O}}+<br>\underbrace{2B_rd}_{\small \text{归一O}}$ Bytes<br>11、终止 $\rightarrow$ $\underbrace{4B_r+ 4B_r + 2B_rd}_{\small \text{初始化m,s,O}}$ Bytes</p>
-<h5 id="4-3、FlashAttention-2的极致优化"><a href="#4-3、FlashAttention-2的极致优化" class="headerlink" title="4.3、FlashAttention-2的极致优化"></a>4.3、FlashAttention-2的极致优化</h5><p>在写底层算子时，变量不是像 PyTorch 那样同时静态存在的，而是“流”过 SRAM 的。寻找整个时间线上的<strong>峰值</strong>，才是决定 Block Size 能设多大的唯一判据。按照 FA2 的极致优化，这条时间线还可以被压缩。下面重新走一遍这条时间线:</p>
-<h6 id="4-3-1、三个颠覆性的优化前提"><a href="#4-3-1、三个颠覆性的优化前提" class="headerlink" title="4.3.1、三个颠覆性的优化前提"></a>4.3.1、三个颠覆性的优化前提</h6><p>在重写时间线之前，必须确立 FA2 的三大原则，这将大幅削减你的内存占用：</p>
-<ul>
-<li>1、<strong>干掉中间变量P_block</strong>：正如上一轮讨论，$\exp(S - m)$ 的计算直接融合进 @ V_k 里，$2 B_r B_c$ 的 P_block彻底消失。</li>
-<li>2、<strong>K/V 内存复用</strong>：K_block和 V_block大小完全一样（$B_c \times d$），且在内循环中是串行使用的（先算 $QK^T$，再算 $PV$）。所以，<strong>它们共享同一块 SRAM 空间</strong>，算完 K 立刻覆盖写入 V，省掉一半占用。</li>
-<li>3、<strong>统计量寄存器化</strong>：$m_{old/new}, s_{old/new}, \delta$ 以及 $\tilde{O}$，在 FA2 中<strong>根本需要在 SRAM 里</strong>！它们被分配给了每个线程独占的寄存器。所以下面 SRAM 的账本里，不再计算它们的占用。</li>
-</ul>
-<h6 id="4-3-2、FA2-极致时间线"><a href="#4-3-2、FA2-极致时间线" class="headerlink" title="4.3.2、FA2 极致时间线"></a>4.3.2、FA2 极致时间线</h6><p>假设我们分配了一块名为 KV_BUFFER 的 SRAM 空间（大小 $2 B_c d$），一块 Q_BUFFER（大小 $2 B_r d$）。</p>
-<p>1、外循环伊始（加载 Q）</p>
-<ul>
-<li>动作：将 $Q_{block}$从 HBM搬入 Q_BUFFER。初始化寄存器里的 $m, s, \tilde{O}$。</li>
-<li>SRAM峰值：$\underbrace{2B_rd}_{\text{Q_BUFFER}}$</li>
-</ul>
-<p>2、内循环第 k 步：加载 K</p>
-<ul>
-<li>动作：将 $K_{block}$ 搬入 KV_BUFFER。</li>
-<li>SRAM峰值：$\underbrace{2B_rd}_{\text{Q_BUFFER}} + \underbrace{2B_cd}_{\text{KV_BUFFER (存K)}}$</li>
-</ul>
-<p>3、计算 $H = QK^T$</p>
-<ul>
-<li>动作：矩阵乘法，结果 $H_{block}$ 逐元素生成。<strong>注意：为了省空间，$H_{block}$ 甚至不配拥有完整的 SRAM 缓冲区！</strong> 它是一小块一小块（比如 16x16）在寄存器里算出来，马上进入下一步。</li>
-<li>SRAM峰值：不变。</li>
-</ul>
-<p>4、融合计算：$m_{new}$, $\delta$, $\exp$, 修正 $\tilde{O}$，更新 $s$</p>
-<ul>
-<li>动作：这是计算最密集的一步。在寄存器里算出 $m_{new}$ 和 $\delta$。此时 $K_{block}$ 已经没用了！</li>
-<li>SRAM峰值：不变。</li>
-</ul>
-<p>5、加载V，覆盖K</p>
-<ul>
-<li>动作：将 $V_{block}$ 从 HBM 搬入 KV_BUFFER，直接覆盖掉刚才的 $K_{block}$。</li>
-<li>SRAM峰值：$\underbrace{2 B_r d}_{\text{Q_BUFFER}} + \underbrace{2 B_c d}_{\text{KV_BUFFER (存V)}}$</li>
-</ul>
-<p>6、融合计算：$\exp(S) \times V$ 累加到 $\tilde{O}$</p>
-<ul>
-<li>动作：把刚才寄存器里的 $\exp(S)$ 逐行拿出来，跟 KV_BUFFER里的 $V$ 相乘，结果累加到寄存器的 $\tilde{O}$ 中。</li>
-<li>SRAM峰值：不变。</li>
-</ul>
-<p>7、内循环终点</p>
-<ul>
-<li>动作：当前 KV 块处理完毕，准备进入第 k+1 块。</li>
-<li>SRAM峰值：$\underbrace{2 B_r d}_{\text{Q_BUFFER}} + \underbrace{2 B_c d}_{\text{KV_BUFFER}}$ （准备被下一个 K 覆盖）</li>
-</ul>
-<h6 id="4-3-3、终极账本：SRAM-到底需要多大？"><a href="#4-3-3、终极账本：SRAM-到底需要多大？" class="headerlink" title="4.3.3、终极账本：SRAM 到底需要多大？"></a>4.3.3、终极账本：SRAM 到底需要多大？</h6><p>看完了整条时间线，会发现 SRAM 的峰值占用极其平稳，没有任何波峰：<br>$$\begin{align}<br>\text{SRAM}_{\text{peak}} = 2B_rd + 2B_cd<br>\end{align}$$</p>
-<p>这就是全部！没有 $B_rB_c$ 的中间矩阵，没有 $m, s, O$ 的占用。再拿 A100 (可用 SRAM ~100 KB, $d=128$, FP16) 算算看：</p>
-<p>$$\begin{align}<br>&amp;(2 B_r \times 128 + 2 B_c \times 128) \times 2 \le 102400\\<br>&amp;512 B_r + 512 B_c \le 102400<br>\end{align}$$</p>
-<p>如果取对称分块 $B_r = B_c$：<br>$$\begin{align}<br>1024 B_r \le 102400 \implies B_r \le 100<br>\end{align}$$</p>
-<p>现在，通过<strong>消灭P、K/V复用、统计量寄存器化</strong>这三板斧，大大提高了<strong>$B_r$ 的理论上限</strong> 考虑到 Tensor Core对齐（必须是 8/16/32/64/128 的倍数），FlashAttention-2 才敢肆无忌惮地把 $B_r$ 和 $B_c$ 设到 <strong>64 或 128</strong>，从而把 HBM 的 IO 次数压到最低，跑出理论极限带宽。</p>
-<h4 id="五、个人评述"><a href="#五、个人评述" class="headerlink" title="五、个人评述"></a>五、个人评述</h4><p>底层优化的本质，就是在这条时间线上玩<strong>俄罗斯方块</strong>：不仅要消除 $P_{block}$ 这种多余的方块，还要让 $K$ 和 $V$ 这种形状相同的方块完美重叠（内存复用），最后把 $m, s, O$ 这种零碎的方块塞进寄存器的缝隙里。这样，SRAM 这个狭小的舞台，才能跳出最快速的舞蹈。</p>
-<p>参考文献<br>[^1]:Dao, T., Fu, D. Y., Ermon, S., Rudra, A., &amp; Ré, C. (2022, May 29). FlashAttention: Fast and memory-efficient exact attention with IO-awareness. arXiv. <a href="https://doi.org/10.48550/arXiv.2205.14135" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2205.14135</a><br>[^2]:Dao, T. (2023, July 17). FlashAttention-2: Faster attention with better parallelism and work partitioning. arXiv. <a href="https://doi.org/10.48550/arXiv.2307.08691" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2307.08691</a><br>[^3]:Shah, J., Bikshandi, G., Zhang, Y., Thakkar, V., Ramani, P., &amp; Dao, T. (2024, July 11). FlashAttention-3: Fast and accurate attention with asynchrony and low-precision. arXiv. <a href="https://doi.org/10.48550/arXiv.2407.08608" target="_blank" rel="noopener">https://doi.org/10.48550/arXiv.2407.08608</a></p>
 <p><hr></p>
 <p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%"><a href="https://www.limoncc.com/post/f8b4cf8901e0b294/">https://www.limoncc.com/post/f8b4cf8901e0b294/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (May. 19, 2026). 《大语言模型研究14——注意力机制优化之FlashAttention》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/f8b4cf8901e0b294">https://www.limoncc.com/post/f8b4cf8901e0b294</a></td></tr><tr><td align="left" width="100%">@online{limoncc-f8b4cf8901e0b294,<br>title={大语言模型研究14——注意力机制优化之FlashAttention},<br>author={引线小白},<br>year={2026},<br>month={May},<br>date={19},<br>url={\url{<a href="https://www.limoncc.com/post/f8b4cf8901e0b294}}">https://www.limoncc.com/post/f8b4cf8901e0b294}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
 <script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
@@ -765,7 +654,7 @@
               
             
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、引理"><span class="nav-number">1.</span> <span class="nav-text">一、引理</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-1、核心问题"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、核心问题</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-2、硬件层面意义"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、硬件层面意义</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-3、最后输出"><span class="nav-number">1.3.</span> <span class="nav-text">1.3、最后输出</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#二、递推公式的矩阵版本"><span class="nav-number">2.</span> <span class="nav-text">二、递推公式的矩阵版本</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#三、FlashAttention的内外循环"><span class="nav-number">3.</span> <span class="nav-text">三、FlashAttention的内外循环</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#四、如何控制-Q和-KV的分块大小"><span class="nav-number">4.</span> <span class="nav-text">四、如何控制 Q和 KV的分块大小</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#4-1、基础变量设定"><span class="nav-number">4.1.</span> <span class="nav-text">4.1、基础变量设定</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#4-2、盘点-SRAM占用时间线"><span class="nav-number">4.2.</span> <span class="nav-text">4.2、盘点 SRAM占用时间线</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#4-3、FlashAttention-2的极致优化"><span class="nav-number">4.3.</span> <span class="nav-text">4.3、FlashAttention-2的极致优化</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#4-3-1、三个颠覆性的优化前提"><span class="nav-number">4.3.1.</span> <span class="nav-text">4.3.1、三个颠覆性的优化前提</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#4-3-2、FA2-极致时间线"><span class="nav-number">4.3.2.</span> <span class="nav-text">4.3.2、FA2 极致时间线</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#4-3-3、终极账本：SRAM-到底需要多大？"><span class="nav-number">4.3.3.</span> <span class="nav-text">4.3.3、终极账本：SRAM 到底需要多大？</span></a></li></ol></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#五、个人评述"><span class="nav-number">5.</span> <span class="nav-text">五、个人评述</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、引理"><span class="nav-number">1.</span> <span class="nav-text">一、引理</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-1、核心问题"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、核心问题</span></a></li></ol></li></ol></div>
             
           </div>
         </section>
