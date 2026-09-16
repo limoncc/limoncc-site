@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-16T11:29:44.472Z">
+<meta property="og:updated_time" content="2026-09-16T11:31:48.176Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究14——注意力机制优化之FlashAttention">
 <meta name="twitter:description" content="本文主要总结了注意力机制优化之FlashAttention的若干基本问题，和我自己的一些体会。">
@@ -409,7 +409,7 @@
 <p>在分块计算的场景下，当我们在处理第 $k$ 块 $\bm{x}_k$ 时，<strong>全局最大值 $m$ 是未知的</strong>，因此你无法在当前块直接算出真正的 $s_k$ 。为了解决这个问题，核心思想是：<strong>用局部最大值计算局部求和，并通过维护一个“运行最大值”来动态修正之前的求和结果</strong>。</p>
 <p>假设我们将 $\bm{x}$ 分成 $K$ 个块，定义到第 $k$ 块为止的局部最大值为 $m_k$，局部指数和为 $s_k$, 也就是说：</p>
 <p>$$\begin{align}<br>&amp;m_k = \max_{i \in [1, k]} (\max[\bm{x}_i])\\<br>&amp;s_k = \sum_{i \in [1, k]} \sum_{j \in \bm{x}_i} \mathrm{e}^{x_j - m_k}<br>\end{align}$$</p>
-<p>当我们从第 $k-1$ 块推进到第 $k$ 块时，局部最大值发生了更新：$m_k = \max(m_{k-1}, m^<em>_k)$，其中 $m^</em>_k = \max[\bm{x}_k]$ 是当前块的局部最大值。由于减去的最大值变大了（$m_k \geqslant m_{k-1}$），之前累加的 $s_k$ 整体缩小了。缩小的倍数正是 $\mathrm{e}^{m_{k-1} - m_k}$。于是我们可以得到如下的递推公式：</p>
+<p>当我们从第 $k-1$ 块推进到第 $k$ 块时，局部最大值发生了更新：$m_k = \max(m_{k-1}, m^<em>_k)$ ，其中 $m^</em>_k = \max[\bm{x}_k]$ 是当前块的局部最大值。由于减去的最大值变大了（ $m_k \geqslant m_{k-1}$），之前累加的 $s_k$ 整体缩小了。缩小的倍数正是 $\mathrm{e}^{m_{k-1} - m_k}$。于是我们可以得到如下的递推公式：</p>
 <p>$$\begin{align}<br>s_k&amp;= \sum_{i \in [1, k-1]} \sum_{j \in \bm{x}_i} \mathrm{e}^{x_j - m_k} + \underbrace{\sum_{j \in \bm{x}_k} \mathrm{e}^{x_j - m_k}}_{b_k} \\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k} \underbrace{\sum_{i \in [1, k-1]} \sum_{j \in \bm{x}_i} \mathrm{e}^{x_j- m_{k-1}}}_{s_{k-1}} + \mathrm{e}^{m^<em>_k - m_k} \underbrace{\sum_{j \in \bm{x}_k} \mathrm{e}^{x_j- m^</em>_k}}_{\hat{b}_k} \\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k} s_{k-1} + \mathrm{e}^{m^*_k - m_k} \hat{b}_k\\<br>&amp;=\mathrm{e}^{m_{k-1} - m_k} s_{k-1} + b_k<br>\end{align}$$</p>
 <p>也就是有</p>
 <p>$$\begin{align}<br>s_k=\mathrm{e}^{m_{k-1} - m_k} s_{k-1} + b_k<br>\end{align}$$</p>
@@ -438,7 +438,7 @@
 <p>为了在 SRAM 中分块完成，我们维护三组行级统计量（每行一个标量，整体是一个长度为 $r$的向量）</p>
 <p>$\bm{m}_{ik}\in \mathbb{R}^{r}$: 到第 $k$块为止的行最大值<br>$\bm{s}_{ik}\in \mathbb{R}^{r}$: 到第 $k$块为止的行指数和<br>$\bm{\tilde{O}}_{ik}\in \mathbb{R}^{r\times d}$: 到第 $k$块为止的未归一化输出</p>
 <p>初始化 $\bm{m}_i = -\bm{\infty}$, $\bm{s}_i = \bm{0}$, $\bm{O}_i = \bm{0}$，处理第 $k$个键值块时的向量化递推。这有：</p>
-<p>1、当前块的行最大值: $\bm{m}^<em>_{ik} = \mathrm{rowmax}(\bm{S}_{ik})\in \mathbb{R}^{r}$<br>2、更新全局行最大值：$\bm{m}_{ik} = \max(\bm{m}_{i,k-1},\bm{m}^</em>_{ik} )\in \mathbb{R}^{r}$<br>3、修正因子（旧最大值到新最大值的缩放）: $\bm{\delta}_{ik}=\mathrm{e}^{\bm{m}_{i,k-1}-\bm{m}_{ik} } \in \mathbb{R}^{r}$<br>4、分子项: $\bm{P}_{ik}=\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}}$<br>5、当前块局部指数和: $\bm{b}_{ik}=\mathrm{rowsum}(\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}})\in \mathbb{R}^r$<br>6、全局指数和: $\bm{s}_{i,k-1}=\sum_{j\in[1,k-1]}\mathrm{rowsum}(\mathrm{e}^{\bm{H}_{ij}-\bm{m}_{ij}})\in \mathbb{R}^r$</p>
+<p>1、当前块的行最大值: $\bm{m}^<em>_{ik}=\mathrm{rowmax}(\bm{S}_{ik})\in \mathbb{R}^{r}$<br>2、更新全局行最大值：$\bm{m}_{ik}=\max(\bm{m}_{i,k-1},\bm{m}^</em>_{ik} )\in \mathbb{R}^{r}$<br>3、修正因子（旧最大值到新最大值的缩放）: $\bm{\delta}_{ik}=\mathrm{e}^{\bm{m}_{i,k-1}-\bm{m}_{ik} } \in \mathbb{R}^{r}$<br>4、分子项: $\bm{P}_{ik}=\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}}$<br>5、当前块局部指数和: $\bm{b}_{ik}=\mathrm{rowsum}(\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}})\in \mathbb{R}^r$<br>6、全局指数和: $\bm{s}_{i,k-1}=\sum_{j\in[1,k-1]}\mathrm{rowsum}(\mathrm{e}^{\bm{H}_{ij}-\bm{m}_{ij}})\in \mathbb{R}^r$</p>
 <p><strong>更新全局指数和</strong>: </p>
 <p>$$\begin{align}<br>\bm{s}_{ik}<br>=\mathrm{e}^{\bm{m}_{i,k-1}-\bm{m}_{ik} }\odot \bm{s}_{i,k-1} + \bm{b}_{ik}<br>= \bm{\delta}_{ik}\odot \bm{s}_{i,k-1} + \bm{b}_{ik} \in \mathbb{R}^{r}<br>\end{align}$$</p>
 <p>当前块未归一化输出: $\bm{\tilde{O}}_{ik}=\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}}\bm{V}_k \in \mathbb{R}^{r\times d}$<br><strong>全局未归一化输出</strong>: </p>
