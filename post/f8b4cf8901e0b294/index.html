@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-16T13:20:46.473Z">
+<meta property="og:updated_time" content="2026-09-21T10:59:43.744Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究14——注意力机制优化之FlashAttention">
 <meta name="twitter:description" content="本文主要总结了注意力机制优化之FlashAttention的若干基本问题，和我自己的一些体会。">
@@ -440,7 +440,7 @@
 <p>为了在 SRAM 中分块完成，我们维护三组行级统计量（每行一个标量，整体是一个长度为 $r$的向量）</p>
 <p>$\bm{m}_{ik}\in \mathbb{R}^{r}$: 到第 $k$块为止的行最大值<br>$\bm{s}_{ik}\in \mathbb{R}^{r}$: 到第 $k$块为止的行指数和<br>$\bm{\tilde{O}}_{ik}\in \mathbb{R}^{r\times d}$: 到第 $k$块为止的未归一化输出</p>
 <p>初始化 $\bm{m}_i = -\bm{\infty}$, $\bm{s}_i = \bm{0}$, $\bm{O}_i = \bm{0}$，处理第 $k$个键值块时的向量化递推。这有：</p>
-<p>1、当前块的行最大值: $\bm{m}^<em>_{ik}=\mathrm{rowmax}(\bm{S}_{ik})\in \mathbb{R}^{r}$<br>2、更新全局行最大值：$\bm{m}_{ik}=\max(\bm{m}_{i,k-1},\bm{m}^</em>_{ik} )\in \mathbb{R}^{r}$<br>3、修正因子（旧最大值到新最大值的缩放）: $\bm{\delta}_{ik}=\mathrm{e}^{\bm{m}_{i,k-1}-\bm{m}_{ik} } \in \mathbb{R}^{r}$<br>4、分子项: $\bm{P}_{ik}=\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}}$<br>5、当前块局部指数和: $\bm{b}_{ik}=\mathrm{rowsum}(\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}})\in \mathbb{R}^r$<br>6、全局指数和: $\bm{s}_{i,k-1}=\sum_{j\in[1,k-1]}\mathrm{rowsum}(\mathrm{e}^{\bm{H}_{ij}-\bm{m}_{ij}})\in \mathbb{R}^r$ </p>
+<p>1、当前块的行最大值: $\bm{m}^<em>_{ik}=\mathrm{rowmax}(\bm{S}_{ik})\in \mathbb{R}^{r}$<br>2、更新全局行最大值：$\bm{m}_{ik}=\max(\bm{m}_{i,k-1},\bm{m}^</em>_{ik} )\in \mathbb{R}^{r}$<br>3、修正因子（旧最大值到新最大值的缩放）: $\bm{\delta}_{ik}=\mathrm{e}^{\bm{m}_{i,k-1}-\bm{m}_{ik} } \in \mathbb{R}^{r}$<br>4、分子项: $\bm{P}_{ik}=\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}}$<br>5、当前块局部指数和: $\bm{b}_{ik}=\mathrm{rowsum}(\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}})\in \mathbb{R}^r$<br>6、全局指数和: $\bm{s}_{i,k-1}=\sum_{j\in[1,k-1]}\mathrm{rowsum}(\mathrm{e}^{\bm{H}_{ij}-\bm{m}_{ij}})\in \mathbb{R}^r$  </p>
 <p><strong>更新全局指数和</strong>: </p>
 <p>$$\begin{align}<br>\bm{s}_{ik}<br>=\mathrm{e}^{\bm{m}_{i,k-1}-\bm{m}_{ik} }\odot \bm{s}_{i,k-1} + \bm{b}_{ik}<br>= \bm{\delta}_{ik}\odot \bm{s}_{i,k-1} + \bm{b}_{ik} \in \mathbb{R}^{r}<br>\end{align}$$</p>
 <p>当前块未归一化输出: $\bm{\tilde{O}}_{ik}=\mathrm{e}^{\bm{H}_{ik}-\bm{m}_{ik}}\bm{V}_k \in \mathbb{R}^{r\times d}$<br><strong>全局未归一化输出</strong>: </p>
