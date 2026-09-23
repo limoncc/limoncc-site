@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-09-23T13:13:00.753Z">
+<meta property="og:updated_time" content="2026-09-23T13:15:47.036Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="强化学习讲义1——RL-for-LLM技术选择决策图Tricks-or-Traps">
 <meta name="twitter:description" content="本文主要总结了LitePPO论文观点的若干基本问题，和我自己的一些体会。">
@@ -465,10 +465,7 @@
 </table>
 <h4 id="三、一句话解读"><a href="#三、一句话解读" class="headerlink" title="三、一句话解读"></a>三、一句话解读</h4><p>$$\begin{align}<br>\text{Lite PPO}<br>=\underbrace{\mathcal{J}_{\text{PPO}}}_{\text{原始对称裁剪损失，无 critic、无 KL}}<br>+\underbrace{A^{\text{group-mean}}_{\text{batch-std}}}_{\text{唯一修改 ①：跨层级优势归一化}}<br>+\underbrace{\mathcal{J}_{\text{token-level}}}_{\text{唯一修改 ②：词元级聚合}}<br>\end{align}$$</p>
 <p>相对 GRPO/DAPO，它<strong>只做减法和一处替换</strong>：去掉 KL 项、去掉非对称上界裁剪、去掉动态采样与超长过滤，再把优势的分母从组级 std 换成批次级 std。正是这两处保留（组均值提供组内相对基线、批次 std 稳定梯度量级；词元级聚合消除长度偏置）使得该最简目标在 Qwen3-Base 模型上超越了技术堆叠更复杂的 GRPO 与 DAPO。</p>
-<h4 id="三、RL-for-LLM-技术选择决策图"><a href="#三、RL-for-LLM-技术选择决策图" class="headerlink" title="三、RL for LLM 技术选择决策图"></a>三、RL for LLM 技术选择决策图</h4><section style="margin:0 auto;max-width:677px;font-family:-apple-system-font,BlinkMacSystemFont,'Helvetica Neue','PingFang SC','Microsoft YaHei',sans-serif;"><br><br>  <!-- 标题 --><br>  <section style="text-align:center;margin:0 0 8px 0;"><br>    <p style="font-size:18px;font-weight:bold;color:#1d2536;margin:0;">🧭 RL for LLM 技术选择决策图</p><br>    <p style="font-size:12px;color:#5f6b85;margin:4px 0 0 0;">Tricks or Traps?（arXiv:2508.08221）八大要点速查</p><br>  </section>
-
-  <!-- START -->
-  <section style="background-color:#ffffff;border:1px solid #c4cede;border-radius:8px;padding:12px 16px;text-align:center;margin:14px 0 0 0;"><br>    <p style="font-size:11px;color:#5f6b85;margin:0 0 4px 0;letter-spacing:1px;">START</p><br>    <p style="font-size:15px;font-weight:bold;color:#1d2536;margin:0;">你的初始策略模型是哪种？</p><br>    <p style="font-size:12px;color:#5f6b85;margin:6px 0 0 0;line-height:1.7;">最关键分叉点：几乎所有结论都以「模型类型」为首要变量</p><br>  </section>
+<h4 id="三、RL-for-LLM-技术选择决策图"><a href="#三、RL-for-LLM-技术选择决策图" class="headerlink" title="三、RL for LLM 技术选择决策图"></a>三、RL for LLM 技术选择决策图</h4><section style="margin:0 auto;max-width:677px;"><br><br>  <!-- START --><br>  <section style="background-color:#ffffff;border:1px solid #c4cede;border-radius:8px;padding:12px 16px;text-align:center;margin:14px 0 0 0;"><br>    <p style="font-size:11px;color:#5f6b85;margin:0 0 4px 0;letter-spacing:1px;">START</p><br>    <p style="font-size:15px;font-weight:bold;color:#1d2536;margin:0;">你的初始策略模型是哪种？</p><br>    <p style="font-size:12px;color:#5f6b85;margin:6px 0 0 0;line-height:1.7;">最关键分叉点：几乎所有结论都以「模型类型」为首要变量</p><br>  </section>
 
   <p style="text-align:center;color:#c4cede;font-size:15px;margin:6px 0;line-height:1;">▼</p>
 
