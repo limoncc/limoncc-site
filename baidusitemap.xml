@@ -5,7 +5,7 @@
     
   <url>
     <loc>https://www.limoncc.com/post/e2dd286f4b3be253/</loc>
-    <lastmod>2026-09-23T13:24:58.443Z</lastmod>
+    <lastmod>2026-09-23T13:28:05.669Z</lastmod>
     <data>
         <display>
         <title>强化学习讲义1——RL-for-LLM技术选择决策图Tricks-or-Traps</title>
@@ -73,9 +73,9 @@
          
         <tag>AI</tag>
          
-        <tag>注意力机制</tag>
-         
         <tag>稀疏注意</tag>
+         
+        <tag>注意力机制</tag>
          
         <tag>DSA</tag>
          
@@ -137,9 +137,9 @@
          
         <tag>AI</tag>
          
-        <tag>KV缓存</tag>
-         
         <tag>注意力机制</tag>
+         
+        <tag>KV缓存</tag>
          
          
            
@@ -601,19 +601,19 @@
          
         <tag>向量导数</tag>
          
+        <tag>Householder变换</tag>
+         
+        <tag>DPLR</tag>
+         
+        <tag>对角加秩一矩阵</tag>
+         
         <tag>记忆</tag>
          
         <tag>Titans</tag>
          
         <tag>线性注意力</tag>
          
-        <tag>Householder变换</tag>
-         
-        <tag>DPLR</tag>
-         
         <tag>DeltaNet</tag>
-         
-        <tag>对角加秩一矩阵</tag>
          
          
            
@@ -775,9 +775,9 @@
         
         <tag>概率论</tag>
          
-        <tag>弱收敛</tag>
-         
         <tag>大数定律</tag>
+         
+        <tag>弱收敛</tag>
          
         <tag>连续定理</tag>
          
@@ -801,9 +801,9 @@
         
         <tag>概率论</tag>
          
-        <tag>大数定律</tag>
-         
         <tag>弱大数定律</tag>
+         
+        <tag>大数定律</tag>
          
          
            
@@ -1054,11 +1054,11 @@
          
         <tag>autogen</tag>
          
-        <tag>工作流</tag>
-         
         <tag>交互语言</tag>
          
         <tag>领域特定语言</tag>
+         
+        <tag>工作流</tag>
          
         <tag>自适应UI</tag>
          
@@ -1089,13 +1089,13 @@
          
         <tag>autogen</tag>
          
+        <tag>工作流</tag>
+         
         <tag>大模型</tag>
          
         <tag>管理系统</tag>
          
         <tag>基本框架</tag>
-         
-        <tag>工作流</tag>
          
          
            

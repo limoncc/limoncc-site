@@ -79,8 +79,8 @@
       <tags>
         <tag>大语言模型</tag>
         <tag>AI</tag>
-        <tag>注意力机制</tag>
         <tag>稀疏注意</tag>
+        <tag>注意力机制</tag>
         <tag>DSA</tag>
         <tag>LightningIndexer</tag>
       </tags>
@@ -111,8 +111,8 @@
       <tags>
         <tag>大语言模型</tag>
         <tag>AI</tag>
-        <tag>KV缓存</tag>
         <tag>注意力机制</tag>
+        <tag>KV缓存</tag>
       </tags>
   </entry>
   <entry>
@@ -186,13 +186,13 @@
         <tag>向量微分</tag>
         <tag>矩阵导数</tag>
         <tag>向量导数</tag>
+        <tag>Householder变换</tag>
+        <tag>DPLR</tag>
+        <tag>对角加秩一矩阵</tag>
         <tag>记忆</tag>
         <tag>Titans</tag>
         <tag>线性注意力</tag>
-        <tag>Householder变换</tag>
-        <tag>DPLR</tag>
         <tag>DeltaNet</tag>
-        <tag>对角加秩一矩阵</tag>
       </tags>
   </entry>
   <entry>
@@ -442,9 +442,9 @@
         <tag>AI-Agent</tag>
         <tag>大语言模型</tag>
         <tag>autogen</tag>
-        <tag>工作流</tag>
         <tag>交互语言</tag>
         <tag>领域特定语言</tag>
+        <tag>工作流</tag>
         <tag>自适应UI</tag>
       </tags>
   </entry>
@@ -460,10 +460,10 @@
         <tag>生成模型</tag>
         <tag>AI-Agent</tag>
         <tag>autogen</tag>
+        <tag>工作流</tag>
         <tag>大模型</tag>
         <tag>管理系统</tag>
         <tag>基本框架</tag>
-        <tag>工作流</tag>
       </tags>
   </entry>
   <entry>
@@ -585,8 +585,8 @@
       </categories>
       <tags>
         <tag>概率论</tag>
-        <tag>弱收敛</tag>
         <tag>大数定律</tag>
+        <tag>弱收敛</tag>
         <tag>连续定理</tag>
       </tags>
   </entry>
@@ -599,8 +599,8 @@
       </categories>
       <tags>
         <tag>概率论</tag>
-        <tag>大数定律</tag>
         <tag>弱大数定律</tag>
+        <tag>大数定律</tag>
       </tags>
   </entry>
   <entry>
