@@ -1,0 +1,1085 @@
+<!doctype html>
+
+
+
+  
+
+
+<html class="theme-next mist use-motion">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/vendors/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/vendors/font-awesome/css/font-awesome.min.css?v=4.4.0" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.0.1" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="大模型,强化学习,KL散度,PPO,GRPO" />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.0.1" />
+
+
+
+
+
+
+<meta name="description" content="本文主要总结了大模型强化学习中的KL散度的若干基本问题，和我自己的一些体会。">
+<meta name="keywords" content="大模型,强化学习,KL散度,PPO,GRPO">
+<meta property="og:type" content="article">
+<meta property="og:title" content="大语言模型研究17——强化学习中KL散度惩罚问题">
+<meta property="og:url" content="https://www.limoncc.com/post/9e2e995289848c87/index.html">
+<meta property="og:site_name" content="柠檬CC">
+<meta property="og:description" content="本文主要总结了大模型强化学习中的KL散度的若干基本问题，和我自己的一些体会。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="https://www.limoncc.com/images/cc.png">
+<meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
+<meta property="og:updated_time" content="2026-10-02T15:02:18.595Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="大语言模型研究17——强化学习中KL散度惩罚问题">
+<meta name="twitter:description" content="本文主要总结了大模型强化学习中的KL散度的若干基本问题，和我自己的一些体会。">
+<meta name="twitter:image" content="https://www.limoncc.com/images/cc.png">
+
+
+
+<script type="text/javascript" id="hexo.configuration">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post"},
+    fancybox: true,
+    motion: true,
+    duoshuo: {
+      userId: undefined,
+      author: '博主'
+    }
+  };
+</script>
+
+  <script src='//unpkg.com/valine/dist/Valine.min.js'></script>
+  <title> 大语言模型研究17——强化学习中KL散度惩罚问题 | 柠檬CC </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-73837972-3', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//hm.baidu.com/hm.js?d225b8f8559eb2eb6a8bd8792e01ebb9";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "//tajs.qq.com/stats?sId=60130136";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container one-collumn sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-meta ">
+  
+
+  <div class="custom-logo-site-title">
+    <a href="/"  class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <span class="site-title">柠檬CC</span>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+  <p class="site-subtitle">小白爱吃柠檬O(∩_∩)O</p>
+</div>
+
+<div class="site-nav-toggle">
+  <button>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+    <span class="btn-bar"></span>
+  </button>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-poetry">
+          <a href="/poetry" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-leaf"></i> <br />
+            
+            诗集
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br />
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="#" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup">
+ <span class="search-icon fa fa-search"></span>
+ <input type="text" id="local-search-input">
+ <div id="local-search-result"></div>
+ <span class="popup-btn-close">close</span>
+</div>
+
+
+    </div>
+  
+</nav>
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                大语言模型研究17——强化学习中KL散度惩罚问题
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">发表于</span>
+            <time itemprop="dateCreated" datetime="2026-06-28T18:21:14+08:00" content="2026-06-28">
+              2026-06-28
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/机器学习/" itemprop="url" rel="index">
+                    <span itemprop="name">机器学习</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/机器学习/大语言模型研究/" itemprop="url" rel="index">
+                    <span itemprop="name">大语言模型研究</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+
+          
+          
+             <span id="/post/9e2e995289848c87/" class="leancloud_visitors" data-flag-title="大语言模型研究17——强化学习中KL散度惩罚问题">
+               &nbsp; | &nbsp;
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               <span class="post-meta-item-text">阅读次数 </span>
+               <span class="leancloud-visitors-count"></span>
+              </span>
+          
+
+          
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：<a href="https://www.limoncc.com/post/9e2e995289848c87/">https://www.limoncc.com/post/9e2e995289848c87/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
+<h3 id="一、回顾一下问题来源"><a href="#一、回顾一下问题来源" class="headerlink" title="一、回顾一下问题来源"></a>一、回顾一下问题来源</h3><h4 id="1-1、优化目标的惩罚项"><a href="#1-1、优化目标的惩罚项" class="headerlink" title="1.1、优化目标的惩罚项"></a>1.1、优化目标的惩罚项</h4><p>对于优化目标 $f(\theta)$, 如果有约束项 $g(\theta)$，通常使用拉格朗日乘子法表示为:</p>
+<p>$$\begin{align}<br>\max_{\theta} [f(\theta)+\lambda g(\theta)]<br>\end{align}$$</p>
+<h4 id="1-2、PPO的KL散度惩罚"><a href="#1-2、PPO的KL散度惩罚" class="headerlink" title="1.2、PPO的KL散度惩罚"></a>1.2、PPO的KL散度惩罚</h4><p>PPO提出了裁剪版的代理目标函数</p>
+<p>$$\begin{align}<br>\mathcal{L}_{\textit{PPO}}(\bm{\theta})<br>&amp;=\mathbb{E}_{q\sim \rho(Q),\bm{o}\sim \pi_{\bm{\theta}_\text{old}}}\frac{1}{\mid\bm{o}\mid}\sum_{t=1}^{\mid\bm{o}\mid}\bigg[\min\left[\frac{\pi_{\bm{\theta}}(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}_\text{old}}(o_t\mid q,o_{:t})}\cdot A_{\pi}(q,o_t),\mathrm{\text{clip}}\left[\frac{\pi_{\bm{\theta}}(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}_\text{old}}(o_t\mid q,o_{:t})},1-\epsilon,1+\epsilon\right]\cdot A_{\pi}(q,o_t)\right]\bigg]<br>\end{align}$$</p>
+<p>为减轻奖励模型的过度优化，PPO引入了基于参考模型的 $\text{KL}$ 散度惩罚项, 在计算每个token奖励时，减去 $\{o_1,\cdots,o_t\}$ 上的散度,</p>
+<p>$$\begin{align}<br>r_t=\pi_{\bm{\theta}_{\textit{rm}}}(q,o_{:t})-\beta \hat{\mathbb{KL}}\big[\pi_{\bm{\theta}} \mid\mid\pi_{\bm{\theta}_\textit{ref}}\big]<br>\end{align}$$</p>
+<p>其中:<br>$\pi_{\bm{\theta}_{\textit{rm}}}$ 是奖励模型(reward model)<br>$\displaystyle \hat{\mathbb{KL}}\big[\pi_{\bm{\theta}} \mid\mid\pi_{\bm{\theta}_\textit{ref}}\big] = \log \frac{\pi_{\bm{\theta}}(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}_\textit{ref}}(o_t\mid q,o_{:t})}$</p>
+<p>PPO这个KL散度惩罚加入的是一眼看上去是极其的不自然。学过优化理论的都知道，惩罚应该加到整体目标函数的外面。PPO这个操作是加到目标函数里面的一个参数里面。这是不自然的。</p>
+<h4 id="1-3、GRPO的KL惩罚"><a href="#1-3、GRPO的KL惩罚" class="headerlink" title="1.3、GRPO的KL惩罚"></a>1.3、GRPO的KL惩罚</h4><p>deepseek math论文[^5]提出了，GRPO组相对策略优化,目标函数是</p>
+<p>$$\begin{align}<br>&amp;\mathcal{L}_{\textit{GRPO}}(\bm{\theta})<br>=\mathbb{E}_{q\sim \rho(Q),\{\bm{o}_i\}_{i=1}^G\sim \pi_{\bm{\theta}_\text{old}}}\\<br>&amp;\frac{1}{G}\sum_{i=1}^G\frac{1}{\mid\bm{o}_i\mid}\sum_{t=1}^{\mid\bm{o}_i\mid}<br>\bigg[\min\left[\frac{\pi_{\bm{\theta}}(o_{i,t}\mid q,o_{i,:t})}{\pi_{\bm{\theta}_\text{old}}(o_{i,t}\mid q,o_{i,:t})}\cdot A_{\pi}(q,o_{i,t}),\mathrm{\text{clip}}\left[\frac{\pi_{\bm{\theta}}(o_{i,t}\mid q,o_{i,:t})}{\pi_{\bm{\theta}_\text{old}}(o_{i,t}\mid q,o_{i,:t})},1-\epsilon,1+\epsilon\right]\cdot A_{\pi}(q,o_{i,t})\right]-\beta \mathbb{\hat{KL}}\big[\pi_{\bm{\theta}} \mid\mid\pi_{\bm{\theta}_\textit{ref}}\big]\bigg]<br>\end{align}$$</p>
+<p>其中 $\displaystyle \mathbb{\hat{KL}}\big[\pi_{\bm{\theta}} \mid\mid\pi_{\bm{\theta}_\textit{ref}}\big] =\frac{\pi_{\bm{\theta}_\textit{ref}}(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}}(o_t\mid q,o_{:t})}- \log \frac{\pi_{\bm{\theta}_\textit{ref}}(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}}(o_t\mid q,o_{:t})}-1$</p>
+<p>忽略掉clip,GRPO的目标函数其实是这样:</p>
+<p>$$\begin{align}<br>\mathcal{L}(\bm{\theta})<br>=\mathbb{E}_{q\sim\rho,\bm{o}\sim \pi_{\bm{\theta}_{old}}}<br>\frac{1}{G}\sum_{i=1}^G\frac{1}{\mid\bm{o}_i\mid}\sum_{t=1}^{\mid\bm{o}_i\mid}\bigg[\frac{\pi_{\bm{\theta}}(o_{i,t}\mid q,o_{i,:t})}{\pi_{\bm{\theta}_\text{old}}(o_{i,t}\mid q,o_{i,:t})}A_{i,t}<br>-\beta\cdot\hat{\mathbb{KL}}\big[\pi_{\bm{\theta}} \mid\mid\pi_{\bm{\theta}_\textit{ref}}\big]\bigg]<br>\end{align}$$</p>
+<p>这样看，比PPO稍微要合理一点，因为KL惩罚项可以单独提出来，这样就和常规优化惩罚项一致了。</p>
+<h3 id="二、GRPO的KL散度的理论分析"><a href="#二、GRPO的KL散度的理论分析" class="headerlink" title="二、GRPO的KL散度的理论分析"></a>二、GRPO的KL散度的理论分析</h3><p>GRPO的KL散度惩罚项的梯度分析最早见之于[^1]和[^2], 不过他们的符号较为混乱，不够清晰。尤其关于PPO的部分，笔者很难同意是正确的。下面分析均是基于token级别的惩罚。</p>
+<h4 id="2-1、KL散度惩罚"><a href="#2-1、KL散度惩罚" class="headerlink" title="2.1、KL散度惩罚"></a>2.1、KL散度惩罚</h4><p>现在讨论GRPO的KL散度，到底是怎么来的，我们先忽略clip和重要性采样。回归到强化学习的目标函数(状态价值函数)，去考察KL散度。其中 $q,o_{i,:t}$是状态 $s_t$， $o_{i,t}$是动作 $a_t$。也可以用优势函数替换期望中的动作价值函数。它们的策略梯度是等价的。</p>
+<p>$$\begin{align}<br>\mathcal{J}(\bm{\theta})<br>&amp;=V_{\pi_{\bm{\theta}}}(o_{i,t})<br>=\mathbb{E}_{q\sim \rho,\bm{o}\sim \pi_{\bm{\theta}}}<br>\bigg[\frac{1}{G}\sum_{i=1}^G\frac{1}{\mid\bm{o}_i\mid}\sum_{t=1}^{\mid\bm{o}_i\mid}<br>Q_{\pi_{\bm{\theta}}}\big(q,o_{i,:t},o_{i,t}\big)<br>\bigg]\\<br>\mathcal{J}(\bm{\theta})<br>&amp;=\mathbb{E}_{q\sim \rho,\bm{o}\sim \pi_{\bm{\theta}}}<br>\bigg[\frac{1}{G}\sum_{i=1}^G\frac{1}{\mid\bm{o}_i\mid}\sum_{t=1}^{\mid\bm{o}_i\mid}<br>A_{\pi_{\bm{\theta}}}\big(q,o_{i,:t},o_{i,t}\big)<br>\bigg]<br>\end{align}$$</p>
+<p>下面从这个目标函数来推导。如果给目标函数加KL散度约束，应该是这样<br>$$\begin{align}<br>\mathcal{L}(\bm{\theta})<br>=\mathbb{E}_{q\sim \rho,\bm{o}\sim \pi_{\bm{\theta}}}<br>\bigg[\frac{1}{G}\sum_{i=1}^G\frac{1}{\mid\bm{o}_i\mid}\sum_{t=1}^{\mid\bm{o}_i\mid}<br>A_{\pi}(q,o_{i,t})<br>\bigg]<br>-\mathbb{E}_{q\sim \rho}\bigg[\frac{1}{G}\sum_{i=1}^G\frac{1}{\mid\bm{o}_i\mid}\sum_{t=1}^{\mid\bm{o}_i\mid}\beta\cdot\mathbb{KL}\big[\pi_{\bm{\theta}}\\mid\pi_{\bm{\theta}_{ref}}\big]\bigg]<br>\end{align}$$</p>
+<p>准确说对于其中一个token输出 $o_{i,t}$ 的KL散度是这样的</p>
+<p>$$\begin{align}<br>\mathbb{KL}\big[\pi_{\bm{\theta}} \mid\mid\pi_{\bm{\theta}_\textit{ref}}\big]<br>=\sum_{o_{i,t} \in \mathcal{Vocab}}\pi_{\bm{\theta}} \cdot \hat{\mathbb{KL}}<br>=\sum_{o_{i,t} \in \mathcal{Vocab}}\pi_{\bm{\theta}}(o_{i,t}\mid q,o_{i,:t})\cdot\hat{\mathbb{KL}}\big[\pi_{\bm{\theta}} \mid\mid\pi_{\bm{\theta}_\textit{ref}}\big]<br>\end{align}$$</p>
+<p><hr></p>
+<p><table border="1" width="100%"><tr><td align="center" width="18%">版权声明</td><td align="left" width="82%"><img src="https://www.limoncc.com/images/cc.png" width="18%"></td></tr><tr><td align="center" width="18%"><img src="https://www.limoncc.com/images/avatar.png" width="100%"></td><td align="left" width="82%">由<a href="https://www.limoncc.com">引线小白</a>创作并维护的<a href="http://www.limoncc.com">柠檬CC</a>博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证。<br>本文首发于柠檬CC <a href="https://www.limoncc.com">[ https://www.limoncc.com ]</a> , 版权所有、侵权必究。</td></tr><tr><td align="center" width="18%">本文永久链接</td><td align="left" width="82%"><a href="https://www.limoncc.com/post/9e2e995289848c87/">https://www.limoncc.com/post/9e2e995289848c87/</a></td></tr></table><table border="0" width="100%" style="display:inline !important;font-size:14px !important;color:#555555;"><tr><td align="left" width="100%" style="font-family:helvetica;font-size:14px !important;font-weight:bold;">如果您需要引用本文，请参考：</td></tr><tr><td align="left" width="100%">引线小白. (Jun. 28, 2026). 《大语言模型研究17——强化学习中KL散度惩罚问题》[Blog post]. Retrieved from <a href="https://www.limoncc.com/post/9e2e995289848c87">https://www.limoncc.com/post/9e2e995289848c87</a></td></tr><tr><td align="left" width="100%">@online{limoncc-9e2e995289848c87,<br>title={大语言模型研究17——强化学习中KL散度惩罚问题},<br>author={引线小白},<br>year={2026},<br>month={Jun},<br>date={28},<br>url={\url{<a href="https://www.limoncc.com/post/9e2e995289848c87}}">https://www.limoncc.com/post/9e2e995289848c87}}</a>,<br>}</td></tr></table><div class="bdsharebuttonbox"><a href="#" class="bds_more" data-cmd="more"></a><a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博"></a><a href="#" class="bds_douban" data-cmd="douban" title="分享到豆瓣网"></a><a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信"></a><a href="#" class="bds_sqq" data-cmd="sqq" title="分享到QQ好友"></a><a href="#" class="bds_duitang" data-cmd="duitang" title="分享到堆糖"></a><a href="#" class="bds_qzone" data-cmd="qzone" title="分享到QQ空间"></a><a href="#" class="bds_fbook" data-cmd="fbook" title="分享到Facebook"></a><a href="#" class="bds_twi" data-cmd="twi" title="分享到Twitter"></a></div></p>
+<script>window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"24"},"share":{},"image":{"viewList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"],"viewText":"分享到：","viewSize":"16"},"selectShare":{"bdContainerClass":null,"bdSelectMiniList":["tsina","douban","weixin","sqq","duitang","qzone","fbook","twi"]}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];</script>
+
+      
+    </div>
+
+    <div>
+      
+        
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/大语言模型/" rel="tag">#大语言模型</a>
+          
+            <a href="/tags/强化学习/" rel="tag">#强化学习</a>
+          
+            <a href="/tags/AI/" rel="tag">#AI</a>
+          
+            <a href="/tags/GRPO/" rel="tag">#GRPO</a>
+          
+            <a href="/tags/PPO/" rel="tag">#PPO</a>
+          
+            <a href="/tags/KL散度/" rel="tag">#KL散度</a>
+          
+        </div>
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/post/1540fb65f18f359a/" rel="next" title="大语言模型研究16——注意力机制优化之稀疏注意">
+                <i class="fa fa-chevron-left"></i> 大语言模型研究16——注意力机制优化之稀疏注意
+              </a>
+            
+          </div>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/post/9e070b6858f0e490/" rel="prev" title="RNN的复兴04:线性注意力并行计算DPLR">
+                RNN的复兴04:线性注意力并行计算DPLR <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+<!--           </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div> -->
+        <div id="vcomments"></div>
+        <script>new Valine({
+          el: "#vcomments",
+      appId: "BVjuNRCpkVSkz82jFmadIvY8-gzGzoHsz",
+    appKey: "bRjXPp55dop7RTC2xgunGdiP"})
+  </script>'
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel ">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.png"
+               alt="引线小白" />
+          <p class="site-author-name" itemprop="name">引线小白</p>
+          <p class="site-description motion-element" itemprop="description">小湖椰影廊桥,曾记否,谷围晓月,灯影朦胧。</p>
+        </div>
+        <nav class="site-state motion-element">
+          <div class="site-state-item site-state-posts">
+            <a href="/archives">
+              <span class="site-state-item-count">70</span>
+              <span class="site-state-item-name">日志</span>
+            </a>
+          </div>
+
+          
+            <div class="site-state-item site-state-categories">
+              <a href="/categories">
+                <span class="site-state-item-count">16</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            <div class="site-state-item site-state-tags">
+              <a href="/tags">
+                <span class="site-state-item-count">140</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="" target="_blank" title="Design">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  Design
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.behance.net/limoncc" target="_blank" title="Behance">
+                  
+                    <i class="fa fa-fw fa-behance"></i>
+                  
+                  Behance
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://www.pinterest.com/aegeanfan/" target="_blank" title="Pinterest">
+                  
+                    <i class="fa fa-fw fa-pinterest"></i>
+                  
+                  Pinterest
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://github.com/limoncc" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://weibo.com/3483157951" target="_blank" title="微博">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  微博
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="http://www.zhihu.com/people/limoncc" target="_blank" title="知乎">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                  知乎
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              设计不止，折腾不息。
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="http://chuangzaoshi.com" title="创造狮" target="_blank">创造狮</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+      </section>
+
+      
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+            
+              
+            
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#一、回顾一下问题来源"><span class="nav-number">1.</span> <span class="nav-text">一、回顾一下问题来源</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-1、优化目标的惩罚项"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、优化目标的惩罚项</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-2、PPO的KL散度惩罚"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、PPO的KL散度惩罚</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-3、GRPO的KL惩罚"><span class="nav-number">1.3.</span> <span class="nav-text">1.3、GRPO的KL惩罚</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#二、GRPO的KL散度的理论分析"><span class="nav-number">2.</span> <span class="nav-text">二、GRPO的KL散度的理论分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-1、KL散度惩罚"><span class="nav-number">2.1.</span> <span class="nav-text">2.1、KL散度惩罚</span></a></li></ol></li></ol></div>
+            
+          </div>
+        </section>
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">引线小白&nbsp &nbsp |&nbsp &nbsp  一个理想主义者，再造自我，以期未来。</span>
+</div>
+
+<div class="powered-by">
+  由 <a rel="external nofollow" class="theme-link" href="http://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a rel="external nofollow" class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>&nbsp &nbsp| &nbsp &nbsp Hosted by  <a href="https://github.com" style="font-weight: bold">Github Pages</a>
+</div>
+
+        
+
+        
+      </div>
+    </footer>
+
+    <div class="back-to-top">
+      <i class="fa fa-arrow-up"></i>
+    </div>
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+  
+  <script type="text/javascript" src="/vendors/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/vendors/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/vendors/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.0.1"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.0.1"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.0.1"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.0.1"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.0.1"></script>
+
+
+
+<!--   
+   
+  
+
+  
+
+ -->
+  
+  
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+       search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body").append('<div class="popoverlay">').css('overflow', 'hidden');
+      $('.popup').toggle();
+
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+    'use strict';
+    $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+            // get the contents from search data
+            isfetched = true;
+            $('.popup').detach().appendTo('.header-inner');
+            var datas = $( "entry", xmlResponse ).map(function() {
+                return {
+                    title: $( "title", this ).text(),
+                    content: $("content",this).text(),
+                    url: $( "url" , this).text()
+                };
+            }).get();
+            var $input = document.getElementById(search_id);
+            var $resultContent = document.getElementById(content_id);
+            $input.addEventListener('input', function(){
+                var matchcounts = 0;
+                var str='<ul class=\"search-result-list\">';                
+                var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                $resultContent.innerHTML = "";
+                if (this.value.trim().length > 1) {
+                // perform local searching
+                datas.forEach(function(data) {
+                    var isMatch = true;
+                    var content_index = [];
+                    var data_title = data.title.trim().toLowerCase();
+                    var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                    var data_url = data.url;
+                    var index_title = -1;
+                    var index_content = -1;
+                    var first_occur = -1;
+                    // only match artiles with not empty titles and contents
+                    if(data_title != '' && data_content != '') {
+                        keywords.forEach(function(keyword, i) {
+                            index_title = data_title.indexOf(keyword);
+                            index_content = data_content.indexOf(keyword);
+                            if( index_title < 0 && index_content < 0 ){
+                                isMatch = false;
+                            } else {
+                                if (index_content < 0) {
+                                    index_content = 0;
+                                }
+                                if (i == 0) {
+                                    first_occur = index_content;
+                                }
+                            }
+                        });
+                    }
+                    // show search results
+                    if (isMatch) {
+                        matchcounts += 1;
+                        str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                        var content = data.content.trim().replace(/<[^>]+>/g,"");
+                        if (first_occur >= 0) {
+                            // cut out 100 characters
+                            var start = first_occur - 20;
+                            var end = first_occur + 80;
+                            if(start < 0){
+                                start = 0;
+                            }
+                            if(start == 0){
+                                end = 50;
+                            }
+                            if(end > content.length){
+                                end = content.length;
+                            }
+                            var match_content = content.substring(start, end);
+                            // highlight all keywords
+                            keywords.forEach(function(keyword){
+                                var regS = new RegExp(keyword, "gi");
+                                match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                            });
+                            
+                            str += "<p class=\"search-result\">" + match_content +"...</p>"
+                        }
+                        str += "</li>";
+                    }
+                })};
+                str += "</ul>";
+                if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+                if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+                $resultContent.innerHTML = str;
+            });
+            proceedsearch();
+        }
+    });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').mousedown(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".popoverlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+  
+<!--   <script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+     showMathMenu: false,
+     showMathMenuMSIE: false,
+     tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+          displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+          processEscapes: true
+        },
+        TeX: {
+          equationNumbers: {autoNumber: 'AMS'},
+          Macros: {bm: "\\boldsymbol"}
+        },
+        'HTML-CSS': {
+          imageFont: null
+        }
+    });
+  </script> -->
+<!--     MathJax.Hub.Queue(function() {
+      var all = MathJax.Hub.getAllJax(), i;
+      for (i=0; i < all.length; i += 1) {
+        all[i].SourceElement().parentNode.className += ' has-jax';
+      }
+    }); -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [ ['$$', '$$'], ["\\[", "\\]"] ],
+    processEscapes: true,
+    tags: 'ams',
+    macros: {
+                                            bm: "\\boldsymbol",
+					    T:"\\intercal",
+                                            oiint: "{\\iint\\kern{-20mu}{\\unicode{x2B2D}}}",
+                                            oiiint: "{\\iiint\\kern{-24.5mu}\\large{\\unicode{x2B2D}}}"
+                                },
+  },
+  svg: {
+    fontCache: 'global'
+  }
+};
+</script>
+  <script type="text/x-mathjax-config">
+MathJax.texReset();
+MathJax.typeset();
+  </script>
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <!-- <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_SVG-full"></script> -->
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("Es7wAnqi0QiGhMLoyl7mkrQo-gzGzoHsz", "BxPXaoPFp3PzWqBTSe6VUuQS");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+</body>
+</html>
