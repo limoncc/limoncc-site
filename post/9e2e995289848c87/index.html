@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-10-02T15:26:51.708Z">
+<meta property="og:updated_time" content="2026-10-02T15:44:08.684Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究17——强化学习中KL散度惩罚问题">
 <meta name="twitter:description" content="本文主要总结了大模型强化学习中的KL散度的若干基本问题，和我自己的一些体会。">
@@ -468,7 +468,7 @@
 <p>$$\begin{align}<br>\nabla_{\bm{\theta} }\mathcal{L}(\bm{\theta})<br>&amp;=\underbrace{\mathbb{E}_{q\sim \rho,\bm{o}\sim \pi_{\bm{\theta} }}\frac{1}{G}\sum_{i=1}^G\frac{1}{\mid\bm{o}_i\mid}\sum_{t=1}^{\mid\bm{o}_i\mid}\bigg[\nabla_{\bm{\theta} }\log\pi_{\bm{\theta} }\cdot A_{i,t} }_{\small\text{标准策略梯度} }<br>\bigg]<br>-\beta\cdot\underbrace{\mathbb{E}_{q\sim \rho,\bm{o}\sim \pi_{\bm{\theta} }}<br>\frac{1}{G}\sum_{i=1}^G\frac{1}{\mid\bm{o}_i\mid}\sum_{t=1}^{\mid\bm{o}_i\mid}<br>\bigg[\nabla_{\bm{\theta} } \log \pi_{\bm{\theta} } \cdot\log\frac{\pi_{\bm{\theta} }}{\pi_{\bm{\theta}_{ref} }}<br>\bigg]}_{\small\text{新增梯度} }\\<br>&amp;=\mathbb{E}_{q\sim \rho,\bm{o}\sim \pi_{\bm{\theta} }}\frac{1}{G}\sum_{i=1}^G\frac{1}{\mid\bm{o}_i\mid}\sum_{t=1}^{\mid\bm{o}_i\mid}\bigg[\nabla_{\bm{\theta} }\log\pi_{\bm{\theta} }\Big(A_{i,t} -\beta\log\frac{\pi_{\bm{\theta} }}{\pi_{\bm{\theta}_{ref} }}\Big)<br>\bigg]<br>\end{align}$$</p>
 <p>这样就有K3策略梯度不截断、K2策略梯度截断、K1策略梯度不截断，它们的效果是一样的。但是 $\displaystyle \mathbb{E}_{\bm{o}\sim\pi_{\bm{\theta} }}\frac{1}{G}\sum_{i=1}^G\frac{1}{\mid\bm{o}_i\mid}\sum_{t=1}^{\mid\bm{o}_i\mid}\bigg[\nabla_{\bm{\theta} }\log\pi_{\bm{\theta} }\cdot1\bigg]=0$  只在理论期望下成立，在有限采样下会增加方差，因此标准做法是利用期望为 0的性质，直接将其截断丢弃。这样K2策略梯度截断似乎是理论上的完美的估计形式。</p>
 <h3 id="三、PPO的KL散度的理论分析"><a href="#三、PPO的KL散度的理论分析" class="headerlink" title="三、PPO的KL散度的理论分析"></a>三、PPO的KL散度的理论分析</h3><p>与GRPO不同，PPO的KL散度惩罚是加在奖励上，而PPO优势估计是通过GAE来计算的。</p>
-<h4 id="3-1、定义与符号说明"><a href="#3-1、定义与符号说明" class="headerlink" title="3.1、定义与符号说明"></a>3.1、定义与符号说明</h4><p>下面逐步推导 PPO 中目标函数对参数 $\theta$ 的梯度。为了书写方便，记 $kl_t$ 为 $t$ 时刻的 KL 散度采样值： $\displaystyle kl_t \triangleq \mathbb{KL}\big[\pi_{\bm{\theta} } \\mid\pi_{\bm{\theta}_\textit{ref} }\big] = \log \frac{\pi_{\bm{\theta} }(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}_\textit{ref} }(o_t\mid q,o_{:t})}$ ，这样有带惩罚的奖励函数：</p>
+<h4 id="3-1、定义与符号说明"><a href="#3-1、定义与符号说明" class="headerlink" title="3.1、定义与符号说明"></a>3.1、定义与符号说明</h4><p>下面逐步推导 PPO 中目标函数对参数 $\theta$ 的梯度。为了书写方便，记 $kl_t$ 为 $t$ 时刻的 KL 散度采样值： $\displaystyle kl_t \triangleq \mathbb{KL}\big[\pi_{\bm{\theta} } \mid\mid\pi_{\bm{\theta}_\textit{ref} }\big] = \log \frac{\pi_{\bm{\theta} }(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}_\textit{ref} }(o_t\mid q,o_{:t})}$ ，这样有带惩罚的奖励函数：</p>
 <p>$$\begin{align}<br>r_t = \pi_{\bm{\theta}_{\textit{rm} }}(q,o_{:t}) - \beta \cdot kl_t<br>\end{align}$$</p>
 <p>对于优势函数估计, 有：</p>
 <p>$$\begin{align}<br>\begin{cases}<br>&amp;\hat{A}_t(k)=\delta_t + \gamma\lambda\hat{A}_{t+1}(k-1)\\<br>&amp;\delta_t = r_t + \gamma v_{\bm{w} }(s_{t+1}) - v_{\bm{w} }(s_t)\\<br>&amp;r_t =\pi_{\bm{\theta}_{\textit{rm} }}(q,o_{:t})-\beta \mathbb{KL}\big[\pi_{\bm{\theta} } \mid\mid\pi_{\bm{\theta}_\textit{ref} }\big]\\<br>&amp;\displaystyle \mathbb{KL}\big[\pi_{\bm{\theta} } \mid\mid\pi_{\bm{\theta}_\textit{ref} }\big] = \log \frac{\pi_{\bm{\theta} }(o_t\mid q,o_{:t})}{\pi_{\bm{\theta}_\textit{ref} }(o_t\mid q,o_{:t})}<br>\end{cases}<br>\end{align}$$</p>
