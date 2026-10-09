@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-10-09T09:48:58.396Z">
+<meta property="og:updated_time" content="2026-10-09T09:50:50.403Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究18——线性回归视角看强化学习策略梯度">
 <meta name="twitter:description" content="本文主要总结了线性回归视角看强化学习策略梯度的若干基本问题，和我自己的一些体会。">
@@ -480,7 +480,7 @@
 <li>肥方向（$\lambda_k\gg1$，大概率动作/主导模式）：自然梯度把该方向压回 $1/\lambda_k$；朴素梯度照单全收，于是优势信号在主导方向上过冲——这正是训练后期策略在几个高概率模式间震荡的一个来源。</li>
 </ul>
 <h4 id="三、深入理解"><a href="#三、深入理解" class="headerlink" title="三、深入理解"></a>三、深入理解</h4><h5 id="3-1、优化器的影响"><a href="#3-1、优化器的影响" class="headerlink" title="3.1、优化器的影响"></a>3.1、优化器的影响</h5><h6 id="3-1-1、从曲率视角看优化器引言"><a href="#3-1-1、从曲率视角看优化器引言" class="headerlink" title="3.1.1、从曲率视角看优化器引言"></a>3.1.1、从曲率视角看优化器引言</h6><p>在深度强化学习中，代理目标的梯度由各类优化器更新，而优化器对策略参数的曲率信息做了不同假设。回顾第 2.3–2.4 节的核心结论：真实曲率是 Fisher 信息矩阵</p>
-<p>$$\begin{align}<br>\bm F=\mathbb E_{\pi_{\bm\theta} }!\big[\bm s\,\bm s^\T\big]<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\bm F=\mathbb E_{\pi_{\bm\theta} }\big[\bm s\,\bm s^\T\big]<br>\end{align}$$</p>
 <p>自然梯度方向为 $\bm F^{-1}\bm g$。任何优化器都可以看成对 $\bm F$ 做某种近似或替换，从而在参数空间中隐式选定一个约束集与一把尺子。一个关键概念是<strong>正交不变性</strong>：量 $f$ 称为正交不变的，如果</p>
 <p>$$\begin{align}<br>f(\bm U\bm W\bm V^\T)=f(\bm W)<br>\qquad<br>\forall\,\bm U\in O(m), \bm V\in O(n).<br>\end{align}$$</p>
 <p>即不管怎么旋转输入、输出空间的基，这个量都不变。权重初始化从某种分布采样，不同随机种子给出不同初始基。<strong>若优化器不是正交不变的，训练结果就部分依赖于初始基的任意选择，而非只依赖初始函数的性质。</strong> 正交不变性消除了这种任意性。所有优化器的参数更新共享同一骨架：</p>
