@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-10-09T09:45:11.898Z">
+<meta property="og:updated_time" content="2026-10-09T09:45:58.069Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究18——线性回归视角看强化学习策略梯度">
 <meta name="twitter:description" content="本文主要总结了线性回归视角看强化学习策略梯度的若干基本问题，和我自己的一些体会。">
@@ -426,10 +426,7 @@
 <p>所以</p>
 <p>$$\begin{align}<br>\nabla_\bm{\delta} \log \pi_\bm{\delta}(x)<br>=\lim_{|\bm{\delta}|\to 0}\frac{\log \pi_{\bm{\theta}+\bm{\delta} }(x)-\log \pi_\bm{\theta}(x)}{|\bm{\delta}|}<br>\end{align}$$<br>也就是说，得分函数 $\bm{s}(x)=\nabla_\bm{\theta} \log \pi_\bm{\theta}(x)$ 正是<strong>对数似然比关于参数的一阶灵敏度</strong>。因此它被称为无穷小对数似然比或局部似然比。</p>
 <h5 id="2-2、策略梯度参数邻域与曲率"><a href="#2-2、策略梯度参数邻域与曲率" class="headerlink" title="2.2、策略梯度参数邻域与曲率"></a>2.2、策略梯度参数邻域与曲率</h5><p>设 $\bm{\delta}$ 是参数的小扰动，$\pi_{\bm{\delta} }(o),\pi_{\bm{\theta}+\bm{\delta} }(o)$，并记得分函数 $\bm{s}(o)=\nabla_{\bm{\theta} }\log\pi_{\bm{\theta} }(o)$。KL 对 $\bm{\theta}$ 求二阶泰勒展开：</p>
-<p>$$\begin{align}<br>\mathbb{KL}\big(\pi_\bm{\theta}\mid\mid\pi_{\bm{\theta}+\bm{\delta} }\big)<br>=\underbrace{\mathbb{E}_\bm{\theta}\Big[\log\frac{\pi_\bm{\theta} }{\pi_{\bm{\theta}+\bm{\delta} }}\Big]}_{\small\text{一阶项} }</p>
-<ul>
-<li>{\small\text{高阶项} }<br>\end{align}$$</li>
-</ul>
+<p>$$\begin{align}<br>\mathbb{KL}\big(\pi_\bm{\theta}\mid\mid\pi_{\bm{\theta}+\bm{\delta} }\big)<br>=\underbrace{\mathbb{E}_\bm{\theta}\Big[\log\frac{\pi_\bm{\theta} }{\pi_{\bm{\theta}+\bm{\delta} }}\Big]}_{\small\text{一阶项} }<br>+{\small\text{高阶项} }<br>\end{align}$$</p>
 <p>把 $\log\pi_{\bm{\theta}+\bm{\delta} }(o)$ 在 $\bm{\theta}$ 处展开到二阶：</p>
 <p>$$\log\pi_{\bm{\theta}+\bm{\delta} }(o)<br>=\log\pi_\bm{\theta}(o)<br>+\bm{\delta}^\T\bm s(o)<br>+\frac{1}{2}\,\bm{\delta}^\T\nabla^2_{\theta}\log\pi_\bm{\theta}(o)\,\bm{\delta}+O(\mid\mid\bm{\delta}\mid\mid^3)$$</p>
 <p>代回：<br>$$\begin{align}<br>\mathrm{KL}\big(\pi_\bm{\theta}\,\mid\mid\,\pi_{\bm{\theta}+\bm{\delta} }\big)<br>=\mathbb{E}_{\pi_\bm{\theta} }\Big[\log\frac{\pi_\bm{\theta} }{\pi_{\bm{\theta}+\bm{\delta} }}\Big]<br>=-\mathbb{E}_{\pi_\bm{\theta} }\big[\bm{\delta}^\T\bm s\big]+O(\mid\mid\bm{\delta}\mid\mid^2)<br>=-\bm{\delta}^\T\underbrace{\mathbb{E}_{\pi_\bm{\theta} }[\bm s]}_{= \bm 0}<br>-\mathbb{E}_{\pi_\bm{\theta} }\Big[\frac12\bm{\delta}^\T\nabla^2\log\pi_\bm{\theta}\,\bm{\delta}\Big]<br>+O(\mid\mid\bm{\delta}\mid\mid^3)<br>\end{align}$$</p>

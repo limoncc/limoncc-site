@@ -5,7 +5,7 @@
     
   <url>
     <loc>https://www.limoncc.com/post/ef608130a2545b76/</loc>
-    <lastmod>2026-10-09T09:45:11.898Z</lastmod>
+    <lastmod>2026-10-09T09:45:58.069Z</lastmod>
     <data>
         <display>
         <title>大语言模型研究18——线性回归视角看强化学习策略梯度</title>
@@ -724,19 +724,19 @@
          
         <tag>向量导数</tag>
          
+        <tag>Householder变换</tag>
+         
+        <tag>DPLR</tag>
+         
+        <tag>对角加秩一矩阵</tag>
+         
         <tag>记忆</tag>
          
         <tag>Titans</tag>
          
         <tag>线性注意力</tag>
          
-        <tag>Householder变换</tag>
-         
-        <tag>DPLR</tag>
-         
         <tag>DeltaNet</tag>
-         
-        <tag>对角加秩一矩阵</tag>
          
          
            
@@ -898,9 +898,9 @@
         
         <tag>概率论</tag>
          
-        <tag>弱收敛</tag>
-         
         <tag>大数定律</tag>
+         
+        <tag>弱收敛</tag>
          
         <tag>连续定理</tag>
          
@@ -924,9 +924,9 @@
         
         <tag>概率论</tag>
          
-        <tag>大数定律</tag>
-         
         <tag>弱大数定律</tag>
+         
+        <tag>大数定律</tag>
          
          
            
