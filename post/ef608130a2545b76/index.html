@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-10-09T09:50:50.403Z">
+<meta property="og:updated_time" content="2026-10-09T14:29:44.425Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究18——线性回归视角看强化学习策略梯度">
 <meta name="twitter:description" content="本文主要总结了线性回归视角看强化学习策略梯度的若干基本问题，和我自己的一些体会。">
@@ -400,7 +400,7 @@
       
         <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：<a href="https://www.limoncc.com/post/ef608130a2545b76/">https://www.limoncc.com/post/ef608130a2545b76/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
 <h4 id="一、简单回顾"><a href="#一、简单回顾" class="headerlink" title="一、简单回顾"></a>一、简单回顾</h4><p>为了说明问题，代理目标函数暂时忽略clip、min这两个操作,，同时不采用原始的GRPO长度归一， $\frac{1}{|\bm{o}_i|}$ 会带来的长度偏差，正优势（答对）时短响应梯度更大 → 正确答案被压短；负优势（答错）时长响应被”摊薄”惩罚 → 错误响应被鼓励越写越长，这里采用DAPO的形式按总响应的总token数归一化。后面会发现如何做归一化影响甚大。</p>
-<p>$$\begin{align}<br>\mathcal{L}(\bm{\theta})<br>=\mathbb{E}_{q\sim \mathcal{D},\bm{o}\sim \pi_{\bm{\theta}_{old} }}<br>\Bigg[<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}<br>\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>{\color{blue}\bigg[}<br>w_{i,t}A_i<br>-\beta\mathbb{\hat{KL} }\big[\pi_{\bm{\theta} }\mid\mid\pi_{\bm{\theta}_{ref} }\big]<br>{\color{blue}\bigg]}<br>\Bigg]<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\mathcal{L}(\bm{\theta})<br>=\mathbb{E}_{q\sim \mathcal{D},\bm{o}\sim \pi_{\bm{\theta}_{old} }}<br>\Bigg[<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}<br>\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>{\color{blue}\bigg[}<br>w_{i,t}\big(A_i<br>-\beta\mathbb{\hat{KL} }\big[\pi_{\bm{\theta} }\mid\mid\pi_{\bm{\theta}_{ref} }\big)\big]<br>{\color{blue}\bigg]}<br>\Bigg]<br>\end{align}$$</p>
 <p>其中重要性比例 $\displaystyle w_{i,t}=\frac{\pi_{\bm{\theta} }(o_{i,t}\mid q,o_{i,:t})}{\pi_{\bm{\theta}_\text{old} }(o_{i,t}\mid q,o_{i,:t})}$ , $:t$ 含义是 $&lt;t$ 。这里选 $\displaystyle k2=\frac{1}{2}\log^2\frac{\pi_{\bm{\theta}_{ref} }}{\pi_{\bm{\theta} }}$，同时梯度截断的KL约束:</p>
 <p>$$\begin{align}<br>\mathcal{L}(\bm{\theta})<br>&amp;=\underbrace{\mathbb{E}_{q\sim \mathcal{D} }<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>\bigg[<br>\pi_{\bm{\theta}_{old} }\frac{\pi_{\bm{\theta} }}{\pi_{\bm{\theta}_\text{old} }}A_{i,t}\bigg]}_{\small\text{ 标准的强化学习目标} }<br>-\beta \cdot \underbrace{ \mathbb{E}_{q\sim \mathcal{D} }<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>\bigg[\pi_{\bm{\theta}_{old} }\frac{ {\color{gray} \pi_{\bm{\theta} }} }{\pi_{\bm{\theta}_\text{old} }}\cdot\hat{\mathbb{KL} }\big[\pi_{\bm{\theta} } ||\pi_{\bm{\theta}_\textit{ref} }\big]\bigg]}_{\small\text{KL惩罚项} }\\<br>&amp;=\underbrace{\mathbb{E}_{q\sim \mathcal{D} }<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>\bigg[<br>\pi_{\bm{\theta} }\cdot A_{i,t}\bigg]}_{\small\text{ 标准的强化学习目标} }<br>-\beta \cdot \underbrace{ \mathbb{E}_{q\sim \mathcal{D} }<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>\bigg[\mathrm{SG}(\pi_{\bm{\theta} })\cdot\hat{\mathbb{KL} }\big[\pi_{\bm{\theta} } ||\pi_{\bm{\theta}_\textit{ref} }\big]\bigg]}_{\small\text{KL惩罚项} }<br>\end{align}$$</p>
 <p>这样有策略梯度</p>
