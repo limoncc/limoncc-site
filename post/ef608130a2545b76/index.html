@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-10-09T09:42:33.913Z">
+<meta property="og:updated_time" content="2026-10-09T09:45:11.898Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究18——线性回归视角看强化学习策略梯度">
 <meta name="twitter:description" content="本文主要总结了线性回归视角看强化学习策略梯度的若干基本问题，和我自己的一些体会。">
@@ -400,7 +400,7 @@
       
         <p>作者: <a href="https://www.limoncc.com">引线小白</a>-本文永久链接：<a href="https://www.limoncc.com/post/ef608130a2545b76/">https://www.limoncc.com/post/ef608130a2545b76/</a><br>知识共享许可协议: 本博客采用<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/" target="_blank" rel="external">署名-非商业-禁止演绎4.0</a>国际许可证</p>
 <h4 id="一、简单回顾"><a href="#一、简单回顾" class="headerlink" title="一、简单回顾"></a>一、简单回顾</h4><p>为了说明问题，代理目标函数暂时忽略clip、min这两个操作,，同时不采用原始的GRPO长度归一， $\frac{1}{|\bm{o}_i|}$ 会带来的长度偏差，正优势（答对）时短响应梯度更大 → 正确答案被压短；负优势（答错）时长响应被”摊薄”惩罚 → 错误响应被鼓励越写越长，这里采用DAPO的形式按总响应的总token数归一化。后面会发现如何做归一化影响甚大。</p>
-<p>$$\begin{align}<br>\mathcal{L}(\bm{\theta})<br>=\mathbb{E}_{q\sim \mathcal{D},\bm{o}\sim \pi_{\bm{\theta}_{old} }}<br>\Bigg[<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}<br>\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>{\color{blue}\bigg[}<br>w_{i,t}A_i<br>-\beta\mathbb{\hat{KL} }\big[\pi_{\bm{\theta} }|\pi_{\bm{\theta}_{ref} }\big]<br>{\color{blue}\bigg]}<br>\Bigg]<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\mathcal{L}(\bm{\theta})<br>=\mathbb{E}_{q\sim \mathcal{D},\bm{o}\sim \pi_{\bm{\theta}_{old} }}<br>\Bigg[<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}<br>\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>{\color{blue}\bigg[}<br>w_{i,t}A_i<br>-\beta\mathbb{\hat{KL} }\big[\pi_{\bm{\theta} }\mid\mid\pi_{\bm{\theta}_{ref} }\big]<br>{\color{blue}\bigg]}<br>\Bigg]<br>\end{align}$$</p>
 <p>其中重要性比例 $\displaystyle w_{i,t}=\frac{\pi_{\bm{\theta} }(o_{i,t}\mid q,o_{i,:t})}{\pi_{\bm{\theta}_\text{old} }(o_{i,t}\mid q,o_{i,:t})}$ , $:t$ 含义是 $&lt;t$ 。这里选 $\displaystyle k2=\frac{1}{2}\log^2\frac{\pi_{\bm{\theta}_{ref} }}{\pi_{\bm{\theta} }}$，同时梯度截断的KL约束:</p>
 <p>$$\begin{align}<br>\mathcal{L}(\bm{\theta})<br>&amp;=\underbrace{\mathbb{E}_{q\sim \mathcal{D} }<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>\bigg[<br>\pi_{\bm{\theta}_{old} }\frac{\pi_{\bm{\theta} }}{\pi_{\bm{\theta}_\text{old} }}A_{i,t}\bigg]}_{\small\text{ 标准的强化学习目标} }<br>-\beta \cdot \underbrace{ \mathbb{E}_{q\sim \mathcal{D} }<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>\bigg[\pi_{\bm{\theta}_{old} }\frac{ {\color{gray} \pi_{\bm{\theta} }} }{\pi_{\bm{\theta}_\text{old} }}\cdot\hat{\mathbb{KL} }\big[\pi_{\bm{\theta} } ||\pi_{\bm{\theta}_\textit{ref} }\big]\bigg]}_{\small\text{KL惩罚项} }\\<br>&amp;=\underbrace{\mathbb{E}_{q\sim \mathcal{D} }<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>\bigg[<br>\pi_{\bm{\theta} }\cdot A_{i,t}\bigg]}_{\small\text{ 标准的强化学习目标} }<br>-\beta \cdot \underbrace{ \mathbb{E}_{q\sim \mathcal{D} }<br>\frac{1}{\sum_{i=1}^G|\bm{o}_i|}\sum_{i=1}^G\sum_{t=1}^{|\bm{o}_i|}<br>\bigg[\mathrm{SG}(\pi_{\bm{\theta} })\cdot\hat{\mathbb{KL} }\big[\pi_{\bm{\theta} } ||\pi_{\bm{\theta}_\textit{ref} }\big]\bigg]}_{\small\text{KL惩罚项} }<br>\end{align}$$</p>
 <p>这样有策略梯度</p>
@@ -422,21 +422,22 @@
 <p>叫<strong>似然比恒等式</strong>的核心原因是：<strong>恒等式里的权重</strong> $s(o)=\nabla_{\bm{\theta} } \log \pi_{\bm{\theta} }(o)$ <strong>本质上是无穷小似然比</strong>。它不是两个固定分布之间的普通似然比，而是参数发生微小变动时，新旧分布似然比的一阶展开系数。设有参数化分布 $\pi_{\bm{\theta} }(x)$。两个参数 $\bm{\theta}$ 和 $\bm{\theta}+\bm{\delta}$ 之间的似然比为</p>
 <p>$$\begin{align}<br>L(x)=\frac{\pi_{\bm{\theta}+\bm{\delta} }(x)}{\pi_\bm{\theta}(x)}<br>\to \log L(x)=\log \pi_{\bm{\theta}+\bm{\delta} }(x)-\log \pi_\bm{\theta}(x)<br>\end{align}$$</p>
 <p>当 $|\bm{\delta}|\to 0$ 时，一阶泰勒展开：</p>
-<p>$$\begin{align}<br>\log L(x)\approx \bm{\delta}^\T \nabla_\bm{\delta} \log \pi_\bm{\delta}(x)<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\log L(x)\approx \bm{\delta}^\T\nabla_\bm{\delta} \log \pi_\bm{\delta}(x)<br>\end{align}$$</p>
 <p>所以</p>
-<p>$$\begin{align}<br>\nabla_\bm{\delta} \log \pi_\bm{\delta}(x)<br>=<br>\lim_{|\bm{\delta}|\to 0}\frac{\log \pi_{\bm{\theta}+\bm{\delta} }(x)-\log \pi_\bm{\theta}(x)}{|\bm{\delta}|}<br>\end{align}$$<br>也就是说，得分函数 $\bm{s}(x)=\nabla_\bm{\theta} \log \pi_\bm{\theta}(x)$ 正是<strong>对数似然比关于参数的一阶灵敏度</strong>。因此它被称为无穷小对数似然比或局部似然比。</p>
+<p>$$\begin{align}<br>\nabla_\bm{\delta} \log \pi_\bm{\delta}(x)<br>=\lim_{|\bm{\delta}|\to 0}\frac{\log \pi_{\bm{\theta}+\bm{\delta} }(x)-\log \pi_\bm{\theta}(x)}{|\bm{\delta}|}<br>\end{align}$$<br>也就是说，得分函数 $\bm{s}(x)=\nabla_\bm{\theta} \log \pi_\bm{\theta}(x)$ 正是<strong>对数似然比关于参数的一阶灵敏度</strong>。因此它被称为无穷小对数似然比或局部似然比。</p>
 <h5 id="2-2、策略梯度参数邻域与曲率"><a href="#2-2、策略梯度参数邻域与曲率" class="headerlink" title="2.2、策略梯度参数邻域与曲率"></a>2.2、策略梯度参数邻域与曲率</h5><p>设 $\bm{\delta}$ 是参数的小扰动，$\pi_{\bm{\delta} }(o),\pi_{\bm{\theta}+\bm{\delta} }(o)$，并记得分函数 $\bm{s}(o)=\nabla_{\bm{\theta} }\log\pi_{\bm{\theta} }(o)$。KL 对 $\bm{\theta}$ 求二阶泰勒展开：</p>
-<p>$$\begin{align}<br>\mathbb{KL}\big(\pi_\bm{\theta}|\pi_{\bm{\theta}+\bm{\delta} }\big)<br>=\underbrace{\mathbb{E}_\bm{\theta}\Big[\log\frac{\pi_\bm{\theta} }{\pi_{\bm{\theta}+\bm{\delta} }}\Big]}_{\small\text{一阶项} }</p>
+<p>$$\begin{align}<br>\mathbb{KL}\big(\pi_\bm{\theta}\mid\mid\pi_{\bm{\theta}+\bm{\delta} }\big)<br>=\underbrace{\mathbb{E}_\bm{\theta}\Big[\log\frac{\pi_\bm{\theta} }{\pi_{\bm{\theta}+\bm{\delta} }}\Big]}_{\small\text{一阶项} }</p>
 <ul>
-<li>{\small\text{高阶项} }<br>\end{align}$$<br>把 $\log\pi_{\bm{\theta}+\bm{\delta} }(o)$ 在 $\bm{\theta}$ 处展开到二阶：</li>
+<li>{\small\text{高阶项} }<br>\end{align}$$</li>
 </ul>
-<p>$$\log\pi_{\bm{\theta}+\bm{\delta} }(o)<br>=\log\pi_\bm{\theta}(o)<br>+\bm{\delta}^\T\bm s(o)<br>+\frac{1}{2}\,\bm{\delta}^\T\nabla^2_{\theta}\log\pi_\bm{\theta}(o)\,\bm{\delta}+O(|\bm{\delta}|^3)$$</p>
-<p>代回：<br>$$\begin{align}<br>\mathrm{KL}\big(\pi_\bm{\theta}\,|\,\pi_{\bm{\theta}+\bm{\delta} }\big)<br>=\mathbb{E}_{\pi_\bm{\theta} }\Big[\log\frac{\pi_\bm{\theta} }{\pi_{\bm{\theta}+\bm{\delta} }}\Big]<br>=-\mathbb{E}_{\pi_\bm{\theta} }\big[\bm{\delta}^\T\bm s\big]+O(|\bm{\delta}|^2)<br>=-\bm{\delta}^\T\underbrace{\mathbb{E}_{\pi_\bm{\theta} }[\bm s]}_{= \bm 0}<br>-\mathbb{E}_{\pi_\bm{\theta} }\Big[\frac12\bm{\delta}^\T\nabla^2\log\pi_\bm{\theta}\,\bm{\delta}\Big]<br>+O(|\bm{\delta}|^3)<br>\end{align}$$</p>
+<p>把 $\log\pi_{\bm{\theta}+\bm{\delta} }(o)$ 在 $\bm{\theta}$ 处展开到二阶：</p>
+<p>$$\log\pi_{\bm{\theta}+\bm{\delta} }(o)<br>=\log\pi_\bm{\theta}(o)<br>+\bm{\delta}^\T\bm s(o)<br>+\frac{1}{2}\,\bm{\delta}^\T\nabla^2_{\theta}\log\pi_\bm{\theta}(o)\,\bm{\delta}+O(\mid\mid\bm{\delta}\mid\mid^3)$$</p>
+<p>代回：<br>$$\begin{align}<br>\mathrm{KL}\big(\pi_\bm{\theta}\,\mid\mid\,\pi_{\bm{\theta}+\bm{\delta} }\big)<br>=\mathbb{E}_{\pi_\bm{\theta} }\Big[\log\frac{\pi_\bm{\theta} }{\pi_{\bm{\theta}+\bm{\delta} }}\Big]<br>=-\mathbb{E}_{\pi_\bm{\theta} }\big[\bm{\delta}^\T\bm s\big]+O(\mid\mid\bm{\delta}\mid\mid^2)<br>=-\bm{\delta}^\T\underbrace{\mathbb{E}_{\pi_\bm{\theta} }[\bm s]}_{= \bm 0}<br>-\mathbb{E}_{\pi_\bm{\theta} }\Big[\frac12\bm{\delta}^\T\nabla^2\log\pi_\bm{\theta}\,\bm{\delta}\Big]<br>+O(\mid\mid\bm{\delta}\mid\mid^3)<br>\end{align}$$</p>
 <p>KL 在 $\bm{\delta}=\bm 0$ 处取极小值（值 0），极小值点处一阶导必为零，而极小性本身又由 KL 的非负性（Gibbs 不等式）保证。<strong>KL 没有线性项，是距离这类量的定义性特征</strong>。麻烦在第二项里的 $\mathbb{E}[\nabla^2\log\pi]$，它不为零。用恒等式 $\nabla^2\log\pi=\dfrac{\nabla^2\pi}{\pi}-\bm s\bm s^\T$（对 $\log\pi$ 求两次导，商法则）拆开：<br>$$\begin{align}<br>\mathbb{E}_{\pi_\bm{\theta} }\big[\nabla^2\log\pi_\bm{\theta}\big]<br>=\mathbb{E}_{\pi_\bm{\theta} }\Big[\frac{\nabla^2\pi_\bm{\theta} }{\pi_\bm{\theta} }\Big]-\mathbb{E}_{\pi_\bm{\theta} }\big[\bm s\bm s^\T\big]<br>=\int\nabla^2\pi_\bm{\theta}\,\mathrm{d}o- \bm{F}<br>=\nabla^2_\theta\underbrace{\int\pi_\bm{\theta}\,\mathrm{d}o}_{\equiv 1}- \bm{F}<br>=\bm 0-\bm{F}=-\bm{F}<br>\end{align}$$</p>
 <p><strong>两个非零的丑东西</strong> $\int\nabla^2\pi$ <strong>（测度归一化的二阶变化）与</strong> $\mathbb{E}[\bm s\bm s^\T]$<strong>（得分的二阶矩）精确抵消，只因</strong> $\int\pi=1$。 代回：</p>
-<p>$$\begin{align}<br>\mathrm{KL}\big(\pi_\bm{\theta}\,|\,\pi_{\bm{\theta}+\bm{\delta} }\big)<br>=-\bm{\delta}^\T\underbrace{\mathbb{E}[\bm s]}_{\bm 0}<br>-\frac12\bm{\delta}^\T\big(-\bm{F}\big)\bm{\delta}<br>+O(|\bm{\delta}|^3)<br>=\frac12\,\bm{\delta}^\T\bm{F}\,\bm{\delta}+O(|\bm{\delta}|^3)<br>\end{align}$$</p>
-<p>$$\begin{align}<br>\mathrm{KL}\big(\pi_\bm{\theta}\,|\,\pi_{\bm{\theta}+\bm{\delta} }\big)<br>=\frac12\,\bm{\delta}^\T\bm{F}\,\bm{\delta}+O(|\bm{\delta}|^3)<br>\end{align}$$</p>
-<p>其中 $\bm{F}=\mathbb{E}_{\pi_\bm{\theta} }\big[\bm s\,\bm s^\T\big]$，全部高阶信息被压进 $O(|\bm{\delta}|^3)$。</p>
+<p>$$\begin{align}<br>\mathrm{KL}\big(\pi_\bm{\theta}\,\mid\mid\,\pi_{\bm{\theta}+\bm{\delta} }\big)<br>=-\bm{\delta}^\T\underbrace{\mathbb{E}[\bm s]}_{\bm 0}<br>-\frac12\bm{\delta}^\T\big(-\bm{F}\big)\bm{\delta}<br>+O(\mid\mid\bm{\delta}\mid\mid^3)<br>=\frac12\,\bm{\delta}^\T\bm{F}\,\bm{\delta}+O(\mid\mid\bm{\delta}\mid\mid^3)<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\mathrm{KL}\big(\pi_\bm{\theta}\,\mid\mid\,\pi_{\bm{\theta}+\bm{\delta} }\big)<br>=\frac12\,\bm{\delta}^\T\bm{F}\,\bm{\delta}+O(\mid\mid\bm{\delta}\mid\mid^3)<br>\end{align}$$</p>
+<p>其中 $\bm{F}=\mathbb{E}_{\pi_\bm{\theta} }\big[\bm s\,\bm s^\T\big]$，全部高阶信息被压进 $O(\mid\mid\bm{\delta}\mid\mid^3)$。</p>
 <h5 id="2-3、归一化外生情形"><a href="#2-3、归一化外生情形" class="headerlink" title="2.3、归一化外生情形"></a>2.3、归一化外生情形</h5><p>归一化参数 c 条件于 $q,o_{i,:t}$ 是常数, 也是外生变量。那么策略梯度可写为 $\nabla_{\bm{\theta} }\mathcal{L}(\bm{\theta})<br>=c\cdot \sum_{i,t}\mathbb{E}_{q\sim \mathcal{D},\bm{o}\sim \pi_{\bm{\theta} }}<br>\left[<br>a_{i,t}\cdot\bm{s}_{i,t}<br>\right]$ ，为节约符号直接写成:</p>
 <p>$$\begin{align}<br>\nabla_{\bm{\theta} }\mathcal{L}(\bm{\theta})<br>=c\cdot \sum_{i,t}\mathbb{E}_{\pi_{\bm{\theta} }}<br>\left[<br>a\cdot\bm{s}<br>\right]<br>\end{align}$$</p>
 <p>那么有<br>$$\begin{align}<br>\nabla_{\bm{\theta} }\mathcal{L}(\bm{\theta})<br>&amp;=c\cdot \sum_{i,t}\mathbb{E}_{\pi_{\bm{\theta} }}<br>\left[a\cdot\bm{s}\right]\\<br>&amp;=c\sum_{i,t}\bigg[<br>\underbrace{\mathbb{E}_{\pi_{\bm{\theta} }}\left[a\right]<br>\mathbb{E}_{\pi_{\bm{\theta} }}\left[\bm{s}\right]}_{\small 漂移项}<br>+\underbrace{\mathrm{Cov}[a,\bm{s}]}_{\small线性相关项}<br>\bigg]\\<br>&amp;=c\sum_{i,t}\mathrm{Cov}[a,\bm{s}]<br>\end{align}$$</p>
@@ -457,7 +458,7 @@
 <p>$\bm{s}_{i,t}$ 是动作 $o_{i,t}$ 通过策略 $\pi_\bm{\theta}$在参数 $\bm{\theta}$ 处的一阶灵敏度特征。它回答的是参数往这个方向微动一步，这个具体动作的概率会怎么变，不含任何好坏评价，纯粹是 $\pi_\bm{\theta}$ 微分结构在 $o_{i,t}$ 处的取值。 $a_{i,t}$ 是回归目标。是环境(价值估计)给这个动作 $o_{i,t}$ 打的分。实际上有 $N=\sum_{i=1}^G|\bm{o}_i|$ 个单点数据集 $\displaystyle \mathcal{D}_{i,t}=\{\bm{s}_{i,t},o_{i,t}\}_{i\times t}$ , 也就是说每个 $(i,t)$ 只有一个采样点，条件于自己的前缀 $o_{i,:t}$。这样协方差计算就变成单样本一阶矩(这是建立在漂移项为零的基础上的)。策略梯度就是 $N$个回归之和，每个单样本数据集贡献一个无偏投票。实际上朴素策略梯度是：</p>
 <p>$$\begin{align}<br>\widehat{\nabla_{\bm{\theta} }\mathcal{L}(\bm{\theta})}<br>=c\sum_{i,t}a_{i,t}\cdot\bm{s}_{i,t}<br>\end{align}$$</p>
 <p>单样本虽然是无偏的，但是方差是极高的。这与假设的几何结构 $\bm{F}=\bm{E}$ ：Fisher信息矩阵是单位矩阵是相矛盾的。由2.2节知：</p>
-<p>$$\begin{align}<br>\mathrm{KL}\big(\pi_\bm{\theta}\,|\,\pi_{\bm{\theta}+\bm{\delta} }\big)<br>\approx \frac{1}{2}\bm{\delta}^\T\bm{F}\,\bm{\delta}=\frac{1}{2}||\bm{\delta}||^2<br>\end{align}$$</p>
+<p>$$\begin{align}<br>\mathrm{KL}\big(\pi_\bm{\theta}\,\mid\mid\,\pi_{\bm{\theta}+\bm{\delta} }\big)<br>\approx \frac{1}{2}\bm{\delta}^\T\bm{F}\,\bm{\delta}=\frac{1}{2}||\bm{\delta}||^2<br>\end{align}$$</p>
 <p>单位矩阵曲率实际上做了两个重要假设：</p>
 <ul>
 <li>正交性： 曲率的非对角元为零。往提高动作 A 概率的方向走一步，不会扰动动作 B 的概率。各动作的得分方向彼此正交。</li>
@@ -467,8 +468,8 @@
 <h6 id="2-4-2、一般策略梯度"><a href="#2-4-2、一般策略梯度" class="headerlink" title="2.4.2、一般策略梯度"></a>2.4.2、一般策略梯度</h6><p>设 logits 为 $\mu\in\mathbb R^K$，分类分布给出 $\pi_i=\frac{e^{\mu_i} }{\sum_{j=1}^K e^{\mu_j} }$ ,  其中 $i=1,\dots,K$。这里参数就是 logits $\mu$。考虑沿第 $i$ 个 logit 方向走一小步 $\mu’ = \mu+t e_i$, 则分布变化为</p>
 <p>$$\begin{align}<br>\pi’_i=\pi_i+\pi_i(1-\pi_i)t+O(t^2),<br>\end{align}$$</p>
 <p>而局部 KL 散度为</p>
-<p>$$\begin{align}<br>D_{\mathrm{KL} }(\pi|\pi’)<br>=<br>\frac12 t^2 F_{ii}+O(t^3)<br>=<br>\frac12 t^2 \pi_i(1-\pi_i)+O(t^3).<br>\end{align}$$</p>
-<p>因此，如果 $\pi_i\ll 1$，则 $F_{ii}\approx \pi_i, \mathbb{KL}(\pi|\pi’)\approx \frac12 t^2 \pi_i$， 若想产生固定的分布变化，比如 $\mathbb{KL}(\pi|\pi’)=\varepsilon$ 则需要</p>
+<p>$$\begin{align}<br>D_{\mathrm{KL} }(\pi\mid\mid\pi’)<br>=<br>\frac12 t^2 F_{ii}+O(t^3)<br>=<br>\frac12 t^2 \pi_i(1-\pi_i)+O(t^3).<br>\end{align}$$</p>
+<p>因此，如果 $\pi_i\ll 1$，则 $F_{ii}\approx \pi_i, \mathbb{KL}(\pi\mid\mid\pi’)\approx \frac12 t^2 \pi_i$， 若想产生固定的分布变化，比如 $\mathbb{KL}(\pi\mid\mid\pi’)=\varepsilon$ 则需要</p>
 <p>$$\begin{align}<br>|t|\approx \sqrt{\frac{2\varepsilon}{\pi_i(1-\pi_i)} }<br>\sim \sqrt{\frac{2\varepsilon}{\pi_i} },<br>\qquad \pi_i\to 0.<br>\end{align}$$</p>
 <p>也就是说，当动作 $i$ 的概率很小时，沿它的 logit 方向，参数要移动 $O\left(\frac{1}{\sqrt{\pi_i} }\right)$ 这么大的距离，才能在分布层面产生有限变化。因此该方向在 Fisher 度量下“极瘦”。等价地，看概率本身的一阶变化：</p>
 <p>$$\begin{align}<br>\Delta \pi_i:=\pi’_i-\pi_i<br>\approx \pi_i(1-\pi_i)t<br>\approx \pi_i t<br>\end{align}$$</p>
@@ -499,7 +500,7 @@
 <p>$\bm s_{i,t}$ 只在这里出现一次——这是恒等式 $c\sum_{i,t}\mathrm{Cov}(a,\bm s)$ 的无偏单样本估计，零修饰。</p>
 <p>更新方向：<br>$$\begin{align}<br>\bm U_k^{\mathrm{SGD} }=\bm g_k<br>\end{align}$$</p>
 <p>参数更新：<br>$$\begin{align}<br>\bm\theta_{k+1}=\bm\theta_k-\eta\,\bm g_k<br>\end{align}$$</p>
-<p>隐式约束集（带权重衰减时）：$\{|\bm\theta|_2\le R\}$</p>
+<p>隐式约束集（带权重衰减时）：$\{\mid\mid\bm\theta\mid\mid_2\le R\}$</p>
 <p>有效曲率：<br>$$\begin{align}<br>\bm{F}=\bm{E}<br>\end{align}$$</p>
 <p>即 SGD 隐式假设 Fisher 信息是单位矩阵——<strong>把参数空间当作欧氏空间</strong>。</p>
 <p>几何性质：<br>1、有效曲率 $=\bm{E}$，所有坐标等权；<br>2、正交不变（Frobenius 球是正交不变的）；<br>3、但<strong>对最坏奇异方向无感知</strong>——不区分”某个方向增益大”和”增益均匀”。</p>
@@ -516,12 +517,12 @@
 <p>更新方向：<br>$$\begin{align}<br>\bm U_k^{\mathrm{Muon},\,(\ell)}<br>=\mathrm{Ortho}!\big(\bm M_k^{(\ell)}\big)<br>\end{align}$$</p>
 <p>其中 $\mathrm{Ortho}(\bm M)=\bm U\bm V^\T$（若 $\bm M=\bm U\bm\Sigma\bm V^\T$），即把奇异值全部抹平为 1。</p>
 <p>参数更新（含解耦权重衰减）：<br>$$\begin{align}<br>\bm W_{k+1}^{(\ell)}<br>=(1-\eta\lambda)\,\bm W_k^{(\ell)}<br>-\eta\,\mathrm{Ortho}!\big(\bm M_k^{(\ell)}\big)<br>\end{align}$$</p>
-<p>隐式约束集：<br>$$\begin{align}<br>\{|\bm W^{(\ell)}|_{\mathrm{sp} }\le R\}<br>\end{align}$$</p>
+<p>隐式约束集：<br>$$\begin{align}<br>\{\mid\mid\bm W^{(\ell)}\mid\mid_{\mathrm{sp} }\le R\}<br>\end{align}$$</p>
 <p>有效曲率：由左极因子视角<br>$$\begin{align}<br>\mathrm{Ortho}(\bm M)=\bm U\bm\Sigma^{-1}\bm U^\T\cdot\bm M<br>\end{align}$$</p>
 <p>曲率校正为 $\bm U\bm\Sigma^{-1}\bm U^\T$，故有效曲率为</p>
 <p>$$\begin{align}<br>\bm F=\bm U\bm\Sigma\bm U^\T<br>\end{align}$$</p>
 <p>这是<strong>对 Fisher 曲率做谱域近似</strong>——用动量的奇异向量作为曲率特征方向的代理，用奇异值作为曲率谱的代理，并把谱压平为等距。</p>
-<p>几何性质：<br>1、有效曲率 $=\bm U\bm\Sigma^{-1}\bm U^\T$（左极因子视角），作用在<strong>奇异方向</strong>上；<br>2、正交不变——$|\bm W^{(\ell)}|_{\mathrm{sp} }$ 是内禀量，不随基旋转而变；<br>3、粒度最粗（逐矩阵、逐奇异方向），但<strong>恰好对准泛化界里出现的量</strong>。</p>
+<p>几何性质：<br>1、有效曲率 $=\bm U\bm\Sigma^{-1}\bm U^\T$（左极因子视角），作用在<strong>奇异方向</strong>上；<br>2、正交不变——$\mid\mid\bm W^{(\ell)}\mid\mid_{\mathrm{sp} }$ 是内禀量，不随基旋转而变；<br>3、粒度最粗（逐矩阵、逐奇异方向），但<strong>恰好对准泛化界里出现的量</strong>。</p>
 <h6 id="3-1-5、三者并排对比"><a href="#3-1-5、三者并排对比" class="headerlink" title="3.1.5、三者并排对比"></a>3.1.5、三者并排对比</h6><p>三者共享同一个更新骨架<br>$$\begin{align}<br>\bm\theta_{k+1}=(1-\eta\lambda)\bm\theta_k-\eta\bm U_k,<br>\end{align}$$<br>区别只在 $\bm U_k$：</p>
 <table>
 <thead>
