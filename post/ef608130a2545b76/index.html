@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-10-09T14:29:44.425Z">
+<meta property="og:updated_time" content="2026-10-09T16:09:40.604Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究18——线性回归视角看强化学习策略梯度">
 <meta name="twitter:description" content="本文主要总结了线性回归视角看强化学习策略梯度的若干基本问题，和我自己的一些体会。">
@@ -500,7 +500,7 @@
 <p>隐式约束集（带权重衰减时）：$\{\mid\mid\bm\theta\mid\mid_2\le R\}$</p>
 <p>有效曲率：<br>$$\begin{align}<br>\bm{F}=\bm{E}<br>\end{align}$$</p>
 <p>即 SGD 隐式假设 Fisher 信息是单位矩阵——<strong>把参数空间当作欧氏空间</strong>。</p>
-<p>几何性质：<br>1、有效曲率 $=\bm{E}$，所有坐标等权；<br>2、正交不变（Frobenius 球是正交不变的）；<br>3、但<strong>对最坏奇异方向无感知</strong>——不区分”某个方向增益大”和”增益均匀”。</p>
+<p>几何性质：<br>1、曲率校正 $=\bm{E}$，所有坐标等权；<br>2、正交不变（Frobenius 球是正交不变的）；<br>3、但<strong>对最坏奇异方向无感知</strong>——不区分”某个方向增益大”和”增益均匀”。</p>
 <h6 id="3-1-3、AdamW：坐标加权-ell-2-球上的自适应下降"><a href="#3-1-3、AdamW：坐标加权-ell-2-球上的自适应下降" class="headerlink" title="3.1.3、AdamW：坐标加权 $\ell_2$ 球上的自适应下降"></a>3.1.3、AdamW：坐标加权 $\ell_2$ 球上的自适应下降</h6><p>更新方向：<br>$$\begin{align}<br>\bm U_k^{\mathrm{AdamW} }<br>=\frac{\hat{\bm m}_k}{\sqrt{\hat{\bm v}_k}+\epsilon}<br>\end{align}$$</p>
 <p>其中<br>$$\begin{align}<br>\bm m_k=\beta_1\bm m_{k-1}+(1-\beta_1)\bm g_k,<br>\qquad<br>\bm v_k=\beta_2\bm v_{k-1}+(1-\beta_2)\bm g_k^{\odot2},<br>\end{align}$$<br>$$\begin{align}<br>\hat{\bm m}_k=\frac{\bm m_k}{1-\beta_1^k},<br>\qquad<br>\hat{\bm v}_k=\frac{\bm v_k}{1-\beta_2^k}.<br>\end{align}$$</p>
 <p>参数更新（含解耦权重衰减）：<br>$$\begin{align}<br>\bm\theta_{k+1}=(1-\eta\lambda)\,\bm\theta_k<br>-\eta\,\frac{\hat{\bm m}_k}{\sqrt{\hat{\bm v}_k}+\epsilon}<br>\end{align}$$</p>
@@ -508,7 +508,7 @@
 <p>有效梯度与曲率：<br>$$\begin{align}<br>\nabla_{\bm\theta}\mathcal L^{\mathrm{AdamW} }<br>\approx\mathrm{diag}(\bm v_k)^{-1/2}\,\mathbb{EMA}\Big[c\sum_{i,t}a_{i,t}\bm s_{i,t}\Big]+\lambda\bm\theta_k<br>\end{align}$$</p>
 <p>$$\begin{align}<br>\bm{F}=\mathrm{diag}(\bm v_k)^{1/2}<br>\end{align}$$</p>
 <p>这里需注意：有效曲率是 $\mathrm{diag}(\bm v_k)^{1/2}$，因为曲率校正是它的逆 $\mathrm{diag}(\bm v_k)^{-1/2}$。</p>
-<p>几何性质：<br>1、有效曲率 $=\mathrm{diag}(\hat{\bm v}_k)^{-1/2}$，逐坐标不同权；<br>2、正交不变没有——权重 $d_j$ 依赖坐标基，神经元重编号后 $d_j$ 全变；<br>3、粒度比 SGD 细（逐坐标），但<strong>代价是放弃了基无关性</strong>；<br>4、处在”比 SGD 更细、但比 Muon 更远离函数空间几何”的中间位置。</p>
+<p>几何性质：<br>1、曲率校正 $=\mathrm{diag}(\hat{\bm v}_k)^{-1/2}$，逐坐标不同权；<br>2、正交不变没有——权重 $d_j$ 依赖坐标基，神经元重编号后 $d_j$ 全变；<br>3、粒度比 SGD 细（逐坐标），但<strong>代价是放弃了基无关性</strong>；<br>4、处在”比 SGD 更细、但比 Muon 更远离函数空间几何”的中间位置。</p>
 <h6 id="3-1-4、Muon：谱范数球上的正交化下降"><a href="#3-1-4、Muon：谱范数球上的正交化下降" class="headerlink" title="3.1.4、Muon：谱范数球上的正交化下降"></a>3.1.4、Muon：谱范数球上的正交化下降</h6><p>把参数按层切开，对矩阵层 $\bm W^{(\ell)}\in\mathbb R^{m\times n}$：</p>
 <p>动量：<br>$$\begin{align}<br>\bm M_k^{(\ell)}=\mu\,\bm M_{k-1}^{(\ell)}+(1-\mu)\,\bm g_k^{(\ell)}<br>\end{align}$$</p>
 <p>更新方向：<br>$$\begin{align}<br>\bm U_k^{\mathrm{Muon},\,(\ell)}<br>=\mathrm{Ortho}!\big(\bm M_k^{(\ell)}\big)<br>\end{align}$$</p>
@@ -519,7 +519,7 @@
 <p>曲率校正为 $\bm U\bm\Sigma^{-1}\bm U^\T$，故有效曲率为</p>
 <p>$$\begin{align}<br>\bm F=\bm U\bm\Sigma\bm U^\T<br>\end{align}$$</p>
 <p>这是<strong>对 Fisher 曲率做谱域近似</strong>——用动量的奇异向量作为曲率特征方向的代理，用奇异值作为曲率谱的代理，并把谱压平为等距。</p>
-<p>几何性质：<br>1、有效曲率 $=\bm U\bm\Sigma^{-1}\bm U^\T$（左极因子视角），作用在<strong>奇异方向</strong>上；<br>2、正交不变——$\mid\mid\bm W^{(\ell)}\mid\mid_{\mathrm{sp} }$ 是内禀量，不随基旋转而变；<br>3、粒度最粗（逐矩阵、逐奇异方向），但<strong>恰好对准泛化界里出现的量</strong>。</p>
+<p>几何性质：<br>1、曲率校正 $=\bm U\bm\Sigma^{-1}\bm U^\T$（左极因子视角），作用在<strong>奇异方向</strong>上；<br>2、正交不变——$\mid\mid\bm W^{(\ell)}\mid\mid_{\mathrm{sp} }$ 是内禀量，不随基旋转而变；<br>3、粒度最粗（逐矩阵、逐奇异方向），但<strong>恰好对准泛化界里出现的量</strong>。</p>
 <h6 id="3-1-5、三者并排对比"><a href="#3-1-5、三者并排对比" class="headerlink" title="3.1.5、三者并排对比"></a>3.1.5、三者并排对比</h6><p>三者共享同一个更新骨架<br>$$\begin{align}<br>\bm\theta_{k+1}=(1-\eta\lambda)\bm\theta_k-\eta\bm U_k,<br>\end{align}$$<br>区别只在 $\bm U_k$：</p>
 <table>
 <thead>
