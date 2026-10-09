@@ -94,7 +94,7 @@
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://www.limoncc.com/images/cc.png">
 <meta property="og:image" content="https://www.limoncc.com/images/avatar.png">
-<meta property="og:updated_time" content="2026-10-09T09:45:58.069Z">
+<meta property="og:updated_time" content="2026-10-09T09:48:58.396Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="大语言模型研究18——线性回归视角看强化学习策略梯度">
 <meta name="twitter:description" content="本文主要总结了线性回归视角看强化学习策略梯度的若干基本问题，和我自己的一些体会。">
@@ -474,7 +474,7 @@
 <p>反过来，若 $\pi_i$ 不是非常接近 $1$，则 $F_{ii}=\pi_i(1-\pi_i)$ ， 相对于小概率动作会大很多。例如二动作情形 $K=2$，非零 Fisher 曲率为 $\pi(1-\pi)$。当 $\pi$ 从很小增加到 $1/2$ 时，曲率增大，说明大概率方向在 Fisher 度量下更“肥”，同样参数步长会造成更大的分布变化。但严格地说，$F_{ii}=\pi_i(1-\pi_i)$ 在 $\pi_i=1/2$ 最大；当 $\pi_i\to 1$ 时， $F_{ii}\approx 1-\pi_i$ 也会变小。因此“大概率方向极肥”应理解为：相对于极小概率方向，在非饱和区域，大概率方向曲率更大。完全接近确定性的动作，其 logit 方向也会变瘦，因为 softmax 对 logits 的局部敏感性降低。</p>
 <p>另外，$F=\operatorname{diag}(\pi)-\pi\pi^\T$ 有一个零特征方向 $\mathbf 1$，因为给所有 logits 同时加常数不改变 softmax 分布。因此严格讨论方向时应在商空间或与 $\mathbf 1$ 正交的子空间中进行。</p>
 <p>小概率动作 $i$ 满足 $F_{ii}=\pi_i(1-\pi_i)\approx \pi_i\ll 1$ 所以沿该 logit 方向，局部 KL 曲率约为 $\pi_i$，要获得固定分布变化需要参数步长 $O(\pi_i^{-1/2})$，故该方向极瘦。大概率方向在非饱和区相对更肥；但严格最大曲率在 $\pi_i=1/2$，且 $\pi_i\to1$ 时也会变瘦。就是说<strong>朴素的策略梯度会在小概率方向放大不足，所以小概率动作学得很慢，出现探索不足的情况</strong>。而在<strong>大概率方向会过度学习，在几个高概率动作之间来回跳，导致震荡和熵坍缩</strong>。</p>
-<p>对于更一般情形，设 $\bm{F}$ 的特征分解为 $\sum_k\lambda_k\bm{v}_k\bm{v}_k^\T$，则朴素方向在特征基下是 $\sum_k\bm{v}_k\bm{v}_k^\T \bm{w}^<em>$，而自然方向是 $\sum_k\frac{1}{\lambda_k}\bm{v}_k\bm{v}_k^\T\bm{w}^</em>$：</p>
+<p>对于更一般情形，设 $\bm{F}$ 的特征分解为 $\sum_k\lambda_k\bm{v}_k\bm{v}_k^\T$，则朴素方向在特征基下是 $\sum_k\bm{v}_k\bm{v}_k^\T\bm{w}^\ast$，而自然方向是 $\sum_k\frac{1}{\lambda_k}\bm{v}_k\bm{v}_k^\T\bm{w}^\ast$：</p>
 <ul>
 <li>瘦方向（$\lambda_k\ll1$，对应小概率动作/罕见行为）：自然梯度把该方向放大 $1/\lambda_k$ 倍——因为在这个方向上“参数走很多、分布挪很少”，需要迈大步；朴素梯度原封不动，于是稀有动作的学习被系统性欠速。这与探索不足互相加强：探索少 → 该方向 $\lambda$ 更小 → 更学不动。</li>
 <li>肥方向（$\lambda_k\gg1$，大概率动作/主导模式）：自然梯度把该方向压回 $1/\lambda_k$；朴素梯度照单全收，于是优势信号在主导方向上过冲——这正是训练后期策略在几个高概率模式间震荡的一个来源。</li>
